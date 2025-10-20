@@ -40,11 +40,17 @@
 
 ## 界面预览
 
-![主界面](resources/screenshots/main_ui.png)
+![主界面](../../AppData/Roaming/Typora/typora-user-images/image-20251020153023960.png)
 _主界面展示_
 
-![资产管理](resources/screenshots/asset_manager.png)
-_资产管理界面_
+![配置工具界面](../../AppData/Roaming/Typora/typora-user-images/image-20251020153454445.png)
+_主界面展示_
+
+![站点推荐](../../AppData/Roaming/Typora/typora-user-images/image-20251020153544834.png)
+_站点推荐_
+
+![设置界面](../../AppData/Roaming/Typora/typora-user-images/image-20251020153622194.png)
+_设置界面_
 
 ## 安装要求
 
@@ -56,8 +62,8 @@ _资产管理界面_
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/your-username/ue_toolkit.git
-cd ue_toolkit
+git clone https://github.com/Awfp1314/ue_toolkits.git
+cd ue_toolkits
 ```
 
 ### 2. 创建虚拟环境（推荐）
@@ -111,7 +117,7 @@ python main.py
 
 ### 站点推荐
 
-1. 浏览推荐的虚幻引擎资源网站
+1. 浏览推荐的虚幻引擎资源网站和一些论坛（国内有些网站是需要魔法的）
 2. 直接点击链接访问相关网站
 
 ## 主题定制
@@ -120,8 +126,6 @@ python main.py
 
 - 深色主题（默认）
 - 浅色主题
-- 日落橙主题
-- 自定义主题
 
 在设置界面中可以切换主题。
 
