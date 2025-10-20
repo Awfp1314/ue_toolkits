@@ -39,18 +39,18 @@
 - 完善的日志系统
 
 ## 界面预览
-
-![主界面](../../AppData/Roaming/Typora/typora-user-images/image-20251020153023960.png)
 _主界面展示_
+<img width="1950" height="1200" alt="image" src="https://github.com/user-attachments/assets/4d3da947-48f0-4efa-9f54-1d8fcd5cc6d7" />
 
-![配置工具界面](../../AppData/Roaming/Typora/typora-user-images/image-20251020153454445.png)
-_主界面展示_
+_配置工具界面_
+<img width="1950" height="1200" alt="image" src="https://github.com/user-attachments/assets/35049bb3-c60f-478d-98d0-0a227ef73d85" />
 
-![站点推荐](../../AppData/Roaming/Typora/typora-user-images/image-20251020153544834.png)
 _站点推荐_
+<img width="1950" height="1200" alt="image" src="https://github.com/user-attachments/assets/6aadd5c9-3a54-43cd-af91-f4740986d628" />
 
-![设置界面](../../AppData/Roaming/Typora/typora-user-images/image-20251020153622194.png)
 _设置界面_
+<img width="1950" height="1200" alt="image" src="https://github.com/user-attachments/assets/ee080824-482a-450d-baae-06038dacbcea" />
+
 
 ## 安装要求
 
@@ -126,6 +126,7 @@ python main.py
 
 - 深色主题（默认）
 - 浅色主题
+<img width="622" height="342" alt="image" src="https://github.com/user-attachments/assets/0aaa6fbe-421f-46da-bc32-b0f3e6a7e014" />
 
 在设置界面中可以切换主题。
 
@@ -196,3 +197,6 @@ HUTAO
 ## 致谢
 
 感谢所有为虚幻引擎社区做出贡献的开发者们。
+
+
+
