@@ -1,0 +1,138 @@
+/* 浅色主题 - 全局样式 */
+
+/* 主窗口 */
+QMainWindow {
+    background-color: ${bg_primary};
+    color: ${text_primary};
+    border: 1px solid ${border};
+}
+
+/* 通用 QWidget */
+QWidget {
+    background-color: ${bg_primary};
+    color: ${text_primary};
+}
+
+/* 左侧面板 */
+#leftPanel {
+    background-color: ${bg_secondary};
+    border-right: 1px solid ${border};
+}
+
+/* 工具按钮 */
+QPushButton[class="toolButton"] {
+    background-color: transparent;
+    border: none;
+    color: ${text_secondary};
+    text-align: left;
+    padding-left: 20px;
+}
+
+QPushButton[class="toolButton"]:hover {
+    background-color: ${bg_hover};
+}
+
+QPushButton[class="toolButton"]:checked {
+    background-color: ${accent};
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* 作者标签 */
+#authorLabel {
+    color: ${text_tertiary};
+    font-size: 11px;
+    padding: 10px;
+}
+
+/* 右侧框架 */
+#rightFrame {
+    background-color: ${bg_primary};
+}
+
+/* 工具标题 */
+#toolTitle {
+    background-color: ${bg_secondary};
+    color: ${text_primary};
+    font-size: 18px;
+    font-weight: bold;
+    padding: 15px 20px;
+    border-bottom: 1px solid ${border};
+}
+
+/* 内容框架 */
+#contentFrame {
+    background-color: ${bg_primary};
+}
+
+/* 描述标签 */
+#descriptionLabel {
+    color: ${text_tertiary};
+    padding-bottom: 10px;
+}
+
+/* 分类标签 */
+#categoryLabel {
+    color: ${accent};
+    padding: 10px 5px 8px 5px;
+}
+
+/* 分隔线 */
+#separator {
+    background-color: ${border};
+}
+
+/* 滚动区域 */
+#scrollArea, QScrollArea {
+    border: none;
+    background-color: transparent;
+}
+
+/* 按钮容器 */
+#buttonsContainer {
+    background-color: transparent;
+}
+
+/* 滚动条 */
+QScrollBar:vertical {
+    background: ${bg_secondary};
+    width: 15px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical {
+    background: ${bg_tertiary};
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: ${bg_hover};
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: ${bg_secondary};
+    height: 15px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:horizontal {
+    background: ${bg_tertiary};
+    border-radius: 4px;
+    min-width: 20px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: ${bg_hover};
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+

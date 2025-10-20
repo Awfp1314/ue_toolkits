@@ -1,0 +1,28 @@
+{
+  "name": "violet",
+  "variables": {
+    "bg_primary": "#1a1a2e",
+    "bg_secondary": "#2d1b4e",
+    "bg_tertiary": "#3e2a5f",
+    "bg_hover": "#4f3970",
+    "bg_pressed": "#2d1b4e",
+    "text_primary": "#f3e5f5",
+    "text_secondary": "#e1bee7",
+    "text_tertiary": "#ce93d8",
+    "text_disabled": "#ab47bc",
+    "accent": "#9c27b0",
+    "accent_hover": "#ba68c8",
+    "accent_pressed": "#7b1fa2",
+    "border": "#3e2a5f",
+    "border_hover": "#9c27b0",
+    "border_focus": "#ba68c8",
+    "success": "#66BB6A",
+    "warning": "#FFA726",
+    "error": "#EF5350",
+    "info": "#42A5F5",
+    "bg_primary_alpha": "rgba(26, 26, 46, 0.85)",
+    "bg_secondary_alpha": "rgba(45, 27, 78, 0.8)",
+    "accent_alpha": "rgba(156, 39, 176, 0.8)"
+  }
+}
+

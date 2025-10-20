@@ -1,0 +1,45 @@
+/*
+ * 侧边栏样式定义
+ * 
+ * 用于主窗口左侧的导航栏
+ */
+
+/* ========================================
+ * 侧边栏容器
+ * ======================================== */
+QWidget#sidebar {
+    background-color: #f0f0f0;
+    border-right: 1px solid #ccc;
+}
+
+/* ========================================
+ * 侧边栏按钮
+ * ======================================== */
+QWidget#sidebar QPushButton {
+    text-align: left;
+    padding: 10px;
+    margin: 2px;
+    border: none;
+    background-color: transparent;
+}
+
+QWidget#sidebar QPushButton:hover {
+    background-color: #e0e0e0;
+}
+
+QWidget#sidebar QPushButton:checked {
+    background-color: #d0d0d0;
+    font-weight: bold;
+}
+
+/* ========================================
+ * 侧边栏作者信息标签
+ * ======================================== */
+QWidget#sidebar QLabel#authorLabel {
+    color: #666;
+    font-size: 12px;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    margin-top: 10px;
+}
+

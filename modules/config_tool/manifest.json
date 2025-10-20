@@ -1,0 +1,10 @@
+{
+  "name": "config_tool",
+  "display_name": "配置工具",
+  "version": "1.0.0",
+  "description": "UE工程配置管理工具",
+  "author": "HUTAO",
+  "icon": "",
+  "dependencies": [],
+  "entry_point": "__main__:ConfigToolModule"
+}

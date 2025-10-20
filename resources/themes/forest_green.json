@@ -1,0 +1,28 @@
+{
+  "name": "forest_green",
+  "variables": {
+    "bg_primary": "#1e2a1a",
+    "bg_secondary": "#2a3a26",
+    "bg_tertiary": "#364a32",
+    "bg_hover": "#425a3e",
+    "bg_pressed": "#2a3a26",
+    "text_primary": "#e8f5e9",
+    "text_secondary": "#c8e6c9",
+    "text_tertiary": "#a5d6a7",
+    "text_disabled": "#66bb6a",
+    "accent": "#4CAF50",
+    "accent_hover": "#66BB6A",
+    "accent_pressed": "#388E3C",
+    "border": "#364a32",
+    "border_hover": "#4CAF50",
+    "border_focus": "#66BB6A",
+    "success": "#66BB6A",
+    "warning": "#FFB74D",
+    "error": "#EF5350",
+    "info": "#4FC3F7",
+    "bg_primary_alpha": "rgba(30, 42, 26, 0.85)",
+    "bg_secondary_alpha": "rgba(42, 58, 38, 0.8)",
+    "accent_alpha": "rgba(76, 175, 80, 0.8)"
+  }
+}
+

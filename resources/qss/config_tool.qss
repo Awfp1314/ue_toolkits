@@ -1,0 +1,91 @@
+/*
+ * 配置工具模块样式定义
+ * 
+ * 包含配置工具模块的所有UI样式
+ */
+
+/* ========================================
+ * 空状态标签
+ * ======================================== */
+QLabel#emptyLabel {
+    color: #666666;
+    font-size: 16px;
+    background-color: transparent;
+}
+
+/* ========================================
+ * 添加配置按钮（轮廓样式）
+ * ======================================== */
+QPushButton#addConfigButton {
+    background-color: transparent;
+    color: white;
+    border: 1px solid #aaaaaa;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QPushButton#addConfigButton:hover {
+    background-color: rgba(255, 255, 255, 20);
+    border: 1px solid #cccccc;
+}
+
+QPushButton#addConfigButton:pressed {
+    background-color: rgba(255, 255, 255, 0);
+    border: 1px solid #888888;
+}
+
+/* ========================================
+ * 配置模板按钮
+ * ======================================== */
+QPushButton[class="config-template-button"] {
+    background-color: rgba(43, 43, 43, 0.8);
+    border: 1px solid rgba(60, 60, 60, 0.8);
+    border-radius: 4px;
+    padding: 10px 15px;
+    text-align: center;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QPushButton[class="config-template-button"]:hover {
+    background-color: rgba(51, 51, 51, 0.9);
+    border: 1px solid rgba(80, 80, 80, 0.9);
+}
+
+QPushButton[class="config-template-button"]:pressed {
+    background-color: rgba(35, 35, 35, 1.0);
+}
+
+/* ========================================
+ * 滚动区域（配置工具专用）
+ * ======================================== */
+QScrollArea#configScrollArea {
+    border: none;
+    background-color: transparent;
+}
+
+QScrollArea#configScrollArea QScrollBar:vertical {
+    background: rgba(43, 43, 43, 0.8);
+    width: 15px;
+    border-radius: 4px;
+}
+
+QScrollArea#configScrollArea QScrollBar::handle:vertical {
+    background: rgba(68, 68, 68, 0.8);
+    border-radius: 4px;
+}
+
+QScrollArea#configScrollArea QScrollBar::handle:vertical:hover {
+    background: rgba(85, 85, 85, 0.9);
+}
+
+/* ========================================
+ * 内容容器
+ * ======================================== */
+QWidget#configContentContainer {
+    background-color: transparent;
+}
+

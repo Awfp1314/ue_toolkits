@@ -1,0 +1,86 @@
+/* 
+ * QSS变量定义文件
+ * 
+ * 注意：Qt的QSS不直接支持变量，但我们可以通过注释的方式记录颜色方案
+ * 在实际使用时需要手动替换这些值
+ * 
+ * 未来可以考虑使用预处理器（如SCSS）来支持真正的变量
+ */
+
+/* ========================================
+ * 颜色系统
+ * ======================================== */
+
+/* 主背景色 */
+/* --bg-primary: #2b2b2b */
+/* --bg-primary-rgba: rgba(43, 43, 43, 0.8) */
+/* --bg-secondary: #1e1e1e */
+/* --bg-tertiary: #3c3c3c */
+
+/* 悬停背景色 */
+/* --bg-hover: rgba(51, 51, 51, 0.9) */
+/* --bg-hover-light: #333333 */
+/* --bg-hover-lighter: #4c4c4c */
+
+/* 按压背景色 */
+/* --bg-pressed: rgba(35, 35, 35, 1.0) */
+/* --bg-pressed-light: #2c2c2c */
+
+/* 边框颜色 */
+/* --border-primary: #555555 */
+/* --border-secondary: rgba(60, 60, 60, 0.8) */
+/* --border-light: #ccc */
+/* --border-lighter: #333333 */
+/* --border-hover: rgba(80, 80, 80, 0.9) */
+/* --border-hover-light: #cccccc */
+
+/* 文本颜色 */
+/* --text-primary: #ffffff */
+/* --text-secondary: #cccccc */
+/* --text-tertiary: #aaaaaa */
+/* --text-disabled: #666666 */
+
+/* 强调色 */
+/* --color-primary: rgba(0, 122, 204, 0.8) */  /* 蓝色 - 主要操作 */
+/* --color-primary-hover: rgba(0, 144, 224, 0.9) */
+/* --color-danger: #e81123 */  /* 红色 - 危险操作 */
+/* --color-success: #107c10 */  /* 绿色 - 成功状态 */
+/* --color-warning: #ff8c00 */  /* 橙色 - 警告状态 */
+
+/* ========================================
+ * 尺寸系统
+ * ======================================== */
+
+/* 边距 */
+/* --spacing-xs: 2px */
+/* --spacing-sm: 5px */
+/* --spacing-md: 10px */
+/* --spacing-lg: 15px */
+/* --spacing-xl: 20px */
+
+/* 圆角 */
+/* --radius-sm: 2px */
+/* --radius-md: 4px */
+
+/* 字体大小 */
+/* --font-xs: 11px */
+/* --font-sm: 12px */
+/* --font-md: 14px */
+/* --font-lg: 16px */
+
+/* ========================================
+ * 组件特定变量
+ * ======================================== */
+
+/* 按钮 */
+/* --button-padding: 4px 8px */
+/* --button-padding-lg: 8px 16px */
+/* --button-padding-xl: 10px 15px */
+
+/* 滚动条 */
+/* --scrollbar-width: 15px */
+
+/* 标题栏 */
+/* --titlebar-height: 30px */
+/* --titlebar-button-size: 30px */
+

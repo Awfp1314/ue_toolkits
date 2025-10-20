@@ -1,0 +1,28 @@
+{
+  "name": "custom",
+  "variables": {
+    "bg_primary": "#1a1a2e",
+    "bg_secondary": "#16213e",
+    "bg_tertiary": "#0f3460",
+    "bg_hover": "#533483",
+    "bg_pressed": "#1a1a2e",
+    "text_primary": "#eaeaea",
+    "text_secondary": "#c4c4c4",
+    "text_tertiary": "#a0a0a0",
+    "text_disabled": "#6b6b6b",
+    "accent": "#e94560",
+    "accent_hover": "#f27289",
+    "accent_pressed": "#c7254e",
+    "border": "#0f3460",
+    "border_hover": "#e94560",
+    "border_focus": "#f27289",
+    "success": "#00d9ff",
+    "warning": "#ffa500",
+    "error": "#e94560",
+    "info": "#00d9ff",
+    "bg_primary_alpha": "rgba(26, 26, 46, 0.85)",
+    "bg_secondary_alpha": "rgba(22, 33, 62, 0.8)",
+    "accent_alpha": "rgba(233, 69, 96, 0.8)"
+  }
+}
+

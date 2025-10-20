@@ -1,0 +1,38 @@
+/* 自定义标题栏样式 */
+
+#customTitleBar {
+    background-color: ${bg_primary};
+    border: none;
+}
+
+#titleLabel {
+    color: ${text_primary};
+    font-size: 12px;
+    background-color: transparent;
+}
+
+#customTitleBar QPushButton {
+    background-color: transparent;
+    border: none;
+    color: ${text_secondary};
+    font-size: 14px;
+    width: 30px;
+    height: 30px;
+}
+
+#customTitleBar QPushButton:hover {
+    background-color: ${bg_hover};
+}
+
+#minimizeButton:hover {
+    background-color: ${bg_hover};
+}
+
+#maximizeButton:hover {
+    background-color: ${bg_hover};
+}
+
+#closeButton:hover {
+    background-color: #e81123;
+    color: white;
+}

@@ -1,0 +1,189 @@
+/*
+ * 对话框样式定义
+ * 
+ * 提供统一的对话框外观，包括：
+ * - 对话框容器
+ * - 对话框中的标签
+ * - 对话框中的输入框
+ * - 对话框中的按钮
+ */
+
+/* ========================================
+ * 对话框容器
+ * ======================================== */
+QDialog {
+    background-color: #2b2b2b;
+    color: white;
+    border: 1px solid #333333;
+    border-radius: 4px;
+}
+
+/* ========================================
+ * 对话框标签
+ * ======================================== */
+QDialog QLabel {
+    color: white;
+    font-size: 14px;
+    background-color: transparent;
+}
+
+/* ========================================
+ * 对话框输入框
+ * ======================================== */
+QDialog QLineEdit {
+    background-color: #3c3c3c;
+    color: white;
+    border: 1px solid #555555;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+QDialog QLineEdit:focus {
+    border: 1px solid rgba(0, 122, 204, 0.8);
+}
+
+QDialog QLineEdit:disabled {
+    background-color: rgba(60, 60, 60, 0.5);
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* ========================================
+ * 对话框文本编辑框
+ * ======================================== */
+QDialog QTextEdit,
+QDialog QPlainTextEdit {
+    background-color: #3c3c3c;
+    color: white;
+    border: 1px solid #555555;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+QDialog QTextEdit:focus,
+QDialog QPlainTextEdit:focus {
+    border: 1px solid rgba(0, 122, 204, 0.8);
+}
+
+/* ========================================
+ * 对话框按钮
+ * ======================================== */
+QDialog QPushButton {
+    background-color: #3c3c3c;
+    color: white;
+    border: 1px solid #555555;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 60px;
+}
+
+QDialog QPushButton:hover {
+    background-color: #4c4c4c;
+}
+
+QDialog QPushButton:pressed {
+    background-color: #2c2c2c;
+}
+
+QDialog QPushButton:disabled {
+    background-color: rgba(60, 60, 60, 0.3);
+    color: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(85, 85, 85, 0.3);
+}
+
+/* ========================================
+ * 对话框复选框
+ * ======================================== */
+QDialog QCheckBox {
+    color: white;
+    font-size: 14px;
+    spacing: 5px;
+}
+
+QDialog QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #555555;
+    border-radius: 2px;
+    background-color: #3c3c3c;
+}
+
+QDialog QCheckBox::indicator:hover {
+    border: 1px solid #666666;
+}
+
+QDialog QCheckBox::indicator:checked {
+    background-color: rgba(0, 122, 204, 0.8);
+    border: 1px solid rgba(0, 122, 204, 0.8);
+}
+
+/* ========================================
+ * 对话框单选按钮
+ * ======================================== */
+QDialog QRadioButton {
+    color: white;
+    font-size: 14px;
+    spacing: 5px;
+}
+
+QDialog QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #555555;
+    border-radius: 9px;
+    background-color: #3c3c3c;
+}
+
+QDialog QRadioButton::indicator:hover {
+    border: 1px solid #666666;
+}
+
+QDialog QRadioButton::indicator:checked {
+    background-color: rgba(0, 122, 204, 0.8);
+    border: 1px solid rgba(0, 122, 204, 0.8);
+}
+
+/* ========================================
+ * 对话框下拉框
+ * ======================================== */
+QDialog QComboBox {
+    background-color: #3c3c3c;
+    color: white;
+    border: 1px solid #555555;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+QDialog QComboBox:hover {
+    border: 1px solid #666666;
+}
+
+QDialog QComboBox:focus {
+    border: 1px solid rgba(0, 122, 204, 0.8);
+}
+
+QDialog QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+
+QDialog QComboBox::down-arrow {
+    image: none;
+    border: 2px solid white;
+    width: 6px;
+    height: 6px;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+}
+
+QDialog QComboBox QAbstractItemView {
+    background-color: #3c3c3c;
+    color: white;
+    border: 1px solid #555555;
+    selection-background-color: rgba(0, 122, 204, 0.8);
+}
+

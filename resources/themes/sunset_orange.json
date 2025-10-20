@@ -1,0 +1,28 @@
+{
+  "name": "sunset_orange",
+  "variables": {
+    "bg_primary": "#2e1a1a",
+    "bg_secondary": "#3e2626",
+    "bg_tertiary": "#4e3232",
+    "bg_hover": "#5e3e3e",
+    "bg_pressed": "#3e2626",
+    "text_primary": "#fff5f0",
+    "text_secondary": "#ffe0cc",
+    "text_tertiary": "#ffccaa",
+    "text_disabled": "#cc9988",
+    "accent": "#FF6F00",
+    "accent_hover": "#FF8F00",
+    "accent_pressed": "#E65100",
+    "border": "#4e3232",
+    "border_hover": "#FF6F00",
+    "border_focus": "#FF8F00",
+    "success": "#66BB6A",
+    "warning": "#FFB74D",
+    "error": "#EF5350",
+    "info": "#42A5F5",
+    "bg_primary_alpha": "rgba(46, 26, 26, 0.85)",
+    "bg_secondary_alpha": "rgba(62, 38, 38, 0.8)",
+    "accent_alpha": "rgba(255, 111, 0, 0.8)"
+  }
+}
+

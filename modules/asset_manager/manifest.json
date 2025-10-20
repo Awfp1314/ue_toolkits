@@ -1,0 +1,10 @@
+{
+  "name": "asset_manager",
+  "display_name": "资产管理",
+  "version": "1.0.0",
+  "description": "资产管理模块",
+  "author": "HUTAO",
+  "icon": "",
+  "dependencies": [],
+  "entry_point": "asset_manager:AssetManagerModule"
+}

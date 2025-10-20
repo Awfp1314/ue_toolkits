@@ -1,0 +1,11 @@
+{
+  "name": "site_recommendations",
+  "display_name": "站点推荐",
+  "version": "1.0.0",
+  "description": "虚幻引擎资源站点推荐",
+  "author": "HUTAO",
+  "icon": "",
+  "dependencies": [],
+  "entry_point": "__main__:SiteRecommendationsModule"
+}
+
