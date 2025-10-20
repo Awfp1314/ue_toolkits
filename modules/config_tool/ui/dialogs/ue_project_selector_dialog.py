@@ -76,14 +76,12 @@ class UEProjectSelectorDialog(QDialog):
         layout.setSpacing(15)
         layout.setContentsMargins(20, 20, 20, 20)
         
-        label = QLabel("检测到多个UE工程，请选择一个：")
+        label = QLabel("搜索到以下UE工程，请选择一个：")
         layout.addWidget(label)
         
         self.project_list = QListWidget()
         for project in self.projects:
-            # 根据PID判断是运行中的工程还是搜索到的工程
-            status = "运行中" if project.pid > 0 else "已找到"
-            self.project_list.addItem(f"[{status}] {project.name} - {project.project_path}")
+            self.project_list.addItem(f"{project.name} - {project.project_path}")
         self.project_list.currentRowChanged.connect(self.on_selection_changed)
         layout.addWidget(self.project_list)
         

@@ -141,8 +141,8 @@ class LayoutBuilder:
         from ..components import ConfigTemplateButton
         button = ConfigTemplateButton(template, self.ui)
         
-        # 连接按钮点击事件
-        button.clicked.connect(lambda: self.ui.on_config_button_clicked(template))
+        # 连接按钮单击事件到配置应用逻辑
+        button.clicked.connect(lambda: button.apply_config_to_ue_project())
         
         # 连接右键菜单事件
         button.customContextMenuRequested.connect(lambda pos: self.ui.handler.show_config_context_menu(pos, button, template))

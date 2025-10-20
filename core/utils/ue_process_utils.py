@@ -262,3 +262,25 @@ class UEProcessUtils:
             if not self._should_exclude_path(project.project_path):
                 filtered_projects.append(project)
         return filtered_projects
+    
+    def is_project_running(self, project_path) -> bool:
+        """检查指定的工程是否正在运行
+        
+        Args:
+            project_path: 工程路径
+            
+        Returns:
+            bool: 工程是否正在运行
+        """
+        from pathlib import Path
+        project_path = Path(project_path) if not isinstance(project_path, Path) else project_path
+        
+        try:
+            running_projects = self.detect_running_ue_projects()
+            for running_project in running_projects:
+                if running_project.project_path.resolve() == project_path.resolve():
+                    return True
+            return False
+        except Exception as e:
+            self.logger.error(f"检查工程运行状态时发生错误: {e}")
+            return False

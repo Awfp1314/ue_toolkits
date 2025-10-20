@@ -140,41 +140,33 @@ class ConfigHandler:
         logger.info("添加配置按钮被点击")
         
         try:
-            # 1. 检测运行的UE工程
-            running_projects = self.detect_running_ue_projects()
+            # 1. 搜索所有UE工程
+            logger.info("搜索所有UE工程")
+            ue_utils = UEProcessUtils()
+            ue_projects = ue_utils.search_all_ue_projects()
             
-            # 2. 如果没有运行的工程，则搜索所有UE工程
-            all_projects = []
-            if not running_projects:
-                logger.info("未检测到运行的UE工程，开始搜索所有UE工程")
-                ue_utils = UEProcessUtils()
-                all_projects = ue_utils.search_all_ue_projects()
-            
-            # 3. 合并运行的工程和搜索到的工程
-            ue_projects = running_projects + all_projects
-            
-            # 4. 如果仍然没有工程，则显示提示消息
+            # 2. 如果没有工程，则显示提示消息
             if not ue_projects:
                 self.show_no_ue_project_message()
                 return
             
-            # 5. 如果多个UE实例，让用户选择
+            # 3. 直接弹出所有搜索到工程的弹窗供用户选择
             selected_project = self.select_ue_project(ue_projects)
             if not selected_project:
                 return
             
-            # 6. 打开文件选择对话框
+            # 4. 打开文件选择对话框
             config_dir = selected_project.project_path.parent / "Saved/Config/Windows"
             files = self.select_config_files(config_dir)
             if not files:
                 return
             
-            # 7. 弹出名称设置弹窗
+            # 5. 弹出名称设置弹窗
             config_name = self.show_name_dialog()
             if not config_name:
                 return
             
-            # 8. 复制文件到目标目录
+            # 6. 复制文件到目标目录
             if self.ui.logic:
                 success = self.ui.logic.add_config_template(config_name, files)
                 if success:

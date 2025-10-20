@@ -7,6 +7,7 @@
 from .config_apply_confirm_dialog import ConfigApplyConfirmDialog
 from .name_input_dialog import NameInputDialog
 from .ue_project_selector_dialog import UEProjectSelectorDialog
+from .project_running_warning_dialog import ProjectRunningWarningDialog
 
-__all__ = ['ConfigApplyConfirmDialog', 'NameInputDialog', 'UEProjectSelectorDialog']
+__all__ = ['ConfigApplyConfirmDialog', 'NameInputDialog', 'UEProjectSelectorDialog', 'ProjectRunningWarningDialog']
 
