@@ -40,7 +40,7 @@
 
 ## 界面预览
 
-![主界面](../../AppData/Roaming/Typora/typora-user-images/image-20251020153023960.png)
+<img width="1950" height="1200" alt="image" src="https://github.com/user-attachments/assets/4d3da947-48f0-4efa-9f54-1d8fcd5cc6d7" />
 _主界面展示_
 
 ![配置工具界面](../../AppData/Roaming/Typora/typora-user-images/image-20251020153454445.png)
@@ -196,3 +196,4 @@ HUTAO
 ## 致谢
 
 感谢所有为虚幻引擎社区做出贡献的开发者们。
+
