@@ -78,7 +78,8 @@ class ConfigTemplateButton(QPushButton):
                 return
             
             # 1. 检测运行的UE工程
-            if not hasattr(self.main_ui, 'logic') or not self.main_ui.logic:
+            # 修复：添加更安全的检查，确保main_ui和logic属性存在且不为None
+            if self.main_ui is None or not hasattr(self.main_ui, 'logic') or not self.main_ui.logic:
                 logger.error("无法获取逻辑层引用")
                 return
                 
@@ -135,7 +136,8 @@ class ConfigTemplateButton(QPushButton):
     # 已移动到逻辑层，这里不再需要
     def copy_config_files(self, target_project):
         """复制配置文件到目标工程 - 已移动到逻辑层，此方法仅保留兼容性"""
-        if not hasattr(self.main_ui, 'logic') or not self.main_ui.logic:
+        # 修复：添加更安全的检查，确保main_ui和logic属性存在且不为None
+        if self.main_ui is None or not hasattr(self.main_ui, 'logic') or not self.main_ui.logic:
             logger.error("无法获取逻辑层引用")
             return False
             
