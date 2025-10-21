@@ -37,6 +37,7 @@ class AssetManagerUI(QWidget):
         self.theme_manager = get_theme_manager()  # 获取主题管理器
         self.asset_cards = {}  # {asset_id: AssetCard}
         self._showing_error = False  # 防止递归显示错误对话框
+        self._current_progress_dialog = None  # 当前进度对话框引用
         self.current_category = None  # 当前选中的分类，None表示全部
         self.search_text = ""  # 当前搜索文本
         self.sort_method = "添加时间（最新）"  # 当前排序方式
@@ -479,6 +480,13 @@ class AssetManagerUI(QWidget):
                 parent=self
             )
             progress_dialog.status_label.setText(f"正在添加资产 \"{asset_info.get('name')}\"...")
+            
+            # 保存进度对话框引用，防止被垃圾回收
+            self._current_progress_dialog = progress_dialog
+            
+            # 连接进度更新信号
+            self.logic.progress_updated.connect(progress_dialog.update_progress)
+            
             progress_dialog.show()
             
             # 在后台线程中添加资产
@@ -491,6 +499,15 @@ class AssetManagerUI(QWidget):
                     logger.error(f"添加资产异常: {e}", exc_info=True)
                     error_msg = str(e)
                     QTimer.singleShot(0, lambda: progress_dialog.finish_error(error_msg))
+                finally:
+                    # 断开信号
+                    try:
+                        self.logic.progress_updated.disconnect(progress_dialog.update_progress)
+                    except:
+                        pass
+                    
+                    # 延迟清理对话框，确保 finish_success 已执行
+                    QTimer.singleShot(1500, lambda: self._cleanup_progress_dialog(progress_dialog))
             
             thread = threading.Thread(target=add_with_progress, daemon=True)
             thread.start()
@@ -512,15 +529,16 @@ class AssetManagerUI(QWidget):
             category = asset_info["category"]
             create_doc = asset_info["create_doc"]
             
-            logger.info(f"调用 logic.add_asset(): name={asset_name}, type={asset_type}, category={category}")
+            logger.info(f"调用 logic.add_asset(): name={asset_name}, type={asset_type}, category={category}, create_doc={create_doc}")
             
-            # 添加资产（不自动创建文档）
+            # 添加资产（传递create_markdown参数用于文档创建）
             asset = self.logic.add_asset(
                 asset_path=asset_path,
                 asset_type=asset_type,
                 name=asset_name,
                 category=category,
-                description=""  # 初始描述为空
+                description="",  # 初始描述为空
+                create_markdown=create_doc  # ✅ 添加此参数
             )
             
             logger.info(f"logic.add_asset() 返回结果: {asset}")
@@ -533,19 +551,20 @@ class AssetManagerUI(QWidget):
                 # 生成缩略图（如果需要）
                 should_generate_thumbnail = False
                 
-                if asset_path.is_file():
-                    if asset_path.suffix.lower() in ThumbnailGenerator.IMAGE_EXTENSIONS:
+                # 注意：此时 asset_path 已经被移动了，所以使用 asset.path 代替
+                if asset.asset_type == AssetType.FILE:
+                    if asset.path.suffix.lower() in ThumbnailGenerator.IMAGE_EXTENSIONS:
                         should_generate_thumbnail = True
-                elif asset_path.is_dir():
+                elif asset.asset_type == AssetType.PACKAGE:
                     for ext in ThumbnailGenerator.IMAGE_EXTENSIONS:
-                        if list(asset_path.glob(f"*{ext}")):
+                        if list(asset.path.glob(f"*{ext}")):
                             should_generate_thumbnail = True
                             break
                 
                 if should_generate_thumbnail:
                     thumbnail_path = self.logic.thumbnails_dir / f"{asset.id}.png"
                     success = ThumbnailGenerator.generate_thumbnail(
-                        asset_path,
+                        asset.path,
                         thumbnail_path,
                         asset_type.value
                     )
@@ -1113,6 +1132,21 @@ class AssetManagerUI(QWidget):
                     )
                     return
                 
+                # 显示进度对话框
+                progress_dialog = ProgressDialog(
+                    title="添加资产",
+                    parent=self
+                )
+                progress_dialog.status_label.setText(f"正在添加资产 \"{result.get('name')}\"...")
+                
+                # 保存进度对话框引用，防止被垃圾回收
+                self._current_progress_dialog = progress_dialog
+                
+                # 连接进度更新信号
+                self.logic.progress_updated.connect(progress_dialog.update_progress)
+                
+                progress_dialog.show()
+                
                 # 在后台线程中添加资产
                 def add_asset_thread():
                     try:
@@ -1127,21 +1161,28 @@ class AssetManagerUI(QWidget):
                         
                         if asset:
                             logger.info(f"拖放添加资产成功: {asset.name}")
-                            QTimer.singleShot(100, self._refresh_assets)
+                            QTimer.singleShot(500, progress_dialog.finish_success)
                         else:
                             logger.error("拖放添加资产失败")
+                            QTimer.singleShot(0, lambda: progress_dialog.finish_error("添加资产失败"))
                     
                     except Exception as e:
                         logger.error(f"拖放添加资产失败: {e}", exc_info=True)
-                        QTimer.singleShot(100, lambda: StyledMessageBox.critical(
-                            self,
-                            "错误",
-                            f"添加资产失败: {str(e)}"
-                        ))
+                        error_msg = str(e)
+                        QTimer.singleShot(0, lambda: progress_dialog.finish_error(error_msg))
+                    finally:
+                        # 断开信号
+                        try:
+                            self.logic.progress_updated.disconnect(progress_dialog.update_progress)
+                        except:
+                            pass
+                        
+                        # 延迟清理对话框，确保 finish_success 已执行
+                        QTimer.singleShot(1500, lambda: self._cleanup_progress_dialog(progress_dialog))
                 
                 thread = threading.Thread(target=add_asset_thread, daemon=True)
                 thread.start()
-                
+        
         except Exception as e:
             logger.error(f"显示添加资产对话框失败: {e}", exc_info=True)
             StyledMessageBox.critical(
