@@ -39,6 +39,7 @@ class AssetManagerLogic(QObject):
         preview_started: 预览启动信号 (str: asset_id)
         preview_finished: 预览完成信号
         error_occurred: 错误发生信号 (str: error_message)
+        progress_updated: 进度更新信号 (int: current, int: total, str: message)
     """
     
     asset_added = pyqtSignal(object)  # Asset
@@ -48,6 +49,7 @@ class AssetManagerLogic(QObject):
     preview_finished = pyqtSignal()
     thumbnail_updated = pyqtSignal(str, str)  # asset_id, thumbnail_path
     error_occurred = pyqtSignal(str)  # error_message
+    progress_updated = pyqtSignal(int, int, str)  # current, total, message
     
     def __init__(self, config_dir: Path):
         super().__init__()
@@ -460,11 +462,21 @@ class AssetManagerLogic(QObject):
                         target_path = category_folder / f"{base_name}_{counter}{suffix}"
                     counter += 1
             
-            # 移动资产
+            # 移动资产到资产库
             logger.info(f"开始移动资产: {asset_path} -> {target_path}")
             logger.info(f"资产类型: {asset_type}, 源路径存在: {asset_path.exists()}")
             
-            shutil.move(str(asset_path), str(target_path))
+            # 使用进度回调进行实时进度报告
+            def move_progress_callback(current, total, message):
+                self.progress_updated.emit(current, total, message)
+            
+            # 根据资产类型选择相应的移动方法
+            if asset_type == AssetType.PACKAGE:
+                # 移动整个文件夹（保持原文件夹名称）
+                self._safe_move_tree(asset_path, target_path, progress_callback=move_progress_callback)
+            else:
+                # 移动单个文件（保持原文件名）
+                self._safe_move_file(asset_path, target_path, progress_callback=move_progress_callback)
             
             logger.info(f"资产已移动: {asset_path} -> {target_path}")
             
@@ -495,6 +507,7 @@ class AssetManagerLogic(QObject):
             self.assets.append(asset)
             
             logger.info("开始保存配置...")
+            self.progress_updated.emit(0, 1, "正在保存配置...")
             self._save_config()
             logger.info("配置保存完成")
             
@@ -505,7 +518,11 @@ class AssetManagerLogic(QObject):
             
             # 如果需要创建markdown文档
             if create_markdown:
+                self.progress_updated.emit(0, 1, "正在创建文档...")
                 self._create_asset_markdown(asset)
+                self.progress_updated.emit(1, 1, "文档创建完成")
+            
+            self.progress_updated.emit(1, 1, "资产添加完成！")
             
             return asset
             
@@ -1311,6 +1328,128 @@ class AssetManagerLogic(QObject):
         except Exception as e:
             raise Exception(f"复制目录失败: {src} -> {dst}: {e}")
     
+    def _safe_move_tree(self, src: Path, dst: Path, max_depth: int = 20, 
+                        progress_callback=None) -> None:
+        """安全地移动目录树，限制最大深度防止无限递归，支持实时进度报告
+        
+        Args:
+            src: 源目录
+            dst: 目标目录
+            max_depth: 最大递归深度（默认20层）
+            progress_callback: 进度回调函数 (current, total, message)
+        """
+        # 计算总文件数（用于进度报告）
+        total_files = 0
+        moved_files = 0
+        
+        if progress_callback:
+            logger.info("正在计算文件总数...")
+            for item in src.rglob('*'):
+                if item.is_file() and not item.is_symlink():
+                    # 跳过隐藏文件和系统文件
+                    if not item.name.startswith('.') and item.name not in ['__pycache__', 'Thumbs.db', 'desktop.ini']:
+                        total_files += 1
+            logger.info(f"共需移动 {total_files} 个文件")
+            progress_callback(0, total_files, f"准备移动 {total_files} 个文件...")
+        
+        def _move_recursive(src_dir: Path, dst_dir: Path, current_depth: int = 0):
+            """递归移动，带深度限制"""
+            nonlocal moved_files
+            
+            if current_depth >= max_depth:
+                logger.warning(f"达到最大移动深度 {max_depth}，跳过: {src_dir}")
+                return
+            
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 遍历源目录中的所有项
+            try:
+                items = list(src_dir.iterdir())
+            except (PermissionError, OSError) as e:
+                logger.warning(f"无法访问目录 {src_dir}: {e}")
+                return
+            
+            for item in items:
+                try:
+                    # 跳过符号链接
+                    if item.is_symlink():
+                        logger.debug(f"跳过符号链接: {item}")
+                        continue
+                    
+                    # 跳过隐藏文件和系统文件
+                    if item.name.startswith('.') or item.name in ['__pycache__', 'Thumbs.db', 'desktop.ini']:
+                        continue
+                    
+                    dst_item = dst_dir / item.name
+                    
+                    if item.is_file():
+                        # 移动文件
+                        shutil.move(str(item), str(dst_item))
+                        moved_files += 1
+                        
+                        # 报告进度
+                        if progress_callback and total_files > 0:
+                            progress = int((moved_files / total_files) * 100)
+                            rel_path = item.relative_to(src)
+                            progress_callback(moved_files, total_files, f"正在移动: {rel_path}")
+                    elif item.is_dir():
+                        # 递归移动子目录
+                        _move_recursive(item, dst_item, current_depth + 1)
+                        
+                except (PermissionError, OSError) as e:
+                    logger.warning(f"移动失败 {item}: {e}")
+                    continue
+                except Exception as e:
+                    logger.error(f"处理 {item} 时出错: {e}")
+                    continue
+        
+        try:
+            logger.info(f"开始安全移动: {src} -> {dst} (最大深度: {max_depth})")
+            _move_recursive(src, dst)
+            
+            # 删除源目录树（包括所有子目录）
+            if src.exists():
+                try:
+                    shutil.rmtree(src)
+                    logger.info(f"已删除源目录树: {src}")
+                except Exception as e:
+                    logger.warning(f"删除源目录树失败（部分文件可能已移动）: {e}")
+            
+            if progress_callback:
+                progress_callback(total_files, total_files, "移动完成！")
+            logger.info(f"移动完成: {dst}")
+        except Exception as e:
+            raise Exception(f"移动目录失败: {src} -> {dst}: {e}")
+    
+    def _safe_move_file(self, src: Path, dst: Path, progress_callback=None) -> None:
+        """安全地移动单个文件，支持实时进度报告
+        
+        Args:
+            src: 源文件
+            dst: 目标文件
+            progress_callback: 进度回调函数 (current, total, message)
+        """
+        try:
+            if not src.is_file():
+                raise ValueError(f"源路径不是文件: {src}")
+            
+            file_size = src.stat().st_size
+            
+            if progress_callback:
+                progress_callback(0, 1, f"准备移动文件: {src.name}")
+            
+            # 简单地移动文件（通常很快）
+            shutil.move(str(src), str(dst))
+            
+            if progress_callback:
+                progress_callback(1, 1, f"已移动: {src.name}")
+            
+            logger.info(f"文件已移动: {src} -> {dst}")
+            
+        except Exception as e:
+            logger.error(f"移动文件失败: {src} -> {dst}: {e}")
+            raise Exception(f"移动文件失败: {e}")
+    
     def _do_preview_asset(self, asset: Asset, preview_project: Path, progress_callback=None) -> None:
         """执行资产预览（后台线程）"""
         try:
@@ -1333,7 +1472,7 @@ class AssetManagerLogic(QObject):
                 logger.warning(f"检查路径时出错: {e}")
             
             if progress_callback:
-                progress_callback(0, 100, "正在清空预览工程Content文件夹...")
+                progress_callback(0, 1, "正在清空预览工程Content文件夹...")
             
             if content_dir.exists():
                 logger.info("清空预览工程Content文件夹...")
@@ -1361,7 +1500,7 @@ class AssetManagerLogic(QObject):
             
             # 通知进度对话框复制已完成，即将启动引擎
             if progress_callback:
-                progress_callback(100, 100, "复制完成，正在启动虚幻引擎...")
+                progress_callback(1, 1, "复制完成，正在启动虚幻引擎...")
             
             def launch_and_monitor():
                 """在独立线程中启动和监听虚幻引擎"""
@@ -1538,7 +1677,7 @@ class AssetManagerLogic(QObject):
                 # 如果目标已存在，先删除
                 if dest_dir.exists():
                     if progress_callback:
-                        progress_callback(0, 100, "正在删除已有的同名文件夹...")
+                        progress_callback(0, 1, "正在删除已有的同名文件夹...")
                     shutil.rmtree(dest_dir)
                 
                 # 使用安全复制并报告进度

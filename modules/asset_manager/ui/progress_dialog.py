@@ -246,15 +246,15 @@ class ProgressDialog(QDialog):
         if total > 0:
             progress = int((current / total) * 100)
             self.set_progress(progress)
-        elif "复制完成" in message or "启动虚幻引擎" in message:
+        elif "完成" in message or "已移动" in message:
             # 如果total为0（空文件夹）但操作已完成，也设置为100%
             self.set_progress(100)
         
         self.set_status(message)
         
-        # 当复制完成后，自动关闭对话框
-        # 修复：total可能为0（空文件夹），也应该自动关闭
-        if ("复制完成" in message or "启动虚幻引擎" in message):
+        # 当操作完成后，自动关闭对话框
+        # 检测完成条件：进度达到100%或包含完成相关关键词
+        if (current == total and total > 0) or ("完成！" in message or "启动虚幻引擎" in message):
             logger.info(f"[进度对话框] 检测到完成条件（{current}/{total}），准备关闭对话框")
             self.finish_success(800)
     
