@@ -260,8 +260,36 @@ class AssetCard(QFrame):
         return pos.y() > self.height() - 50
     
     def _show_description_dialog(self):
-        """显示资产描述对话框（已移除文档支持）"""
-        logger.info(f"资产 {self.asset.name} 的文档功能已移除")
+        """点击卡片打开关联的文本文档"""
+        try:
+            import subprocess
+            import sys
+            from pathlib import Path
+            
+            # 构建文档文件名（与资产ID关联）
+            doc_filename = f"{self.asset.id}.txt"
+            
+            # 文档保存在: C:\Users\{user}\AppData\Roaming\ue_toolkit\user_data\documents
+            user_data_dir = Path.home() / "AppData" / "Roaming" / "ue_toolkit" / "user_data"
+            documents_dir = user_data_dir / "documents"
+            doc_path = documents_dir / doc_filename
+            
+            # 如果文档存在，打开它
+            if doc_path.exists():
+                logger.info(f"打开文本文档: {doc_path}")
+                if sys.platform == "win32":
+                    subprocess.Popen(['notepad', str(doc_path)])
+                elif sys.platform == "darwin":
+                    subprocess.Popen(['open', '-a', 'TextEdit', str(doc_path)])
+                else:
+                    subprocess.Popen(['gedit', str(doc_path)])
+            else:
+                logger.warning(f"文本文档不存在: {doc_path}")
+                logger.info(f"资产 {self.asset.name} 的关联文本文档位置应该是: {doc_path}")
+                logger.info(f"请通过添加资产时勾选'创建文档'选项来生成文档")
+        
+        except Exception as e:
+            logger.error(f"打开文本文档失败: {e}", exc_info=True)
     
     def _init_ui(self):
         """初始化UI - 极简现代化卡片设计"""
