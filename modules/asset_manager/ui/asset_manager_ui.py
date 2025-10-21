@@ -395,14 +395,17 @@ class AssetManagerUI(QWidget):
         
         try:
             current_category = self.category_combo.currentText()
+            categories = self.logic.get_all_categories()
+            
+            logger.info(f"[DEBUG] 更新分类下拉框 - 当前选中: {current_category}, 获取到的分类: {categories}")
             
             # 清空并重新添加
             self.category_combo.clear()
             self.category_combo.addItem("全部分类")
             
             # 添加所有分类
-            categories = self.logic.get_all_categories()
             self.category_combo.addItems(categories)
+            logger.info(f"[DEBUG] 分类已添加到下拉框，共 {self.category_combo.count()} 项")
             
             # 恢复之前选中的分类
             if current_category:
@@ -412,7 +415,7 @@ class AssetManagerUI(QWidget):
         finally:
             # 恢复信号
             self.category_combo.blockSignals(False)
-            logger.debug(f"分类选择框已更新，当前选中: {self.category_combo.currentText()}")
+            logger.info(f"[DEBUG] 分类下拉框更新完成，当前选中: {self.category_combo.currentText()}")
     
     def _on_category_changed(self, category_name: str):
         """分类改变事件"""
@@ -587,9 +590,10 @@ class AssetManagerUI(QWidget):
                 lib_path = Path(lib_path_str)
                 if self.logic.set_asset_library_path(lib_path):
                     logger.info(f"资产库路径已设置: {lib_path}")
-                    # 重新加载配置以显示资产
-                    self.logic._load_config()
-                    self._refresh_assets()
+                    # set_asset_library_path 内部已调用 _load_config()
+                    # 使用小延迟确保数据完全加载后再更新UI
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(0, self._on_categories_updated)
             
             # 设置预览工程路径
             if preview_path_str:

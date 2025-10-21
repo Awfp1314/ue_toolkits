@@ -1038,6 +1038,7 @@ class AssetManagerLogic(QObject):
             current_lib_path = self.get_asset_library_path()
             if current_lib_path:
                 logger.info(f"保存当前资产库路径的配置: {current_lib_path}")
+                # 这里会保存当前路径的分类和资产数据
                 self._save_config()
             
             # 第二步：更新配置中的资产库路径
