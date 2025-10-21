@@ -190,6 +190,10 @@ pytest --cov=core --cov=modules --cov-report=html
 
 本项目采用 MIT 许可证，详情请见 [LICENSE](LICENSE) 文件。
 
+## 发布打包
+
+有关如何构建和打包发布版本的详细信息，请参阅 [RELEASE.md](RELEASE.md) 文件。
+
 ## 作者
 
 HUTAO
