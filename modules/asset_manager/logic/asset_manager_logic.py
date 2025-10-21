@@ -78,20 +78,17 @@ class AssetManagerLogic(QObject):
         config = self.config_manager.load_user_config()
         if not config:
             config = {
-                "_version": "1.0.0",
-                "asset_library_path": "",  # 新增：资产库路径
+                "_version": "2.0.0",
                 "preview_project_path": "",
                 "last_target_project_path": "",
-                "categories": ["默认分类"],
-                "assets": []
+                "asset_library_configs": {}
             }
             self.config_manager.save_user_config(config)
         
-        # 从配置加载分类列表
-        self.categories = config.get("categories", ["默认分类"])
-        if "默认分类" not in self.categories:
-            self.categories.insert(0, "默认分类")
+        # 自动迁移旧配置格式到新格式
+        config = self._migrate_config(config)
         
+        # 获取当前资产库路径
         asset_library_path = config.get("asset_library_path", "")
         if not asset_library_path or not Path(asset_library_path).exists():
             logger.warning("资产库路径未设置或不存在，不加载任何资产")
@@ -99,8 +96,88 @@ class AssetManagerLogic(QObject):
             self.assets_loaded.emit(self.assets)
             return
         
-        # 从资产库扫描实际存在的资产
-        self._scan_asset_library(Path(asset_library_path), config.get("assets", []))
+        # 从新的多路径配置中获取该路径的配置
+        asset_library_configs = config.get("asset_library_configs", {})
+        lib_config = asset_library_configs.get(asset_library_path, {})
+        
+        # 从配置加载分类列表
+        self.categories = lib_config.get("categories", config.get("categories", ["默认分类"]))
+        if "默认分类" not in self.categories:
+            self.categories.insert(0, "默认分类")
+        
+        # 从资产库扫描实际存在的资产（优先使用缓存的资产数据）
+        cached_assets_data = lib_config.get("assets", config.get("assets", []))
+        self._scan_asset_library(Path(asset_library_path), cached_assets_data)
+    
+    def _migrate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """迁移旧配置格式到新的多路径格式
+        
+        旧格式: 
+        {
+            "asset_library_path": "...",
+            "categories": [...],
+            "assets": [...]
+        }
+        
+        新格式:
+        {
+            "_version": "2.0.0",
+            "asset_library_configs": {
+                "path": {
+                    "categories": [...],
+                    "assets": [...]
+                }
+            }
+        }
+        """
+        version = config.get("_version", "1.0.0")
+        
+        # 如果已经是新版本格式，直接返回
+        if version == "2.0.0":
+            logger.debug("配置已是最新版本2.0.0")
+            return config
+        
+        logger.info(f"检测到旧配置版本 {version}，开始迁移...")
+        
+        try:
+            # 保存旧的资产库路径和资产数据
+            old_asset_library_path = config.get("asset_library_path", "")
+            old_categories = config.get("categories", ["默认分类"])
+            old_assets = config.get("assets", [])
+            
+            # 创建新格式的配置
+            new_config = {
+                "_version": "2.0.0",
+                "preview_project_path": config.get("preview_project_path", ""),
+                "last_target_project_path": config.get("last_target_project_path", ""),
+                "asset_library_configs": {}
+            }
+            
+            # 如果旧配置有资产库路径，将其数据迁移到新格式
+            if old_asset_library_path:
+                new_config["asset_library_configs"][old_asset_library_path] = {
+                    "categories": old_categories,
+                    "assets": old_assets
+                }
+                logger.info(f"已迁移旧配置: {old_asset_library_path}")
+            
+            # 保存迁移后的配置
+            self.config_manager.save_user_config(new_config)
+            logger.info("配置迁移完成")
+            
+            # 返回与旧格式兼容的视图（用于向后兼容）
+            # 这样可以保证加载逻辑不需要太多改动
+            if old_asset_library_path:
+                new_config["asset_library_path"] = old_asset_library_path
+                new_config["categories"] = old_categories
+                new_config["assets"] = old_assets
+            
+            return new_config
+            
+        except Exception as e:
+            logger.error(f"配置迁移失败: {e}", exc_info=True)
+            # 迁移失败时返回原配置
+            return config
     
     def _scan_asset_library(self, library_path: Path, cached_assets_data: List[Dict[str, Any]]) -> None:
         """扫描资产库，加载实际存在的资产
@@ -148,6 +225,21 @@ class AssetManagerLogic(QObject):
                     
                     if cached_data:
                         # 使用缓存的数据恢复资产
+                        # 获取缩略图路径，并验证其有效性
+                        thumbnail_path = None
+                        if cached_data.get("thumbnail_path"):
+                            thumbnail_candidate = Path(cached_data["thumbnail_path"])
+                            # 验证缩略图文件是否存在
+                            if thumbnail_candidate.exists():
+                                thumbnail_path = thumbnail_candidate
+                                logger.debug(f"找到有效的缩略图: {cached_data['name']} -> {thumbnail_path}")
+                            else:
+                                logger.warning(f"缩略图文件不存在，将跳过: {thumbnail_candidate}")
+                                # 尝试从标准缩略图目录查找
+                                thumbnail_path = self._find_thumbnail_by_asset_id(cached_data.get("id"))
+                                if thumbnail_path:
+                                    logger.info(f"从缩略图目录恢复了缩略图: {cached_data['name']}")
+                        
                         asset = Asset(
                             id=cached_data["id"],
                             name=cached_data["name"],
@@ -155,7 +247,7 @@ class AssetManagerLogic(QObject):
                             path=item,
                             category=category,  # 使用当前分类文件夹作为分类
                             file_extension=cached_data.get("file_extension", file_extension),
-                            thumbnail_path=Path(cached_data["thumbnail_path"]) if cached_data.get("thumbnail_path") else None,
+                            thumbnail_path=thumbnail_path,
                             thumbnail_source=cached_data.get("thumbnail_source"),
                             size=cached_data.get("size", 0),
                             created_time=datetime.fromisoformat(cached_data.get("created_time", datetime.now().isoformat())),
@@ -206,6 +298,32 @@ class AssetManagerLogic(QObject):
             return total_size
         return 0
     
+    def _find_thumbnail_by_asset_id(self, asset_id: str) -> Optional[Path]:
+        """根据资产ID在缩略图目录中查找缩略图
+        
+        Args:
+            asset_id: 资产ID
+            
+        Returns:
+            如果找到缩略图返回Path对象，否则返回None
+        """
+        if not asset_id or not self.thumbnails_dir.exists():
+            return None
+        
+        try:
+            # 标准缩略图文件名格式为 {asset_id}.png
+            thumbnail_path = self.thumbnails_dir / f"{asset_id}.png"
+            if thumbnail_path.exists():
+                logger.debug(f"找到了缩略图文件: {thumbnail_path}")
+                return thumbnail_path
+            
+            logger.debug(f"缩略图不存在: {thumbnail_path}")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"查找缩略图失败 (asset_id: {asset_id}): {e}")
+            return None
+    
     def _load_assets_from_config(self, assets_data: List[Dict[str, Any]]) -> None:
         """从配置数据加载资产列表"""
         self.assets.clear()
@@ -252,29 +370,49 @@ class AssetManagerLogic(QObject):
         """保存配置"""
         config = self.config_manager.load_user_config() or {}
         
-        config["categories"] = self.categories
+        # 确保配置有正确的结构
+        if "_version" not in config:
+            config["_version"] = "2.0.0"
         
-        assets_data = []
-        for asset in self.assets:
-            assets_data.append({
-                "id": asset.id,
-                "name": asset.name,
-                "asset_type": asset.asset_type.value,
-                "path": str(asset.path),
-                "category": asset.category,
-                "file_extension": asset.file_extension,
-                "thumbnail_path": str(asset.thumbnail_path) if asset.thumbnail_path else None,
-                "thumbnail_source": asset.thumbnail_source,  # 新增：保存缩略图来源
-                "size": asset.size,
-                "created_time": asset.created_time.isoformat(),
-                "description": asset.description
-            })
+        if "asset_library_configs" not in config:
+            config["asset_library_configs"] = {}
         
-        config["assets"] = assets_data
+        # 获取当前资产库路径
+        current_lib_path = self.get_asset_library_path()
+        
+        if current_lib_path:
+            lib_path_str = str(current_lib_path)
+            
+            # 保存分类列表
+            config["asset_library_configs"][lib_path_str] = {
+                "categories": self.categories
+            }
+            
+            # 保存资产数据
+            assets_data = []
+            for asset in self.assets:
+                assets_data.append({
+                    "id": asset.id,
+                    "name": asset.name,
+                    "asset_type": asset.asset_type.value,
+                    "path": str(asset.path),
+                    "category": asset.category,
+                    "file_extension": asset.file_extension,
+                    "thumbnail_path": str(asset.thumbnail_path) if asset.thumbnail_path else None,
+                    "thumbnail_source": asset.thumbnail_source,
+                    "size": asset.size,
+                    "created_time": asset.created_time.isoformat(),
+                    "description": asset.description
+                })
+            
+            config["asset_library_configs"][lib_path_str]["assets"] = assets_data
+            
+            logger.debug(f"已保存 {len(self.assets)} 个资产的配置到路径: {lib_path_str}")
+        
         self.config_manager.save_user_config(config)
     
     def add_asset(self, asset_path: Path, asset_type: AssetType, name: str = "", category: str = "默认分类", 
-                  description: str = "") -> Optional[Asset]:
+                  description: str = "", create_markdown: bool = False) -> Optional[Asset]:
         """添加资产（将资产移动到资产库）
         
         Args:
@@ -283,6 +421,7 @@ class AssetManagerLogic(QObject):
             name: 资产名称（可选，默认使用文件/文件夹名）
             category: 资产分类
             description: 资产描述
+            create_markdown: 是否创建markdown文档
             
         Returns:
             添加成功返回Asset对象，失败返回None
@@ -364,6 +503,10 @@ class AssetManagerLogic(QObject):
             self.asset_added.emit(asset)
             logger.info("asset_added 信号已发送")
             
+            # 如果需要创建markdown文档
+            if create_markdown:
+                self._create_asset_markdown(asset)
+            
             return asset
             
         except Exception as e:
@@ -371,6 +514,85 @@ class AssetManagerLogic(QObject):
             logger.error(error_msg, exc_info=True)
             self.error_occurred.emit(error_msg)
             return None
+    
+    def _create_asset_markdown(self, asset: Asset) -> None:
+        """创建资产的文本文档并用记事本打开
+        
+        Args:
+            asset: 资产对象
+        """
+        try:
+            import subprocess
+            from pathlib import Path
+            
+            # 创建文档目录：user_data/documents
+            # config_dir 是 .../user_data/configs/asset_manager
+            # 所以 user_data 目录是 config_dir.parent.parent
+            user_data_dir = self.config_dir.parent.parent
+            documents_dir = user_data_dir / "documents"
+            documents_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 文档文件名为 {asset_id}.txt
+            doc_filename = f"{asset.id}.txt"
+            doc_path = documents_dir / doc_filename
+            
+            # 创建文本内容
+            text_content = f"""资产信息表
+{'='*50}
+
+资产名称: {asset.name}
+资产ID: {asset.id}
+资产类型: {asset.asset_type.value}
+分类: {asset.category}
+文件路径: {asset.path}
+文件大小: {self._format_size(asset.size)}
+创建时间: {asset.created_time.strftime('%Y-%m-%d %H:%M:%S')}
+
+描述:
+{asset.description or '暂无'}
+
+{'='*50}
+
+使用说明:
+请在下方添加关于如何使用该资产的详细说明...
+
+
+备注:
+请在下方添加其他备注信息...
+
+"""
+            
+            # 写入文档到固定位置
+            with open(doc_path, 'w', encoding='utf-8') as f:
+                f.write(text_content)
+            
+            logger.info(f"已创建文本文档: {doc_path}")
+            
+            # 用记事本打开
+            import sys
+            if sys.platform == "win32":
+                subprocess.Popen(['notepad', str(doc_path)])
+                logger.info(f"已用记事本打开文档: {doc_path}")
+            elif sys.platform == "darwin":
+                subprocess.Popen(['open', '-a', 'TextEdit', str(doc_path)])
+                logger.info(f"已用TextEdit打开文档: {doc_path}")
+            else:
+                subprocess.Popen(['gedit', str(doc_path)])
+                logger.info(f"已用gedit打开文档: {doc_path}")
+            
+        except Exception as e:
+            logger.warning(f"创建文本文档失败: {e}", exc_info=True)
+    
+    def _format_size(self, size: int) -> str:
+        """格式化文件大小"""
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        elif size < 1024 * 1024 * 1024:
+            return f"{size / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size / (1024 * 1024 * 1024):.2f} GB"
     
     def remove_asset(self, asset_id: str, delete_physical: bool = False) -> bool:
         """删除资产
@@ -786,9 +1008,17 @@ class AssetManagerLogic(QObject):
     def get_asset_library_path(self) -> Optional[Path]:
         """获取资产库路径"""
         config = self.config_manager.load_user_config()
-        library_path = config.get("asset_library_path", "")
-        if library_path:
-            return Path(library_path)
+        # 从配置中获取资产库路径，优先使用旧的单一路径，然后是新的多路径配置
+        asset_library_path = config.get("asset_library_path", "")
+        if not asset_library_path:
+            # 尝试从配置中获取第一个资产库路径
+            for key in config.get("asset_library_configs", {}).keys():
+                if Path(key).exists():
+                    asset_library_path = key
+                    break
+        
+        if asset_library_path:
+            return Path(asset_library_path)
         return None
     
     def set_asset_library_path(self, library_path: Path) -> bool:
@@ -804,14 +1034,29 @@ class AssetManagerLogic(QObject):
             if not library_path.exists():
                 library_path.mkdir(parents=True, exist_ok=True)
             
+            # 第一步：保存当前资产库路径的配置
+            current_lib_path = self.get_asset_library_path()
+            if current_lib_path:
+                logger.info(f"保存当前资产库路径的配置: {current_lib_path}")
+                self._save_config()
+            
+            # 第二步：更新配置中的资产库路径
             config = self.config_manager.load_user_config() or {}
+            
+            # 确保新的配置结构
+            if "_version" not in config:
+                config["_version"] = "2.0.0"
+            if "asset_library_configs" not in config:
+                config["asset_library_configs"] = {}
+            
             config["asset_library_path"] = str(library_path)
             self.config_manager.save_user_config(config)
             
-            # 同步分类文件夹
-            self._sync_category_folders()
+            # 第三步：从新路径加载配置
+            logger.info(f"从新资产库路径加载配置: {library_path}")
+            self._load_config()
             
-            logger.info(f"资产库路径已设置: {library_path}")
+            logger.info(f"资产库路径已切换至: {library_path}")
             return True
             
         except Exception as e:
