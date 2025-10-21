@@ -407,32 +407,17 @@ class SettingsWidget(QWidget):
                 if asset_manager_module and hasattr(asset_manager_module, 'instance'):
                     module_instance = asset_manager_module.instance
                     
-                    # 第一步：让逻辑层重新加载配置和扫描资产
-                    if hasattr(module_instance, 'logic') and module_instance.logic:
-                        asset_logic = module_instance.logic
-                        logger.info("触发资产逻辑层重新加载配置...")
-                        
-                        # 重新加载配置，这会触发资产库的重新扫描
-                        if hasattr(asset_logic, '_load_config'):
-                            asset_logic._load_config()
-                            logger.info("✓ 资产逻辑层配置重新加载完成")
-                        else:
-                            logger.warning("资产逻辑层没有_load_config方法")
-                    
-                    # 第二步：刷新UI显示
+                    # 刷新UI显示（set_asset_library_path已经调用了_load_config）
                     if hasattr(module_instance, 'ui') and module_instance.ui:
                         asset_manager_ui = module_instance.ui
                         
-                        if hasattr(asset_manager_ui, '_refresh_category_combo'):
-                            logger.info("刷新分类下拉框...")
-                            asset_manager_ui._refresh_category_combo()
-                        
-                        if hasattr(asset_manager_ui, '_refresh_assets'):
-                            logger.info("刷新资产显示...")
-                            asset_manager_ui._refresh_assets()
+                        # 使用与分类管理相同的回调方法
+                        if hasattr(asset_manager_ui, '_on_categories_updated'):
+                            logger.info("刷新分类下拉框和资产显示...")
+                            asset_manager_ui._on_categories_updated()
                             logger.info("✓ 资产管理器UI刷新完成")
                         else:
-                            logger.warning("资产管理器UI没有_refresh_assets方法")
+                            logger.warning("资产管理器UI没有_on_categories_updated方法")
                     else:
                         logger.debug("资产管理器UI尚未创建，配置已重新加载，切换到资产管理器时会自动应用")
                 else:
