@@ -323,8 +323,16 @@ class SettingsWidget(QWidget):
     
     def _clear_additional_preview_inputs(self):
         """清空额外的预览工程路径输入框"""
-        for input_field, _ in self.additional_preview_inputs:
-            input_field.deleteLater()
+        for input_field, container_layout in self.additional_preview_inputs:
+            # 删除布局中的所有控件
+            while container_layout.count():
+                item = container_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # 从容器中移除这个布局
+            self.additional_preview_container.removeItem(container_layout)
+        
         self.additional_preview_inputs.clear()
     
     def _add_additional_preview_project(self):

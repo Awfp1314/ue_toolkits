@@ -1861,10 +1861,7 @@ class AssetManagerLogic(QObject):
             
             if not screenshot_path:
                 if has_thumbnail:
-                    if asset.thumbnail_source == "screenshots":
-                        logger.info(f"资产 {asset.name} 缩略图来自Screenshots目录，未找到新截图，保持原缩略图")
-                    else:
-                        logger.info(f"资产 {asset.name} 缩略图来自Saved目录，未找到新截图，保持原缩略图")
+                    logger.info(f"资产 {asset.name} 保留原缩略图，未找到新截图")
                 else:
                     logger.info(f"未找到资产 {asset.name} 的截图")
                 return
@@ -1901,55 +1898,49 @@ class AssetManagerLogic(QObject):
     def _find_screenshot(self, preview_project: Path, thumbnail_source: Optional[str] = None) -> tuple[Optional[Path], Optional[str]]:
         """查找截图文件
         
-        查找策略：
-        - 如果缩略图来源是 "screenshots"：只检查 Saved/Screenshots/Windows/
-        - 如果缩略图来源是 "saved" 或 None：按优先级检查 Saved/Screenshots/Windows/ 和 Saved/
+        查找策略：扫描 {预览工程}/Saved/Screenshots/ 下的所有文件夹，查找最新的图片文件
         
         Args:
             preview_project: 预览工程路径
-            thumbnail_source: 缩略图来源（"screenshots" 或 "saved" 或 None）
+            thumbnail_source: 缩略图来源（用于向后兼容，暂不使用）
             
         Returns:
             元组 (截图文件路径, 来源)，如果未找到返回 (None, None)
-            来源值为 "screenshots" 或 "saved"
+            来源值为 "screenshots"
         """
         try:
-            # 根据缩略图来源决定搜索路径
-            if thumbnail_source == "screenshots":
-                # 缩略图曾经从Screenshots获取：只检查Screenshots目录
-                search_dirs = [
-                    (preview_project / "Saved" / "Screenshots" / "Windows", "screenshots")
-                ]
-                logger.debug("缩略图来自Screenshots/Windows目录，仅检查该目录")
+            screenshots_dir = preview_project / "Saved" / "Screenshots"
+            
+            if not screenshots_dir.exists():
+                logger.debug(f"Screenshots目录不存在: {screenshots_dir}")
+                return None, None
+            
+            # 扫描 Screenshots 下的所有文件夹和当前目录，查找所有图片文件
+            latest_screenshot = None
+            latest_mtime = 0
+            
+            # 先扫描 Screenshots 当前目录
+            for file_path in screenshots_dir.glob("*.png"):
+                mtime = file_path.stat().st_mtime
+                if mtime > latest_mtime:
+                    latest_mtime = mtime
+                    latest_screenshot = file_path
+            
+            # 再扫描所有子文件夹
+            for subdir in screenshots_dir.iterdir():
+                if subdir.is_dir():
+                    for file_path in subdir.glob("*.png"):
+                        mtime = file_path.stat().st_mtime
+                        if mtime > latest_mtime:
+                            latest_mtime = mtime
+                            latest_screenshot = file_path
+            
+            if latest_screenshot:
+                logger.info(f"找到截图: {latest_screenshot}")
+                return latest_screenshot, "screenshots"
             else:
-                # 缩略图从未从Screenshots获取（来自Saved或从未获取过）：检查两个目录
-                search_dirs = [
-                    (preview_project / "Saved" / "Screenshots" / "Windows", "screenshots"),
-                    (preview_project / "Saved", "saved")
-                ]
-                if thumbnail_source == "saved":
-                    logger.debug("缩略图来自Saved目录，每次检查Screenshots/Windows和Saved目录")
-                else:
-                    logger.debug("资产无缩略图或未知来源，检查Screenshots/Windows和Saved目录")
-            
-            for search_dir, source in search_dirs:
-                if not search_dir.exists():
-                    logger.debug(f"目录不存在: {search_dir}")
-                    continue
-                
-                # 查找PNG文件
-                png_files = list(search_dir.glob("*.png"))
-                
-                if png_files:
-                    # 按修改时间排序，取最新的
-                    latest_screenshot = max(png_files, key=lambda p: p.stat().st_mtime)
-                    logger.info(f"找到截图: {latest_screenshot}，来源: {source}")
-                    return latest_screenshot, source
-                else:
-                    logger.debug(f"目录中无PNG文件: {search_dir}")
-            
-            logger.debug("未找到任何截图文件")
-            return None, None
+                logger.debug(f"Screenshots目录中无PNG文件")
+                return None, None
             
         except Exception as e:
             logger.error(f"查找截图时出错: {e}", exc_info=True)
