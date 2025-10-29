@@ -6,7 +6,7 @@
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QFileDialog, QGroupBox, 
-                             QFrame, QComboBox, QMessageBox)
+                             QFrame, QComboBox, QMessageBox, QScrollArea)
 from PyQt6.QtCore import Qt, QStandardPaths
 from PyQt6.QtGui import QFont
 from pathlib import Path
@@ -14,6 +14,7 @@ import json
 from core.logger import get_logger
 from core.utils.theme_manager import get_theme_manager, Theme
 from core.utils.custom_widgets import NoContextMenuLineEdit
+from modules.config_tool.ui.dialogs.name_input_dialog import NameInputDialog
 
 logger = get_logger(__name__)
 
@@ -25,6 +26,9 @@ class SettingsWidget(QWidget):
         super().__init__(parent)
         self.asset_manager_logic = None  # 将在显示时设置
         self.theme_manager = get_theme_manager()  # 获取主题管理器
+        
+        # 存储额外工程路径的输入框列表
+        self.additional_preview_inputs = []
         
         self.init_ui()
         
@@ -63,26 +67,28 @@ class SettingsWidget(QWidget):
         
         paths_layout.addLayout(asset_lib_layout)
         
-        # 预览工程路径
-        self.preview_label = QLabel("预览工程路径：")
-        paths_layout.addWidget(self.preview_label)
+        # 预览工程说明标签
+        self.preview_info_label = QLabel("⚠️ 预览工程：请通过下方'添加其他工程'添加。首个添加的工程将作为默认预览工程。")
+        self.preview_info_label.setStyleSheet("font-size: 12px; color: #FFA500;")
+        self.preview_info_label.setWordWrap(True)
+        paths_layout.addWidget(self.preview_info_label)
         
-        preview_layout = QHBoxLayout()
-        preview_layout.setSpacing(10)
+        # 额外工程路径容器（用于存放动态添加的路径）
+        self.additional_preview_container = QVBoxLayout()
+        self.additional_preview_container.setSpacing(15)
+        paths_layout.addLayout(self.additional_preview_container)
         
-        self.preview_input = NoContextMenuLineEdit()
-        self.preview_input.setPlaceholderText("未设置预览工程路径...")
-        self.preview_input.setReadOnly(True)
-        self.preview_input.setMaximumWidth(500)  # 设置最大宽度
-        preview_layout.addWidget(self.preview_input)
+        # 添加其他工程按钮
+        add_preview_layout = QHBoxLayout()
+        add_preview_layout.setSpacing(10)
         
-        browse_preview_btn = QPushButton("浏览...")
-        browse_preview_btn.setFixedWidth(80)
-        browse_preview_btn.clicked.connect(self._browse_preview_project)
-        preview_layout.addWidget(browse_preview_btn)
-        preview_layout.addStretch()  # 添加弹性空间
+        add_preview_btn = QPushButton("➕ 添加工程")
+        add_preview_btn.setFixedWidth(150)
+        add_preview_btn.clicked.connect(self._add_additional_preview_project)
+        add_preview_layout.addWidget(add_preview_btn)
+        add_preview_layout.addStretch()
         
-        paths_layout.addLayout(preview_layout)
+        paths_layout.addLayout(add_preview_layout)
         
         paths_group.setLayout(paths_layout)
         main_layout.addWidget(paths_group)
@@ -284,21 +290,279 @@ class SettingsWidget(QWidget):
                 self.asset_lib_input.setText("")
                 logger.warning("✗ 资产库路径为空或None")
             
-            preview_path = self.asset_manager_logic.get_preview_project()
-            logger.info(f"从logic获取到预览工程路径: {preview_path} (类型: {type(preview_path)})")
-            
-            if preview_path:
-                path_str = str(preview_path)
-                self.preview_input.setText(path_str)
-                logger.info(f"✓ 已加载预览工程路径到输入框: {path_str}")
-            else:
-                self.preview_input.setText("")
-                logger.warning("✗ 预览工程路径为空或None")
+            # 加载额外的预览工程路径
+            self._load_additional_preview_projects()
             
             logger.info("路径加载完成")
             
         except Exception as e:
             logger.error(f"加载路径设置失败: {e}", exc_info=True)
+    
+    def _load_additional_preview_projects(self):
+        """加载额外的预览工程路径"""
+        try:
+            if not self.asset_manager_logic:
+                return
+            
+            # 从配置中加载额外的预览工程路径（带名称）
+            additional_projects = self.asset_manager_logic.get_additional_preview_projects_with_names()
+            
+            # 清空现有的输入框
+            self._clear_additional_preview_inputs()
+            
+            # 添加加载的路径
+            for project in additional_projects:
+                path_str = project.get("path", "")
+                name = project.get("name", "")
+                self._add_additional_preview_project_with_data(path_str, name)
+            
+            logger.info(f"已加载 {len(additional_projects)} 个额外预览工程")
+            
+        except Exception as e:
+            logger.error(f"加载额外预览工程路径失败: {e}", exc_info=True)
+    
+    def _clear_additional_preview_inputs(self):
+        """清空额外的预览工程路径输入框"""
+        for input_field, container_layout in self.additional_preview_inputs:
+            # 删除布局中的所有控件
+            while container_layout.count():
+                item = container_layout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # 从容器中移除这个布局
+            self.additional_preview_container.removeItem(container_layout)
+        
+        self.additional_preview_inputs.clear()
+    
+    def _add_additional_preview_project(self):
+        """添加新的预览工程路径（交互式）"""
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            "选择预览工程文件夹",
+            "",
+            QFileDialog.Option.ShowDirsOnly
+        )
+        
+        if folder:
+            logger.info(f"选择预览工程路径: {folder}")
+            
+            # 弹出命名对话框
+            name_dialog = NameInputDialog(self)
+            name_dialog.name_input.setPlaceholderText("请输入工程名称")
+            
+            # 获取已有的名称列表，防止重复
+            existing_projects = self.asset_manager_logic.get_additional_preview_projects_with_names()
+            existing_names = [p.get("name", "") for p in existing_projects]
+            name_dialog.set_existing_names(existing_names)
+            
+            if name_dialog.exec() == QFileDialog.DialogCode.Accepted:
+                project_name = name_dialog.get_config_name()
+                if project_name:
+                    self._add_additional_preview_project_with_data(folder, project_name)
+                    self._save_additional_preview_projects()
+                    logger.info(f"已添加工程: {project_name} -> {folder}")
+            else:
+                logger.info("用户取消了命名对话框")
+    
+    def _add_additional_preview_project_with_path(self, path_str: str):
+        """使用给定的路径添加额外预览工程
+        
+        Args:
+            path_str: 预览工程路径字符串
+        """
+        # 创建新的输入框容器
+        container_layout = QHBoxLayout()
+        container_layout.setSpacing(10)
+        
+        # 标签
+        label = QLabel(f"额外工程 {len(self.additional_preview_inputs) + 1}：")
+        container_layout.addWidget(label)
+        
+        # 输入框
+        input_field = NoContextMenuLineEdit()
+        input_field.setPlaceholderText("未设置预览工程路径...")
+        input_field.setReadOnly(True)
+        input_field.setMaximumWidth(500)
+        input_field.setText(path_str)
+        container_layout.addWidget(input_field)
+        
+        # 浏览按钮
+        browse_btn = QPushButton("浏览...")
+        browse_btn.setFixedWidth(80)
+        browse_btn.clicked.connect(lambda: self._browse_additional_preview_project(input_field))
+        container_layout.addWidget(browse_btn)
+        
+        # 删除按钮
+        remove_btn = QPushButton("✖ 移除")
+        remove_btn.setFixedWidth(80)
+        remove_btn.clicked.connect(lambda: self._remove_additional_preview_project(input_field, container_layout))
+        container_layout.addWidget(remove_btn)
+        
+        container_layout.addStretch()
+        
+        # 添加到容器
+        self.additional_preview_container.addLayout(container_layout)
+        self.additional_preview_inputs.append((input_field, container_layout))
+        
+        logger.info(f"已添加额外预览工程路径输入框: {path_str}")
+    
+    def _add_additional_preview_project_with_data(self, path_str: str, name: str):
+        """使用给定的路径和名称添加额外预览工程
+        
+        Args:
+            path_str: 预览工程路径字符串
+            name: 工程自定义名称
+        """
+        # 创建新的输入框容器
+        container_layout = QHBoxLayout()
+        container_layout.setSpacing(10)
+        
+        # 标签（显示自定义名称）
+        label = QLabel(f"{name}：")
+        container_layout.addWidget(label)
+        
+        # 输入框（显示路径，只读）
+        input_field = NoContextMenuLineEdit()
+        input_field.setPlaceholderText("工程路径...")
+        input_field.setReadOnly(True)
+        input_field.setMaximumWidth(500)
+        input_field.setText(path_str)
+        # 存储路径用于保存
+        input_field.path = path_str
+        input_field.name = name
+        container_layout.addWidget(input_field)
+        
+        # 浏览按钮
+        browse_btn = QPushButton("浏览...")
+        browse_btn.setFixedWidth(80)
+        browse_btn.clicked.connect(lambda: self._browse_additional_preview_project(input_field))
+        container_layout.addWidget(browse_btn)
+        
+        # 重命名按钮
+        rename_btn = QPushButton("📝 重命名")
+        rename_btn.setFixedWidth(100)
+        rename_btn.clicked.connect(lambda: self._rename_additional_preview_project(input_field, label, container_layout))
+        container_layout.addWidget(rename_btn)
+        
+        # 删除按钮
+        remove_btn = QPushButton("✖ 移除")
+        remove_btn.setFixedWidth(80)
+        remove_btn.clicked.connect(lambda: self._remove_additional_preview_project(input_field, container_layout))
+        container_layout.addWidget(remove_btn)
+        
+        container_layout.addStretch()
+        
+        # 添加到容器
+        self.additional_preview_container.addLayout(container_layout)
+        self.additional_preview_inputs.append((input_field, container_layout))
+        
+        logger.info(f"已添加额外预览工程: {name} -> {path_str}")
+    
+    def _browse_additional_preview_project(self, input_field: NoContextMenuLineEdit):
+        """浏览额外预览工程文件夹
+        
+        Args:
+            input_field: 输入框控件
+        """
+        current_path = input_field.text() or ""
+        folder = QFileDialog.getExistingDirectory(
+            self,
+            "选择预览工程文件夹",
+            current_path,
+            QFileDialog.Option.ShowDirsOnly
+        )
+        
+        if folder:
+            input_field.setText(folder)
+            logger.info(f"选择额外预览工程路径: {folder}")
+            self._save_additional_preview_projects()
+    
+    def _remove_additional_preview_project(self, input_field: NoContextMenuLineEdit, container_layout: QHBoxLayout):
+        """移除额外预览工程路径
+        
+        Args:
+            input_field: 输入框控件
+            container_layout: 容器布局
+        """
+        # 从列表中移除
+        self.additional_preview_inputs = [
+            (field, layout) for field, layout in self.additional_preview_inputs
+            if field is not input_field
+        ]
+        
+        # 从UI中移除
+        input_field.deleteLater()
+        
+        # 移除布局中的所有控件
+        while container_layout.count():
+            item = container_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # 从additional_preview_container中移除
+        self.additional_preview_container.removeItem(container_layout)
+        
+        logger.info("已移除额外预览工程路径")
+        self._save_additional_preview_projects()
+    
+    def _rename_additional_preview_project(self, input_field: NoContextMenuLineEdit, label: QLabel, container_layout: QHBoxLayout):
+        """重命名额外预览工程
+        
+        Args:
+            input_field: 输入框控件
+            label: 标签控件
+            container_layout: 容器布局
+        """
+        # 弹出命名对话框
+        name_dialog = NameInputDialog(self)
+        name_dialog.name_input.setPlaceholderText("请输入新的工程名称")
+        name_dialog.name_input.setText(input_field.name)
+        
+        # 获取已有的名称列表（除了当前名称），防止重复
+        existing_projects = self.asset_manager_logic.get_additional_preview_projects_with_names()
+        existing_names = [p.get("name", "") for p in existing_projects if p.get("name", "") != input_field.name]
+        name_dialog.set_existing_names(existing_names)
+        
+        if name_dialog.exec() == QFileDialog.DialogCode.Accepted:
+            new_name = name_dialog.get_config_name()
+            if new_name:
+                # 更新标签显示
+                label.setText(f"{new_name}：")
+                # 更新输入框的名称属性
+                input_field.name = new_name
+                logger.info(f"已重命名工程: {input_field.name} -> {new_name}")
+                self._save_additional_preview_projects()
+        else:
+            logger.info("用户取消了重命名")
+    
+    def _save_additional_preview_projects(self):
+        """保存所有额外预览工程路径和名称"""
+        if not self.asset_manager_logic:
+            logger.warning("资产管理器未初始化，无法保存额外预览工程")
+            return
+        
+        try:
+            # 收集所有路径和名称
+            projects = []
+            for input_field, _ in self.additional_preview_inputs:
+                path_str = getattr(input_field, 'path', input_field.text())
+                name = getattr(input_field, 'name', "")
+                
+                if path_str and name:
+                    projects.append({
+                        "path": path_str,
+                        "name": name
+                    })
+            
+            # 调用logic层保存
+            self.asset_manager_logic.set_additional_preview_projects_with_names(projects)
+            
+            logger.info(f"已保存 {len(projects)} 个额外预览工程")
+            
+        except Exception as e:
+            logger.error(f"保存额外预览工程路径失败: {e}", exc_info=True)
+            QMessageBox.warning(self, "警告", f"保存额外预览工程路径失败: {str(e)}")
     
     def _browse_asset_library(self):
         """浏览资产库文件夹"""
@@ -316,23 +580,6 @@ class SettingsWidget(QWidget):
             
             # 立即保存路径
             self._save_asset_library_path(folder)
-    
-    def _browse_preview_project(self):
-        """浏览预览工程文件夹"""
-        current_path = self.preview_input.text() or ""
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            "选择预览工程文件夹",
-            current_path,
-            QFileDialog.Option.ShowDirsOnly
-        )
-        
-        if folder:
-            self.preview_input.setText(folder)
-            logger.info(f"选择预览工程路径: {folder}")
-            
-            # 立即保存路径
-            self._save_preview_project_path(folder)
     
     def _save_asset_library_path(self, path_str: str):
         """保存资产库路径
@@ -364,34 +611,6 @@ class SettingsWidget(QWidget):
         except Exception as e:
             logger.error(f"保存资产库路径失败: {e}", exc_info=True)
             QMessageBox.critical(self, "错误", f"保存资产库路径失败：{str(e)}")
-    
-    def _save_preview_project_path(self, path_str: str):
-        """保存预览工程路径
-        
-        Args:
-            path_str: 预览工程路径字符串
-        """
-        if not self.asset_manager_logic:
-            QMessageBox.information(
-                self,
-                "提示",
-                "资产管理器尚未加载。\n请先切换到资产管理器模块，然后再回到设置界面设置路径。"
-            )
-            return
-        
-        try:
-            if path_str and path_str.strip():
-                preview_path = Path(path_str.strip())
-                if self.asset_manager_logic.set_preview_project(preview_path):
-                    logger.info(f"预览工程路径已保存: {preview_path}")
-                    
-                    # 不再显示成功提示框，静默完成
-                    logger.info("预览工程路径保存成功")
-                else:
-                    QMessageBox.warning(self, "警告", "保存预览工程路径失败")
-        except Exception as e:
-            logger.error(f"保存预览工程路径失败: {e}", exc_info=True)
-            QMessageBox.critical(self, "错误", f"保存预览工程路径失败：{str(e)}")
     
     def _refresh_asset_manager_ui(self):
         """刷新资产管理器UI（重新扫描并加载资产）"""

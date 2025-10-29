@@ -155,6 +155,19 @@ class AssetManagerLogic(QObject):
                 "asset_library_configs": {}
             }
             
+            # 迁移旧的单个预览工程路径到新的多工程格式
+            old_preview_project = config.get("preview_project_path", "")
+            if old_preview_project and Path(old_preview_project).exists():
+                # 检查是否已有额外工程配置，如果没有则从旧配置迁移
+                if not config.get("additional_preview_projects_with_names"):
+                    new_config["additional_preview_projects_with_names"] = [
+                        {
+                            "path": old_preview_project,
+                            "name": "默认工程"
+                        }
+                    ]
+                    logger.info(f"已迁移旧的预览工程路径到新格式: {old_preview_project}")
+            
             # 如果旧配置有资产库路径，将其数据迁移到新格式
             if old_asset_library_path:
                 new_config["asset_library_configs"][old_asset_library_path] = {
@@ -1001,25 +1014,24 @@ class AssetManagerLogic(QObject):
         return 0
     
     def set_preview_project(self, project_path: Path) -> bool:
-        """设置预览工程路径"""
-        try:
-            if not project_path.exists():
-                error_msg = f"预览工程路径不存在: {project_path}"
-                logger.error(error_msg)
-                self.error_occurred.emit(error_msg)
-                return False
+        """设置预览工程路径
+        
+        Args:
+            project_path: 预览工程路径
             
-            config = self.config_manager.load_user_config()
+        Returns:
+            成功返回True，失败返回False
+        """
+        try:
+            config = self.config_manager.load_user_config() or {}
             config["preview_project_path"] = str(project_path)
             self.config_manager.save_user_config(config)
             
-            logger.info(f"设置预览工程: {project_path}")
+            logger.info(f"预览工程路径已设置: {project_path}")
             return True
             
         except Exception as e:
-            error_msg = f"设置预览工程失败: {e}"
-            logger.error(error_msg, exc_info=True)
-            self.error_occurred.emit(error_msg)
+            logger.error(f"设置预览工程路径失败: {e}", exc_info=True)
             return False
     
     def get_asset_library_path(self) -> Optional[Path]:
@@ -1079,6 +1091,119 @@ class AssetManagerLogic(QObject):
             
         except Exception as e:
             logger.error(f"设置资产库路径失败: {e}", exc_info=True)
+            return False
+    
+    def get_additional_preview_projects(self) -> List[str]:
+        """获取额外的预览工程路径列表
+        
+        Returns:
+            额外预览工程路径列表（字符串）
+        """
+        try:
+            config = self.config_manager.load_user_config() or {}
+            additional_paths = config.get("additional_preview_projects", [])
+            
+            # 确保返回的是字符串列表
+            if isinstance(additional_paths, list):
+                return [str(p) for p in additional_paths]
+            
+            logger.debug(f"已加载 {len(additional_paths)} 个额外预览工程路径")
+            return additional_paths
+            
+        except Exception as e:
+            logger.error(f"获取额外预览工程路径失败: {e}", exc_info=True)
+            return []
+    
+    def get_additional_preview_projects_with_names(self) -> List[Dict[str, str]]:
+        """获取额外的预览工程路径和名称列表
+        
+        Returns:
+            包含path和name的字典列表，格式: [{"path": "...", "name": "..."}, ...]
+        """
+        try:
+            config = self.config_manager.load_user_config() or {}
+            
+            # 支持新旧格式的兼容性
+            additional_projects = config.get("additional_preview_projects_with_names", [])
+            if not additional_projects:
+                # 尝试从旧格式迁移
+                old_paths = config.get("additional_preview_projects", [])
+                additional_projects = [
+                    {"path": str(p), "name": f"工程 {i+1}"} 
+                    for i, p in enumerate(old_paths)
+                ]
+            
+            logger.debug(f"已加载 {len(additional_projects)} 个额外预览工程")
+            return additional_projects
+            
+        except Exception as e:
+            logger.error(f"获取额外预览工程路径失败: {e}", exc_info=True)
+            return []
+    
+    def set_additional_preview_projects(self, project_paths: List[str]) -> bool:
+        """设置额外的预览工程路径列表
+        
+        Args:
+            project_paths: 预览工程路径列表
+            
+        Returns:
+            成功返回True，失败返回False
+        """
+        try:
+            config = self.config_manager.load_user_config() or {}
+            
+            # 验证所有路径都存在
+            for path_str in project_paths:
+                path = Path(path_str)
+                if not path.exists():
+                    logger.warning(f"预览工程路径不存在，跳过: {path_str}")
+                    project_paths = [p for p in project_paths if p != path_str]
+            
+            config["additional_preview_projects"] = project_paths
+            self.config_manager.save_user_config(config)
+            
+            logger.info(f"已保存 {len(project_paths)} 个额外预览工程路径")
+            return True
+            
+        except Exception as e:
+            logger.error(f"保存额外预览工程路径失败: {e}", exc_info=True)
+            return False
+    
+    def set_additional_preview_projects_with_names(self, projects: List[Dict[str, str]]) -> bool:
+        """设置额外的预览工程路径和名称列表
+        
+        Args:
+            projects: 包含path和name的字典列表，格式: [{"path": "...", "name": "..."}, ...]
+            
+        Returns:
+            成功返回True，失败返回False
+        """
+        try:
+            config = self.config_manager.load_user_config() or {}
+            
+            # 验证所有路径都存在
+            valid_projects = []
+            for project in projects:
+                path_str = project.get("path", "")
+                name = project.get("name", "")
+                if not path_str or not name:
+                    continue
+                
+                path = Path(path_str)
+                if not path.exists():
+                    logger.warning(f"预览工程路径不存在，跳过: {path_str}")
+                    continue
+                
+                valid_projects.append({"path": path_str, "name": name})
+            
+            config["additional_preview_projects_with_names"] = valid_projects
+            self.config_manager.save_user_config(config)
+            
+            logger.info(f"已保存 {len(valid_projects)} 个额外预览工程")
+            return True
+            
+        except Exception as e:
+            logger.error(f"保存额外预览工程路径失败: {e}", exc_info=True)
             return False
     
     def _sync_category_folders(self):
@@ -1143,33 +1268,37 @@ class AssetManagerLogic(QObject):
             return False
     
     def get_preview_project(self) -> Optional[Path]:
-        """获取预览工程路径"""
-        config = self.config_manager.load_user_config()
-        preview_path = config.get("preview_project_path", "")
-        if preview_path:
-            return Path(preview_path)
-        return None
-    
-    def set_preview_project(self, project_path: Path) -> bool:
-        """设置预览工程路径
+        """获取预览工程路径
         
-        Args:
-            project_path: 预览工程路径
-            
+        优先级：
+        1. 额外工程列表中的第一个工程
+        2. 配置中的旧单个预览工程
+        
         Returns:
-            成功返回True，失败返回False
+            预览工程路径，不存在返回None
         """
         try:
-            config = self.config_manager.load_user_config() or {}
-            config["preview_project_path"] = str(project_path)
-            self.config_manager.save_user_config(config)
+            # 优先从额外工程中获取第一个
+            additional_projects = self.get_additional_preview_projects_with_names()
+            if additional_projects:
+                first_project_path = additional_projects[0].get("path", "")
+                if first_project_path:
+                    path = Path(first_project_path)
+                    if path.exists():
+                        return path
             
-            logger.info(f"预览工程路径已设置: {project_path}")
-            return True
+            # 回退到旧的单个预览工程配置
+            config = self.config_manager.load_user_config()
+            preview_path = config.get("preview_project_path", "")
+            if preview_path:
+                path = Path(preview_path)
+                if path.exists():
+                    return path
             
+            return None
         except Exception as e:
-            logger.error(f"设置预览工程路径失败: {e}", exc_info=True)
-            return False
+            logger.error(f"获取预览工程路径失败: {e}", exc_info=True)
+            return None
     
     def clean_preview_project(self) -> bool:
         """清理预览工程的Content文件夹
@@ -1202,12 +1331,13 @@ class AssetManagerLogic(QObject):
             self.error_occurred.emit(error_msg)
             return False
     
-    def preview_asset(self, asset_id: str, progress_callback=None) -> bool:
+    def preview_asset(self, asset_id: str, progress_callback=None, preview_project_path: Optional[Path] = None) -> bool:
         """预览资产
         
         Args:
             asset_id: 资产ID
             progress_callback: 进度回调函数 (current, total, message)
+            preview_project_path: 指定的预览工程路径（如果不提供则使用默认）
             
         Returns:
             成功返回True，失败返回False
@@ -1220,7 +1350,12 @@ class AssetManagerLogic(QObject):
                 self.error_occurred.emit(error_msg)
                 return False
             
-            preview_project = self.get_preview_project()
+            # 使用提供的工程路径，或者获取默认工程
+            if preview_project_path is None:
+                preview_project = self.get_preview_project()
+            else:
+                preview_project = preview_project_path
+            
             if not preview_project or not preview_project.exists():
                 error_msg = "预览工程未设置或不存在，请先设置预览工程"
                 logger.error(error_msg)
@@ -1726,10 +1861,7 @@ class AssetManagerLogic(QObject):
             
             if not screenshot_path:
                 if has_thumbnail:
-                    if asset.thumbnail_source == "screenshots":
-                        logger.info(f"资产 {asset.name} 缩略图来自Screenshots目录，未找到新截图，保持原缩略图")
-                    else:
-                        logger.info(f"资产 {asset.name} 缩略图来自Saved目录，未找到新截图，保持原缩略图")
+                    logger.info(f"资产 {asset.name} 保留原缩略图，未找到新截图")
                 else:
                     logger.info(f"未找到资产 {asset.name} 的截图")
                 return
@@ -1766,55 +1898,49 @@ class AssetManagerLogic(QObject):
     def _find_screenshot(self, preview_project: Path, thumbnail_source: Optional[str] = None) -> tuple[Optional[Path], Optional[str]]:
         """查找截图文件
         
-        查找策略：
-        - 如果缩略图来源是 "screenshots"：只检查 Saved/Screenshots/Windows/
-        - 如果缩略图来源是 "saved" 或 None：按优先级检查 Saved/Screenshots/Windows/ 和 Saved/
+        查找策略：扫描 {预览工程}/Saved/Screenshots/ 下的所有文件夹，查找最新的图片文件
         
         Args:
             preview_project: 预览工程路径
-            thumbnail_source: 缩略图来源（"screenshots" 或 "saved" 或 None）
+            thumbnail_source: 缩略图来源（用于向后兼容，暂不使用）
             
         Returns:
             元组 (截图文件路径, 来源)，如果未找到返回 (None, None)
-            来源值为 "screenshots" 或 "saved"
+            来源值为 "screenshots"
         """
         try:
-            # 根据缩略图来源决定搜索路径
-            if thumbnail_source == "screenshots":
-                # 缩略图曾经从Screenshots获取：只检查Screenshots目录
-                search_dirs = [
-                    (preview_project / "Saved" / "Screenshots" / "Windows", "screenshots")
-                ]
-                logger.debug("缩略图来自Screenshots/Windows目录，仅检查该目录")
+            screenshots_dir = preview_project / "Saved" / "Screenshots"
+            
+            if not screenshots_dir.exists():
+                logger.debug(f"Screenshots目录不存在: {screenshots_dir}")
+                return None, None
+            
+            # 扫描 Screenshots 下的所有文件夹和当前目录，查找所有图片文件
+            latest_screenshot = None
+            latest_mtime = 0
+            
+            # 先扫描 Screenshots 当前目录
+            for file_path in screenshots_dir.glob("*.png"):
+                mtime = file_path.stat().st_mtime
+                if mtime > latest_mtime:
+                    latest_mtime = mtime
+                    latest_screenshot = file_path
+            
+            # 再扫描所有子文件夹
+            for subdir in screenshots_dir.iterdir():
+                if subdir.is_dir():
+                    for file_path in subdir.glob("*.png"):
+                        mtime = file_path.stat().st_mtime
+                        if mtime > latest_mtime:
+                            latest_mtime = mtime
+                            latest_screenshot = file_path
+            
+            if latest_screenshot:
+                logger.info(f"找到截图: {latest_screenshot}")
+                return latest_screenshot, "screenshots"
             else:
-                # 缩略图从未从Screenshots获取（来自Saved或从未获取过）：检查两个目录
-                search_dirs = [
-                    (preview_project / "Saved" / "Screenshots" / "Windows", "screenshots"),
-                    (preview_project / "Saved", "saved")
-                ]
-                if thumbnail_source == "saved":
-                    logger.debug("缩略图来自Saved目录，每次检查Screenshots/Windows和Saved目录")
-                else:
-                    logger.debug("资产无缩略图或未知来源，检查Screenshots/Windows和Saved目录")
-            
-            for search_dir, source in search_dirs:
-                if not search_dir.exists():
-                    logger.debug(f"目录不存在: {search_dir}")
-                    continue
-                
-                # 查找PNG文件
-                png_files = list(search_dir.glob("*.png"))
-                
-                if png_files:
-                    # 按修改时间排序，取最新的
-                    latest_screenshot = max(png_files, key=lambda p: p.stat().st_mtime)
-                    logger.info(f"找到截图: {latest_screenshot}，来源: {source}")
-                    return latest_screenshot, source
-                else:
-                    logger.debug(f"目录中无PNG文件: {search_dir}")
-            
-            logger.debug("未找到任何截图文件")
-            return None, None
+                logger.debug(f"Screenshots目录中无PNG文件")
+                return None, None
             
         except Exception as e:
             logger.error(f"查找截图时出错: {e}", exc_info=True)

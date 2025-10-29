@@ -30,7 +30,7 @@ class StyledMessageBox(QMessageBox):
             QMessageBox QLabel {{
                 color: {tm.get_variable('text_primary')};
                 font-size: 14px;
-                min-width: 350px;
+                min-width: 180px;
                 padding: 10px;
             }}
             QMessageBox QPushButton {{

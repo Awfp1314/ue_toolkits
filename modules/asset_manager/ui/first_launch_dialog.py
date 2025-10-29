@@ -128,7 +128,7 @@ class FirstLaunchDialog(QDialog):
     def init_ui(self):
         """初始化UI"""
         self.setModal(True)
-        self.setFixedSize(600, 420)
+        self.setFixedSize(600, 300)  # 减小高度，因为移除了预览工程部分
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
@@ -148,7 +148,7 @@ class FirstLaunchDialog(QDialog):
         # 欢迎说明
         welcome_label = QLabel(
             "首次使用需要设置资产库路径，用于存储和管理您的资产。\n"
-            "预览工程路径为可选项，可以稍后在设置中配置。"
+            "预览工程可以稍后在设置界面中配置。"
         )
         welcome_label.setObjectName("WelcomeLabel")
         welcome_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -173,7 +173,7 @@ class FirstLaunchDialog(QDialog):
         
         browse_asset_btn = QPushButton("浏览...")
         browse_asset_btn.setFixedWidth(80)
-        browse_asset_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # 禁用焦点，避免Alt键虚线框
+        browse_asset_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         browse_asset_btn.clicked.connect(self._browse_asset_library)
         asset_lib_layout.addWidget(browse_asset_btn)
         
@@ -185,27 +185,6 @@ class FirstLaunchDialog(QDialog):
         self.warning_label.setVisible(False)
         layout.addWidget(self.warning_label)
         
-        # 预览工程路径（可选）
-        preview_label = QLabel("预览工程路径：（可选）")
-        preview_label.setObjectName("PathLabel")
-        layout.addWidget(preview_label)
-        
-        preview_layout = QHBoxLayout()
-        preview_layout.setSpacing(10)
-        
-        self.preview_input = NoContextMenuLineEdit()
-        self.preview_input.setPlaceholderText("选择预览工程文件夹（可稍后设置）...")
-        self.preview_input.setReadOnly(True)
-        preview_layout.addWidget(self.preview_input, 1)
-        
-        browse_preview_btn = QPushButton("浏览...")
-        browse_preview_btn.setFixedWidth(80)
-        browse_preview_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # 禁用焦点，避免Alt键虚线框
-        browse_preview_btn.clicked.connect(self._browse_preview_project)
-        preview_layout.addWidget(browse_preview_btn)
-        
-        layout.addLayout(preview_layout)
-        
         layout.addStretch()
         
         button_layout = QHBoxLayout()
@@ -214,8 +193,8 @@ class FirstLaunchDialog(QDialog):
         self.confirm_btn = QPushButton("开始使用")
         self.confirm_btn.setObjectName("ConfirmButton")
         self.confirm_btn.setFixedWidth(150)
-        self.confirm_btn.setEnabled(False)  # 初始禁用
-        self.confirm_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # 禁用焦点，避免Alt键虚线框
+        self.confirm_btn.setEnabled(False)
+        self.confirm_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.confirm_btn.clicked.connect(self._on_confirm)
         button_layout.addWidget(self.confirm_btn)
         
@@ -257,20 +236,6 @@ class FirstLaunchDialog(QDialog):
             # 触发验证
             self._validate_input()
     
-    def _browse_preview_project(self):
-        """浏览预览工程文件夹"""
-        current_path = self.preview_input.text() or ""
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            "选择预览工程文件夹",
-            current_path,
-            QFileDialog.Option.ShowDirsOnly
-        )
-        
-        if folder:
-            self.preview_input.setText(folder)
-            logger.info(f"选择预览工程路径: {folder}")
-    
     def _on_confirm(self):
         """确认按钮点击"""
         asset_lib_path = self.asset_lib_input.text().strip()
@@ -299,7 +264,7 @@ class FirstLaunchDialog(QDialog):
         Returns:
             元组 (资产库路径, 预览工程路径)
         """
-        return self.asset_lib_input.text().strip(), self.preview_input.text().strip()
+        return self.asset_lib_input.text().strip(), ""  # 预览工程路径现在为空，用户稍后在设置中配置
     
     def refresh_theme(self):
         """刷新主题样式"""
