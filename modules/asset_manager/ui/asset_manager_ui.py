@@ -764,12 +764,48 @@ class AssetManagerUI(QWidget):
     @pyqtSlot(str)
     def _preview_asset(self, asset_id: str):
         """预览资产"""
-        preview_project = self.logic.get_preview_project()
-        if not preview_project:
+        # 获取所有预览工程
+        additional_projects = self.logic.get_additional_preview_projects_with_names()
+        
+        if not additional_projects:
             StyledMessageBox.warning(
                 self,
                 "警告",
                 "请先设置预览工程！\n\n请在左侧工具栏的「设置」中配置预览工程路径。"
+            )
+            return
+        
+        # 如果只有一个工程，直接使用
+        if len(additional_projects) == 1:
+            preview_project = Path(additional_projects[0]["path"])
+        else:
+            # 多个工程时，弹出选择对话框
+            project_names = [p.get("name", "未命名") for p in additional_projects]
+            
+            # 创建一个简单的项目选择对话框
+            from PyQt6.QtWidgets import QInputDialog
+            selected_name, ok = QInputDialog.getItem(
+                self,
+                "选择预览工程",
+                "请选择要预览的工程：",
+                project_names,
+                0,
+                False
+            )
+            
+            if not ok:
+                logger.info("用户取消了工程选择")
+                return
+            
+            # 找到选中的工程路径
+            selected_index = project_names.index(selected_name)
+            preview_project = Path(additional_projects[selected_index]["path"])
+        
+        if not preview_project or not preview_project.exists():
+            StyledMessageBox.warning(
+                self,
+                "警告",
+                "选中的预览工程不存在！\n\n请检查工程路径是否有效。"
             )
             return
         
@@ -781,7 +817,7 @@ class AssetManagerUI(QWidget):
         self._preview_progress_dialog = progress_dialog
         
         # 开始预览（在后台线程），使用progress_dialog的update_progress方法作为回调
-        self.logic.preview_asset(asset_id, progress_callback=progress_dialog.update_progress)
+        self.logic.preview_asset(asset_id, progress_callback=progress_dialog.update_progress, preview_project_path=preview_project)
         
         # 使用show()而不是exec()，这样对话框不会阻塞
         progress_dialog.show()
@@ -1210,19 +1246,14 @@ class AssetManagerUI(QWidget):
                         if self.logic.set_asset_library_path(lib_path):
                             logger.info(f"首次启动：资产库路径已设置: {lib_path}")
                             
-                            # 设置预览工程路径（如果有）
-                            if preview_path_str:
-                                preview_path = Path(preview_path_str)
-                                if preview_path.exists():
-                                    self.logic.set_preview_project(preview_path)
-                                    logger.info(f"首次启动：预览工程路径已设置: {preview_path}")
+                            # 注意：预览工程不再在首次启动时设置，用户需要在设置界面中配置
                             
                             QTimer.singleShot(100, self._refresh_assets)
                             
                             QTimer.singleShot(500, lambda: StyledMessageBox.information(
                                 self,
                                 "欢迎",
-                                f"资产库路径设置成功！\n\n{lib_path}\n\n您可以开始添加资产了。"
+                                f"资产库路径设置成功！\n\n{lib_path}"
                             ))
                         else:
                             logger.error("首次启动：设置资产库路径失败")
@@ -1233,7 +1264,7 @@ class AssetManagerUI(QWidget):
                             )
                 else:
                     logger.warning("用户取消了首次启动设置（理论上不应该发生）")
-        
+
         except Exception as e:
             logger.error(f"检查首次启动失败: {e}", exc_info=True)
     
