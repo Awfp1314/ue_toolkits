@@ -269,10 +269,16 @@ class AssetCard(QFrame):
             # 构建文档文件名（与资产ID关联）
             doc_filename = f"{self.asset.id}.txt"
             
-            # 文档保存在: C:\Users\{user}\AppData\Roaming\ue_toolkit\user_data\documents
-            user_data_dir = Path.home() / "AppData" / "Roaming" / "ue_toolkit" / "user_data"
-            documents_dir = user_data_dir / "documents"
-            doc_path = documents_dir / doc_filename
+            # 优先使用本地文档目录，如果不存在则查找全局文档目录（向后兼容）
+            if hasattr(self.asset_manager_ui, 'logic') and hasattr(self.asset_manager_ui.logic, 'documents_dir'):
+                # 使用本地文档目录
+                documents_dir = self.asset_manager_ui.logic.documents_dir
+                doc_path = documents_dir / doc_filename
+            else:
+                # 向后兼容：查找全局文档目录
+                user_data_dir = Path.home() / "AppData" / "Roaming" / "ue_toolkit" / "user_data"
+                documents_dir = user_data_dir / "documents"
+                doc_path = documents_dir / doc_filename
             
             # 如果文档存在，打开它
             if doc_path.exists():

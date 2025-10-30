@@ -10,6 +10,8 @@ from PyQt6.QtWidgets import (
     QLabel, QPushButton, QFrame, QStackedWidget
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QRegion, QPainterPath, QPainter, QColor, QBrush
+from PyQt6.QtGui import QMouseEvent
 
 from core.module_interface import IModuleProvider
 from core.logger import get_logger

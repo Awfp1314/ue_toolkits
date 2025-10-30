@@ -57,13 +57,14 @@ class AssetManagerLogic(QObject):
         self.config_manager = ConfigManager("asset_manager", 
                                            template_path=self.config_dir / "config_template.json")
         
-        # 资产存储目录
-        self.assets_dir = self.config_dir / "assets"
-        self.assets_dir.mkdir(parents=True, exist_ok=True)
+        # 本地配置路径（在资产库目录下，只在需要时初始化）
+        self.local_config_path = None
         
-        # 缩略图存储目录
-        self.thumbnails_dir = self.config_dir.parent.parent / "thumbnails"
-        self.thumbnails_dir.mkdir(parents=True, exist_ok=True)
+        # 本地缩略图目录（将在 _load_config 中设置）
+        self.thumbnails_dir = None
+        
+        # 本地文档目录（将在 _load_config 中设置）
+        self.documents_dir = None
         
         # 资产列表
         self.assets: List[Asset] = []
@@ -79,13 +80,13 @@ class AssetManagerLogic(QObject):
         """加载配置"""
         config = self.config_manager.load_user_config()
         if not config:
+            # 不自动创建全局配置，只有在需要时才创建本地配置
             config = {
                 "_version": "2.0.0",
                 "preview_project_path": "",
                 "last_target_project_path": "",
                 "asset_library_configs": {}
             }
-            self.config_manager.save_user_config(config)
         
         # 自动迁移旧配置格式到新格式
         config = self._migrate_config(config)
@@ -98,9 +99,27 @@ class AssetManagerLogic(QObject):
             self.assets_loaded.emit(self.assets)
             return
         
-        # 从新的多路径配置中获取该路径的配置
-        asset_library_configs = config.get("asset_library_configs", {})
-        lib_config = asset_library_configs.get(asset_library_path, {})
+        # 设置本地配置文件路径
+        self.local_config_path = Path(asset_library_path) / ".asset_config" / "config.json"
+        
+        # 设置本地缩略图和文档目录
+        asset_config_dir = Path(asset_library_path) / ".asset_config"
+        self.thumbnails_dir = asset_config_dir / "thumbnails"
+        # 只在第一次扫描资产时创建本地目录，不在这里提前创建
+        self.documents_dir = asset_config_dir / "documents"
+        # 同样延迟创建文档目录
+        
+        # 优先加载本地配置，如果不存在则从全局配置迁移
+        local_config = self._load_local_config()
+        if local_config:
+            lib_config = local_config
+        else:
+            # 从新的多路径配置中获取该路径的配置（用于迁移）
+            asset_library_configs = config.get("asset_library_configs", {})
+            lib_config = asset_library_configs.get(asset_library_path, {})
+            # 如果本地配置不存在但有全局配置，则将其保存为本地配置
+            if lib_config:
+                self._save_local_config(lib_config)
         
         # 从配置加载分类列表
         self.categories = lib_config.get("categories", config.get("categories", ["默认分类"]))
@@ -294,6 +313,10 @@ class AssetManagerLogic(QObject):
                     logger.error(f"扫描资产失败 {item}: {e}", exc_info=True)
         
         logger.info(f"资产库扫描完成，共加载 {len(self.assets)} 个资产")
+        
+        # 迁移缩略图和文档到本地目录
+        self._migrate_thumbnails_and_docs()
+        
         self.assets_loaded.emit(self.assets)
         
         self._save_config()
@@ -383,23 +406,12 @@ class AssetManagerLogic(QObject):
     
     def _save_config(self) -> None:
         """保存配置"""
-        config = self.config_manager.load_user_config() or {}
-        
-        # 确保配置有正确的结构
-        if "_version" not in config:
-            config["_version"] = "2.0.0"
-        
-        if "asset_library_configs" not in config:
-            config["asset_library_configs"] = {}
-        
         # 获取当前资产库路径
         current_lib_path = self.get_asset_library_path()
         
         if current_lib_path:
-            lib_path_str = str(current_lib_path)
-            
-            # 保存分类列表
-            config["asset_library_configs"][lib_path_str] = {
+            # 准备本地配置数据
+            lib_config = {
                 "categories": self.categories
             }
             
@@ -420,11 +432,130 @@ class AssetManagerLogic(QObject):
                     "description": asset.description
                 })
             
-            config["asset_library_configs"][lib_path_str]["assets"] = assets_data
+            lib_config["assets"] = assets_data
             
-            logger.debug(f"已保存 {len(self.assets)} 个资产的配置到路径: {lib_path_str}")
+            # 保存到本地配置文件
+            self._save_local_config(lib_config)
+            logger.debug(f"已保存 {len(self.assets)} 个资产的配置到本地: {self.local_config_path}")
+            
+            # 不保存全局配置文件，只保存本地配置
+            # 预览工程等全局设置由 set_preview_project() 等方法单独处理
+    
+    def _migrate_thumbnails_and_docs(self) -> None:
+        """迁移缩略图和文档到本地目录
         
-        self.config_manager.save_user_config(config)
+        此方法现在只用于日志记录，实际目录创建发生在需要时：
+        - 缩略图目录在生成缩略图时创建
+        - 文档目录在创建资产文档时创建
+        """
+        logger.debug("本地缩略图和文档目录已准备好（实际创建将在需要时进行）")
+    
+    def _load_local_config(self) -> Optional[Dict[str, Any]]:
+        """从本地配置文件加载资产库配置
+        
+        Returns:
+            配置字典或None（如果文件不存在）
+        """
+        if not self.local_config_path or not self.local_config_path.exists():
+            logger.debug(f"本地配置文件不存在: {self.local_config_path}")
+            return None
+        
+        try:
+            with open(self.local_config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            # 检查版本并进行迁移
+            version = config.get("_version", "1.0.0")
+            if version != "2.0.0":
+                logger.info(f"检测到本地配置版本 {version}，需要迁移到 2.0.0")
+                config = self._migrate_local_config(config)
+                # 迁移后保存新版本
+                self._save_local_config(config)
+            
+            logger.info(f"成功加载本地配置: {self.local_config_path}")
+            return config
+        except Exception as e:
+            logger.error(f"加载本地配置失败: {e}", exc_info=True)
+            return None
+    
+    def _migrate_local_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """迁移本地配置文件到新版本
+        
+        Args:
+            config: 旧版本配置
+            
+        Returns:
+            新版本配置
+        """
+        version = config.get("_version", "1.0.0")
+        logger.info(f"开始迁移本地配置，从版本 {version} 到 2.0.0")
+        
+        # 如果已经是新版本，直接返回
+        if version == "2.0.0":
+            return config
+        
+        # 为旧版本添加版本字段
+        config["_version"] = "2.0.0"
+        
+        return config
+    
+    def _save_local_config(self, config: Dict[str, Any]) -> bool:
+        """保存资产库配置到本地文件
+        
+        Args:
+            config: 要保存的配置字典
+            
+        Returns:
+            是否保存成功
+        """
+        if not self.local_config_path:
+            logger.warning("本地配置路径未设置，无法保存本地配置")
+            return False
+        
+        try:
+            # 确保目录存在
+            self.local_config_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # 确保版本字段存在
+            if "_version" not in config:
+                config["_version"] = "2.0.0"
+            
+            # 创建备份前先备份旧配置（如果存在），然后备份新配置
+            try:
+                backup_dir = self.local_config_path.parent / "backup"
+                backup_dir.mkdir(parents=True, exist_ok=True)
+                
+                # 创建带时间戳的备份文件（备份的是即将保存的新配置）
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = backup_dir / f"config_{timestamp}.json"
+                
+                # 备份即将保存的完整配置内容
+                with open(backup_path, 'w', encoding='utf-8') as f:
+                    json.dump(config, f, ensure_ascii=False, indent=2)
+                logger.debug(f"已创建本地配置备份: {backup_path}")
+                
+                # 清理旧备份，只保留最近 5 个
+                backup_files = sorted(backup_dir.glob("config_*.json"), reverse=True)
+                for old_backup in backup_files[5:]:
+                    try:
+                        old_backup.unlink()
+                        logger.debug(f"已删除旧备份: {old_backup}")
+                    except Exception as e:
+                        logger.warning(f"删除旧备份失败: {e}")
+            
+            except Exception as e:
+                logger.warning(f"创建备份失败: {e}")
+            
+            # 保存配置到本地文件
+            with open(self.local_config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"成功保存本地配置: {self.local_config_path}")
+            return True
+        except Exception as e:
+            logger.error(f"保存本地配置失败: {e}", exc_info=True)
+            return False
     
     def add_asset(self, asset_path: Path, asset_type: AssetType, name: str = "", category: str = "默认分类", 
                   description: str = "", create_markdown: bool = False) -> Optional[Asset]:
@@ -555,11 +686,12 @@ class AssetManagerLogic(QObject):
             import subprocess
             from pathlib import Path
             
-            # 创建文档目录：user_data/documents
-            # config_dir 是 .../user_data/configs/asset_manager
-            # 所以 user_data 目录是 config_dir.parent.parent
-            user_data_dir = self.config_dir.parent.parent
-            documents_dir = user_data_dir / "documents"
+            # 使用本地文档目录（在资产库目录下）
+            if not self.documents_dir:
+                logger.error("本地文档目录未设置")
+                return
+            
+            documents_dir = self.documents_dir
             documents_dir.mkdir(parents=True, exist_ok=True)
             
             # 文档文件名为 {asset_id}.txt
@@ -667,6 +799,16 @@ class AssetManagerLogic(QObject):
                     logger.info(f"已删除缩略图: {asset.thumbnail_path}")
                 except Exception as e:
                     logger.warning(f"删除缩略图失败: {e}")
+            
+            # 删除关联的文档
+            if self.documents_dir:
+                doc_path = self.documents_dir / f"{asset_id}.txt"
+                if doc_path.exists():
+                    try:
+                        doc_path.unlink()
+                        logger.info(f"已删除关联文档: {doc_path}")
+                    except Exception as e:
+                        logger.warning(f"删除关联文档失败: {e}")
             
             self._save_config()
             
@@ -1076,8 +1218,10 @@ class AssetManagerLogic(QObject):
             # 确保新的配置结构
             if "_version" not in config:
                 config["_version"] = "2.0.0"
-            if "asset_library_configs" not in config:
-                config["asset_library_configs"] = {}
+            
+            # 清除旧的 asset_library_configs 字段（不再使用）
+            if "asset_library_configs" in config:
+                del config["asset_library_configs"]
             
             config["asset_library_path"] = str(library_path)
             self.config_manager.save_user_config(config)
@@ -1898,49 +2042,76 @@ class AssetManagerLogic(QObject):
     def _find_screenshot(self, preview_project: Path, thumbnail_source: Optional[str] = None) -> tuple[Optional[Path], Optional[str]]:
         """查找截图文件
         
-        查找策略：扫描 {预览工程}/Saved/Screenshots/ 下的所有文件夹，查找最新的图片文件
+        查找策略：
+        1. 优先在 {预览工程}/Saved/Screenshots/ 及其子文件夹下查找用户主动截图
+        2. 如果已获取过 Saved/Screenshots/ 的图片，只有新图片才更新
+        3. 如果找不到，在 {预览工程}/Saved/ 下查找自动保存的截图
         
         Args:
             preview_project: 预览工程路径
-            thumbnail_source: 缩略图来源（用于向后兼容，暂不使用）
+            thumbnail_source: 缩略图来源（screenshots 或 autosave，用于判断是否需要更新）
             
         Returns:
             元组 (截图文件路径, 来源)，如果未找到返回 (None, None)
-            来源值为 "screenshots"
+            来源值为 "screenshots" 或 "autosave"
         """
         try:
+            # 第一步：查找用户截图
             screenshots_dir = preview_project / "Saved" / "Screenshots"
             
-            if not screenshots_dir.exists():
-                logger.debug(f"Screenshots目录不存在: {screenshots_dir}")
+            if screenshots_dir.exists():
+                latest_screenshot = None
+                latest_mtime = 0
+                
+                # 扫描 Screenshots 当前目录
+                for file_path in screenshots_dir.glob("*.png"):
+                    mtime = file_path.stat().st_mtime
+                    if mtime > latest_mtime:
+                        latest_mtime = mtime
+                        latest_screenshot = file_path
+                
+                # 扫描所有子文件夹
+                for subdir in screenshots_dir.iterdir():
+                    if subdir.is_dir():
+                        for file_path in subdir.glob("*.png"):
+                            mtime = file_path.stat().st_mtime
+                            if mtime > latest_mtime:
+                                latest_mtime = mtime
+                                latest_screenshot = file_path
+                
+                if latest_screenshot:
+                    logger.info(f"找到用户截图: {latest_screenshot}")
+                    return latest_screenshot, "screenshots"
+            
+            # 第二步：如果已获取过 Saved/Screenshots/ 的图片，不再查找自动保存图
+            if thumbnail_source == "screenshots":
+                logger.debug(f"已获取过用户截图，不再查找自动保存的截图")
                 return None, None
             
-            # 扫描 Screenshots 下的所有文件夹和当前目录，查找所有图片文件
-            latest_screenshot = None
-            latest_mtime = 0
+            # 第三步：查找自动保存的截图
+            saved_dir = preview_project / "Saved"
             
-            # 先扫描 Screenshots 当前目录
-            for file_path in screenshots_dir.glob("*.png"):
-                mtime = file_path.stat().st_mtime
-                if mtime > latest_mtime:
-                    latest_mtime = mtime
-                    latest_screenshot = file_path
+            if saved_dir.exists():
+                latest_autosave = None
+                latest_mtime = 0
+                
+                # 在 Saved 目录下查找所有 PNG 文件（包括 Saved 根目录和所有子目录）
+                for file_path in saved_dir.rglob("*.png"):
+                    # 跳过 Screenshots 子目录中的文件（已在第一步检查过）
+                    if "Screenshots" in str(file_path):
+                        continue
+                    
+                    mtime = file_path.stat().st_mtime
+                    if mtime > latest_mtime:
+                        latest_mtime = mtime
+                        latest_autosave = file_path
+                
+                if latest_autosave:
+                    logger.info(f"找到自动保存的截图: {latest_autosave}")
+                    return latest_autosave, "autosave"
             
-            # 再扫描所有子文件夹
-            for subdir in screenshots_dir.iterdir():
-                if subdir.is_dir():
-                    for file_path in subdir.glob("*.png"):
-                        mtime = file_path.stat().st_mtime
-                        if mtime > latest_mtime:
-                            latest_mtime = mtime
-                            latest_screenshot = file_path
-            
-            if latest_screenshot:
-                logger.info(f"找到截图: {latest_screenshot}")
-                return latest_screenshot, "screenshots"
-            else:
-                logger.debug(f"Screenshots目录中无PNG文件")
-                return None, None
+            logger.debug(f"未找到任何截图")
+            return None, None
             
         except Exception as e:
             logger.error(f"查找截图时出错: {e}", exc_info=True)

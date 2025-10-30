@@ -36,7 +36,16 @@ class ConfigManager:
         self.logger = get_logger(f"config_manager.{module_name}")
         self.path_utils = PathUtils()
         
-        self.user_config_dir = self.path_utils.get_user_config_dir()
+        # 获取用户配置基目录
+        base_config_dir = self.path_utils.get_user_config_dir()
+        
+        # 为每个模块创建专属的配置目录（除了 "app" 模块，它使用全局 configs 目录）
+        if module_name == "app":
+            self.user_config_dir = base_config_dir
+        else:
+            # 其他模块在 configs/{module_name}/ 下创建配置目录
+            self.user_config_dir = base_config_dir / module_name
+        
         self.user_config_dir.mkdir(parents=True, exist_ok=True)
         
         # 用户配置文件路径
@@ -120,7 +129,7 @@ class ConfigManager:
         """保存用户配置（同步版本，保持向后兼容）
         
         改进的备份策略：
-        1. 在保存前自动备份现有配置
+        1. 在保存前自动备份新配置（即将保存的配置）
         2. 验证备份文件的有效性
         3. 使用带时间戳和原因的文件名
         
@@ -135,10 +144,10 @@ class ConfigManager:
             # 确保配置目录存在
             self.user_config_dir.mkdir(parents=True, exist_ok=True)
             
-            if self.user_config_path.exists():
-                self.logger.debug(f"保存前备份配置，原因: {backup_reason}")
-                if not self.backup_manager.backup_config(reason=backup_reason):
-                    self.logger.warning("备份失败，但继续保存新配置")
+            # 备份新配置（即将保存的配置）
+            self.logger.debug(f"备份新配置，原因: {backup_reason}")
+            if not self.backup_manager.backup_config(reason=backup_reason, config=config):
+                self.logger.warning("备份失败，但继续保存新配置")
             
             if not self.validator.validate_config(config):
                 self.logger.error("配置验证失败，拒绝保存")
@@ -262,8 +271,8 @@ class ConfigManager:
         # 如果版本不同，需要升级
         if version_comparison != 0:
             self.logger.info(f"检测到配置版本不匹配，执行升级: {user_version} -> {template_version}")
-            # 在升级前备份配置
-            self.backup_manager.backup_config(reason="auto_upgrade")
+            # 在升级前备份当前配置
+            self.backup_manager.backup_config(reason="auto_upgrade", config=user_config)
         
         # 合并配置
         merged_config = self.merge_config(template, user_config)
@@ -482,7 +491,12 @@ class ConfigManager:
         # 在恢复前备份当前配置
         if self.user_config_path.exists():
             self.logger.info("恢复前备份当前配置")
-            self.backup_manager.backup_config(reason="before_restore")
+            try:
+                with open(self.user_config_path, 'r', encoding='utf-8') as f:
+                    current_config = json.load(f)
+                self.backup_manager.backup_config(reason="before_restore", config=current_config)
+            except Exception as e:
+                self.logger.warning(f"恢复前备份配置失败: {e}")
         
         # 从备份恢复配置数据
         backup_config = self.backup_manager.restore_from_backup(backup_index)

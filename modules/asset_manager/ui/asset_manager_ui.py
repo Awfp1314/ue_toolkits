@@ -782,24 +782,214 @@ class AssetManagerUI(QWidget):
             # 多个工程时，弹出选择对话框
             project_names = [p.get("name", "未命名") for p in additional_projects]
             
-            # 创建一个简单的项目选择对话框
-            from PyQt6.QtWidgets import QInputDialog
-            selected_name, ok = QInputDialog.getItem(
-                self,
-                "选择预览工程",
-                "请选择要预览的工程：",
-                project_names,
-                0,
-                False
-            )
+            # 创建一个应用主题的项目选择对话框（无标题栏风格）
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QWidget
+            from PyQt6.QtCore import Qt, QPoint
+            from PyQt6.QtGui import QMouseEvent
             
-            if not ok:
+            class PreviewProjectDialog(QDialog):
+                """预览工程选择对话框（带自定义标题栏）"""
+                def __init__(self, parent=None):
+                    super().__init__(parent)
+                    self.drag_position = QPoint()
+                    self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+                    
+                mousePressEvent_orig = None
+                mouseMoveEvent_orig = None
+                
+                def mousePressEvent(self, event: QMouseEvent):
+                    """处理鼠标按下事件"""
+                    if event.position().y() < 45:
+                        self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                        event.accept()
+                    else:
+                        super().mousePressEvent(event)
+                
+                def mouseMoveEvent(self, event: QMouseEvent):
+                    """处理鼠标移动事件"""
+                    if event.buttons() == Qt.MouseButton.LeftButton and event.position().y() < 45:
+                        self.move(event.globalPosition().toPoint() - self.drag_position)
+                        event.accept()
+                    else:
+                        super().mouseMoveEvent(event)
+            
+            dialog = PreviewProjectDialog(self)
+            dialog.setMinimumWidth(420)
+            dialog.setMinimumHeight(200)
+            dialog.theme_manager = self.theme_manager
+            
+            # 应用主题样式
+            tm = dialog.theme_manager
+            dialog.setStyleSheet(f"""
+                QDialog {{
+                    background-color: {tm.get_variable('bg_secondary')};
+                    border: 1px solid {tm.get_variable('border')};
+                    border-radius: 8px;
+                }}
+                /* 自定义标题栏 */
+                QDialog #titleBar {{
+                    background-color: {tm.get_variable('bg_tertiary')};
+                    border-bottom: 1px solid {tm.get_variable('border')};
+                    border-radius: 8px 8px 0px 0px;
+                    padding: 0px;
+                }}
+                QDialog #titleLabel {{
+                    color: {tm.get_variable('text_primary')};
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding-left: 15px;
+                    background-color: transparent;
+                    border: none;
+                }}
+                QDialog #closeBtn {{
+                    background-color: transparent;
+                    color: {tm.get_variable('text_primary')};
+                    border: none;
+                    font-size: 16px;
+                    width: 30px;
+                    height: 30px;
+                    padding: 0px;
+                    margin-right: 5px;
+                }}
+                QDialog #closeBtn:hover {{
+                    background-color: {tm.get_variable('error')};
+                    color: white;
+                    border-radius: 3px;
+                }}
+                QLabel {{
+                    color: {tm.get_variable('text_primary')};
+                    font-size: 14px;
+                    padding: 2px 0px;
+                    height: auto;
+                }}
+                QComboBox {{
+                    background-color: {tm.get_variable('bg_tertiary')};
+                    border: 1px solid {tm.get_variable('border')};
+                    border-radius: 4px;
+                    padding: 4px 6px;
+                    color: {tm.get_variable('text_primary')};
+                    font-size: 13px;
+                    min-height: 28px;
+                    max-height: 28px;
+                }}
+                QComboBox::item {{
+                    height: 26px;
+                    padding: 2px 0px;
+                }}
+                QComboBox:focus {{
+                    border: 1px solid {tm.get_variable('accent')};
+                }}
+                QComboBox::drop-down {{
+                    border: none;
+                    width: 30px;
+                }}
+                QPushButton {{
+                    background-color: {tm.get_variable('accent')};
+                    color: white;
+                    border: none;
+                    padding: 6px 20px;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    min-width: 70px;
+                    min-height: 28px;
+                    font-weight: bold;
+                }}
+                QPushButton:hover {{
+                    background-color: {tm.get_variable('accent_hover')};
+                }}
+                QPushButton:pressed {{
+                    background-color: {tm.get_variable('accent_pressed')};
+                }}
+                QPushButton#cancelBtn {{
+                    background-color: {tm.get_variable('bg_tertiary')};
+                    color: {tm.get_variable('text_primary')};
+                    border: 1px solid {tm.get_variable('border')};
+                    min-width: 70px;
+                    min-height: 28px;
+                }}
+                QPushButton#cancelBtn:hover {{
+                    background-color: {tm.get_variable('bg_hover')};
+                }}
+            """)
+            
+            # 创建自定义标题栏
+            title_bar = QWidget()
+            title_bar.setObjectName("titleBar")
+            title_bar.setFixedHeight(45)
+            title_bar_layout = QHBoxLayout()
+            title_bar_layout.setSpacing(0)
+            title_bar_layout.setContentsMargins(0, 0, 0, 0)
+            
+            title_label = QLabel("选择预览工程")
+            title_label.setObjectName("titleLabel")
+            title_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+            title_bar_layout.addWidget(title_label, 1)
+            
+            close_btn = QPushButton("×")
+            close_btn.setObjectName("closeBtn")
+            close_btn.clicked.connect(dialog.reject)
+            title_bar_layout.addWidget(close_btn)
+            
+            title_bar.setLayout(title_bar_layout)
+            
+            # 主布局
+            main_layout = QVBoxLayout()
+            main_layout.setSpacing(0)
+            main_layout.setContentsMargins(0, 0, 0, 0)
+            main_layout.addWidget(title_bar)
+            
+            # 内容布局
+            layout = QVBoxLayout()
+            layout.setSpacing(12)
+            layout.setContentsMargins(20, 20, 20, 20)
+            
+            # 标签
+            label = QLabel("请选择要预览的工程：")
+            label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            layout.addWidget(label)
+            
+            # 下拉框
+            combo = QComboBox()
+            combo.addItems(project_names)
+            combo.setCurrentIndex(0)
+            layout.addWidget(combo)
+            
+            layout.addSpacing(8)
+            
+            # 按钮
+            button_layout = QHBoxLayout()
+            button_layout.setSpacing(10)
+            
+            ok_btn = QPushButton("确定")
+            ok_btn.clicked.connect(dialog.accept)
+            button_layout.addStretch()
+            button_layout.addWidget(ok_btn)
+            
+            cancel_btn = QPushButton("取消")
+            cancel_btn.setObjectName("cancelBtn")
+            cancel_btn.clicked.connect(dialog.reject)
+            button_layout.addWidget(cancel_btn)
+            
+            layout.addLayout(button_layout)
+            main_layout.addLayout(layout, 1)
+            dialog.setLayout(main_layout)
+            
+            # 显示对话框（居中于主窗口）
+            # 计算对话框的中心位置
+            parent_geometry = self.geometry()
+            parent_center_x = parent_geometry.x() + parent_geometry.width() // 2
+            parent_center_y = parent_geometry.y() + parent_geometry.height() // 2
+            dialog_x = parent_center_x - dialog.width() // 2
+            dialog_y = parent_center_y - dialog.height() // 2
+            dialog.move(dialog_x, dialog_y)
+            
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                selected_name = combo.currentText()
+                selected_index = project_names.index(selected_name)
+                preview_project = Path(additional_projects[selected_index]["path"])
+            else:
                 logger.info("用户取消了工程选择")
                 return
-            
-            # 找到选中的工程路径
-            selected_index = project_names.index(selected_name)
-            preview_project = Path(additional_projects[selected_index]["path"])
         
         if not preview_project or not preview_project.exists():
             StyledMessageBox.warning(
