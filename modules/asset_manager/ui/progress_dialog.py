@@ -61,6 +61,7 @@ class ProgressDialog(QDialog):
                 color: {tm.get_variable('text_primary')};
                 font-size: 16px;
                 font-weight: bold;
+                background: transparent;
             }}
         """
     
@@ -97,6 +98,7 @@ class ProgressDialog(QDialog):
                 color: {tm.get_variable('text_secondary')};
                 font-size: 12px;
                 padding: 5px;
+                background: transparent;
             }}
         """
     
@@ -155,6 +157,8 @@ class ProgressDialog(QDialog):
             text: 状态文本
         """
         self.status_label.setText(text)
+        # 重新应用默认样式，确保背景透明
+        self.status_label.setStyleSheet(self._build_status_label_style())
         logger.debug(f"进度状态: {text}")
     
     def set_indeterminate(self, indeterminate: bool = True):
@@ -192,6 +196,7 @@ class ProgressDialog(QDialog):
                 font-size: 12px;
                 font-weight: bold;
                 padding: 5px;
+                background: transparent;
             }}
         """)
         logger.info(f"[进度对话框] 设置完成状态，{delay_ms}ms后关闭")
@@ -221,6 +226,7 @@ class ProgressDialog(QDialog):
                 font-size: 12px;
                 font-weight: bold;
                 padding: 5px;
+                background: transparent;
             }}
         """)
     

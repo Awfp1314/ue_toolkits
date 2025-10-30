@@ -731,7 +731,7 @@ class AssetManagerUI(QWidget):
         # 添加资产卡片（网格布局，每行4个）
         columns = 4
         for i, asset in enumerate(assets):
-            card = AssetCard(asset)
+            card = AssetCard(asset, asset_manager_ui=self)
             card.preview_clicked.connect(self._preview_asset)
             card.delete_clicked.connect(self._delete_asset)
             card.migrate_clicked.connect(self._migrate_asset)
@@ -1033,25 +1033,84 @@ class AssetManagerUI(QWidget):
     def _migrate_asset(self, asset_id: str):
         """迁移资产到目标工程（使用工程选择器）"""
         try:
-            # 1. 检测运行的UE工程和搜索所有UE工程
-            from core.utils.ue_process_utils import UEProcessUtils
-            ue_utils = UEProcessUtils()
+            # 保存 asset_id 供后续使用
+            self._migrate_asset_id = asset_id
             
-            # 首先检测运行中的工程
-            running_projects = ue_utils.detect_running_ue_projects()
-            logger.info(f"检测到 {len(running_projects)} 个运行中的UE工程")
+            # 创建进度对话框
+            progress_dialog = ProgressDialog("正在搜索工程", self)
+            progress_dialog.set_indeterminate(True)  # 设置为不确定进度模式
+            progress_dialog.set_status("正在检测和搜索UE工程...")
             
-            # 如果没有运行的工程，则搜索所有UE工程
-            all_projects = []
-            if not running_projects:
-                logger.info("未检测到运行的UE工程，开始搜索所有UE工程")
-                all_projects = ue_utils.search_all_ue_projects()
-                logger.info(f"搜索到 {len(all_projects)} 个UE工程")
+            # 创建并启动搜索线程
+            from PyQt6.QtCore import QThread, pyqtSignal
+            
+            class SearchProjectsThread(QThread):
+                """后台搜索UE工程的线程"""
+                search_completed = pyqtSignal(list, list)  # (running_projects, all_projects)
+                search_error = pyqtSignal(str)
+                progress_updated = pyqtSignal(int, int, str)  # (current, total, message)
+                
+                def run(self):
+                    """在后台线程执行搜索"""
+                    try:
+                        from core.utils.ue_process_utils import UEProcessUtils
+                        ue_utils = UEProcessUtils()
+                        
+                        # 1. 检测运行中的工程
+                        logger.info("开始检测运行中的工程...")
+                        self.progress_updated.emit(0, 100, "正在检测运行中的工程...")
+                        running_projects = ue_utils.detect_running_ue_projects()
+                        logger.info(f"检测到 {len(running_projects)} 个运行中的工程")
+                        
+                        # 2. 搜索所有工程
+                        logger.info("开始搜索所有工程...")
+                        self.progress_updated.emit(50, 100, "正在搜索所有工程...")
+                        all_projects = ue_utils.search_all_ue_projects()
+                        logger.info(f"搜索到 {len(all_projects)} 个工程")
+                        
+                        # 3. 搜索完成
+                        self.progress_updated.emit(100, 100, "搜索完成！")
+                        self.search_completed.emit(running_projects, all_projects)
+                        
+                    except Exception as e:
+                        logger.error(f"搜索工程时出错: {e}", exc_info=True)
+                        self.search_error.emit(str(e))
+            
+            self.search_thread = SearchProjectsThread()
+            self.search_thread.progress_updated.connect(
+                lambda c, t, m: progress_dialog.update_progress(c, t, m)
+            )
+            self.search_thread.search_completed.connect(
+                lambda r, a: self._on_search_completed_for_migrate(r, a, progress_dialog)
+            )
+            self.search_thread.search_error.connect(
+                lambda e: self._on_search_error_for_migrate(e, progress_dialog)
+            )
+            
+            # 显示进度对话框（模态）
+            progress_dialog.show()
+            
+            # 启动搜索线程
+            self.search_thread.start()
+            
+        except Exception as e:
+            logger.error(f"迁移资产时出错: {e}", exc_info=True)
+            StyledMessageBox.error(
+                self,
+                "错误",
+                f"迁移资产时发生错误：\n{str(e)}"
+            )
+    
+    def _on_search_completed_for_migrate(self, running_projects, all_projects, progress_dialog):
+        """搜索完成回调"""
+        try:
+            # 关闭进度对话框
+            progress_dialog.close()
             
             # 合并运行的工程和搜索到的工程
             ue_projects = running_projects + all_projects
             
-            # 2. 如果没有找到任何工程，显示提示
+            # 如果没有找到任何工程，显示提示
             if not ue_projects:
                 StyledMessageBox.warning(
                     self,
@@ -1060,7 +1119,7 @@ class AssetManagerUI(QWidget):
                 )
                 return
             
-            # 3. 选择目标工程
+            # 选择目标工程
             selected_project = self._select_ue_project(ue_projects)
             if not selected_project:
                 return
@@ -1068,8 +1127,8 @@ class AssetManagerUI(QWidget):
             target_project = selected_project.project_path.parent
             logger.info(f"选择的目标工程: {target_project}")
             
-            # 4. 确认迁移
-            asset = self.logic.get_asset(asset_id)
+            # 确认迁移
+            asset = self.logic.get_asset(self._migrate_asset_id)
             dialog = ConfirmDialog(
                 "确认迁移",
                 f"确定要将资产 \"{asset.name}\" 迁移到目标工程吗？",
@@ -1078,32 +1137,42 @@ class AssetManagerUI(QWidget):
             )
             
             if dialog.exec() == QDialog.DialogCode.Accepted:
-                progress_dialog = ProgressDialog("迁移资产", self)
+                migrate_progress_dialog = ProgressDialog("迁移资产", self)
                 
                 # 在后台线程执行迁移
                 def do_migrate():
                     try:
-                        if self.logic.migrate_asset(asset_id, target_project, progress_callback=progress_dialog.update_progress):
+                        if self.logic.migrate_asset(self._migrate_asset_id, target_project, progress_callback=migrate_progress_dialog.update_progress):
                             logger.info(f"资产迁移成功")
                         else:
                             # 迁移失败，使用QTimer在主线程显示错误
-                            QTimer.singleShot(0, lambda: progress_dialog.finish_error("迁移失败"))
+                            QTimer.singleShot(0, lambda: migrate_progress_dialog.finish_error("迁移失败"))
                     except Exception as e:
                         logger.error(f"迁移时出错: {e}", exc_info=True)
                         # 使用QTimer在主线程显示错误
-                        QTimer.singleShot(0, lambda: progress_dialog.finish_error(str(e)))
+                        QTimer.singleShot(0, lambda: migrate_progress_dialog.finish_error(str(e)))
                 
                 thread = threading.Thread(target=do_migrate, daemon=True)
                 thread.start()
                 
-                progress_dialog.exec()
+                migrate_progress_dialog.exec()
+                
         except Exception as e:
-            logger.error(f"迁移资产时出错: {e}", exc_info=True)
+            logger.error(f"处理搜索结果时出错: {e}", exc_info=True)
             StyledMessageBox.error(
                 self,
                 "错误",
-                f"迁移资产时发生错误：\n{str(e)}"
+                f"处理搜索结果时发生错误：\n{str(e)}"
             )
+    
+    def _on_search_error_for_migrate(self, error_msg, progress_dialog):
+        """搜索错误回调"""
+        progress_dialog.close()
+        StyledMessageBox.error(
+            self,
+            "搜索错误",
+            f"搜索UE工程时发生错误：\n{error_msg}"
+        )
     
     def _select_ue_project(self, ue_projects):
         """选择UE工程
