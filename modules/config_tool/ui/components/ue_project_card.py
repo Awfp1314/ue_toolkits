@@ -79,17 +79,8 @@ class RoundedThumbnailWidget(QWidget):
         
         # 绘制内容
         if self._pixmap and not self._pixmap.isNull():
-            # 填充模式：图片居中绘制，超出部分被圆角路径裁剪
-            pixmap_to_draw = self._pixmap
-            
-            # 计算居中位置（可能是负数，表示图片超出容器）
-            px_w = pixmap_to_draw.width()
-            px_h = pixmap_to_draw.height()
-            x = (w - px_w) // 2
-            y = (h - px_h) // 2
-            
-            # 绘制图片 - 超出部分会被圆角裁剪路径自动裁剪
-            painter.drawPixmap(x, y, pixmap_to_draw)
+            # 图片已经在加载时裁剪到精确尺寸，直接从(0,0)绘制
+            painter.drawPixmap(0, 0, self._pixmap)
         elif self._text:
             # 绘制文本 - 居中对齐，使用主题变量
             if self.theme_manager:
@@ -122,7 +113,7 @@ class UEProjectCard(QFrame):
         self.engine_version = None  # 缓存版本号
         
         self.setObjectName("projectCard")
-        self.setFixedSize(210, 210)  # 卡片总大小（宽度从220改为210）
+        self.setFixedSize(205, 210)  # 卡片总大小（宽度与缩略图一致为200）
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         
         self._init_ui()
@@ -193,9 +184,16 @@ class UEProjectCard(QFrame):
                     Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                     Qt.TransformationMode.SmoothTransformation
                 )
+                
+                # 裁剪到精确的 200x150 尺寸（居中裁剪）
+                if scaled_pixmap.width() > 200 or scaled_pixmap.height() > 150:
+                    x_offset = (scaled_pixmap.width() - 200) // 2
+                    y_offset = (scaled_pixmap.height() - 150) // 2
+                    scaled_pixmap = scaled_pixmap.copy(x_offset, y_offset, 200, 150)
+                
                 self.thumbnail_pixmap = scaled_pixmap
                 self.thumbnail_widget.setPixmap(scaled_pixmap)
-                logger.debug(f"成功加载工程缩略图: {self.project.name}")
+                logger.debug(f"成功加载工程缩略图: {self.project.name} (裁剪后尺寸: {scaled_pixmap.width()}x{scaled_pixmap.height()})")
             else:
                 self._show_default_thumbnail()
                 

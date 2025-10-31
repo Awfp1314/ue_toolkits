@@ -446,12 +446,17 @@ class AssetCard(QFrame):
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         name_category_layout.addWidget(self.name_label, 1)  # stretch=1 让名称占据剩余空间
         
-        # 分类标签 - 右对齐小标签
-        self.category_label = QLabel(self.asset.category)
-        self.category_label.setObjectName("assetCardCategory")
+        # 类型标签 - 右对齐小标签(显示资产类型：资源包/文件)
+        type_name_map = {
+            AssetType.PACKAGE: "资源包",
+            AssetType.FILE: "文件"
+        }
+        type_display_name = type_name_map.get(self.asset.asset_type, "未知")
+        self.type_label = QLabel(type_display_name)
+        self.type_label.setObjectName("assetCardCategory")
         # 样式由上方 setStyleSheet 中的 #assetCardCategory 提供
-        self.category_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        name_category_layout.addWidget(self.category_label, 0)  # stretch=0 保持最小宽度
+        self.type_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        name_category_layout.addWidget(self.type_label, 0)  # stretch=0 保持最小宽度
         
         content_layout.addLayout(name_category_layout)
         
@@ -459,27 +464,20 @@ class AssetCard(QFrame):
         # 样式由上方 setStyleSheet 中的 .assetCardInfo 提供
         
         try:
-            # 中文类型映射
-            type_name_map = {
-                AssetType.PACKAGE: "资源包",
-                AssetType.FILE: "文件"
-            }
-            type_display_name = type_name_map.get(self.asset.asset_type, "未知")
+            # 资产分类 (显示在第一行)
+            self.category_info_label = QLabel(f"资产分类：{self.asset.category}")
+            self.category_info_label.setProperty("class", "assetCardInfo")
+            self.category_info_label.setAlignment(Qt.AlignmentFlag.AlignLeft)  # 左对齐
+            content_layout.addWidget(self.category_info_label)
             
-            # 资产大小
+            # 资产大小 (显示在第二行)
             size_text = self.asset._format_size() if hasattr(self.asset, '_format_size') else f"{getattr(self.asset, 'size', 0)} B"
             self.size_info_label = QLabel(f"资产大小：{size_text}")
             self.size_info_label.setProperty("class", "assetCardInfo")
             self.size_info_label.setAlignment(Qt.AlignmentFlag.AlignLeft)  # 左对齐
             content_layout.addWidget(self.size_info_label)
             
-            # 资产类型
-            self.type_info_label = QLabel(f"资产类型：{type_display_name}")
-            self.type_info_label.setProperty("class", "assetCardInfo")
-            self.type_info_label.setAlignment(Qt.AlignmentFlag.AlignLeft)  # 左对齐
-            content_layout.addWidget(self.type_info_label)
-            
-            logger.debug(f"资产信息显示: 大小={size_text}, 类型={type_display_name}")
+            logger.debug(f"资产信息显示: 分类={self.asset.category}, 大小={size_text}")
         except Exception as e:
             logger.error(f"创建资产信息标签失败: {e}", exc_info=True)
             self.error_label = QLabel("信息加载失败")

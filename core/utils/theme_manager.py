@@ -102,6 +102,16 @@ class ThemeManager:
                 'error': '#F44336',
                 'info': '#2196F3',
                 
+                # 按钮样式
+                'button_bg': '#353535',
+                'button_text': '#ffffff',
+                'button_hover': '#3d3d3d',
+                'button_pressed': '#2a2a2a',
+                
+                # 危险操作
+                'danger': '#F44336',
+                'danger_hover': '#E53935',
+                
                 # 透明度变体
                 'bg_primary_alpha': 'rgba(30, 30, 30, 0.85)',
                 'bg_secondary_alpha': 'rgba(43, 43, 43, 0.8)',
@@ -134,6 +144,16 @@ class ThemeManager:
                 'warning': '#FF9800',
                 'error': '#F44336',
                 'info': '#2196F3',
+                
+                # 按钮样式
+                'button_bg': '#e0e0e0',
+                'button_text': '#212121',
+                'button_hover': '#d5d5d5',
+                'button_pressed': '#c0c0c0',
+                
+                # 危险操作
+                'danger': '#F44336',
+                'danger_hover': '#E53935',
                 
                 # 透明度变体
                 'bg_primary_alpha': 'rgba(255, 255, 255, 0.95)',

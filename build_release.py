@@ -174,6 +174,21 @@ def create_release_package():
     try:
         shutil.copytree(source_dir, release_dir / "ue_toolkit")
         print("文件复制完成")
+        
+        # 复制启动脚本到 release 目录
+        bat_files = [
+            project_root / "run_with_console.bat",
+            project_root / "run_without_console.bat"
+        ]
+        
+        for bat_file in bat_files:
+            if bat_file.exists():
+                dest_file = release_dir / bat_file.name
+                shutil.copy2(bat_file, dest_file)
+                print(f"复制启动脚本: {bat_file.name}")
+            else:
+                print(f"警告: 启动脚本不存在: {bat_file.name}")
+        
     except Exception as e:
         print(f"文件复制失败: {e}")
         return False
@@ -184,15 +199,25 @@ def create_release_package():
         with open(version_info, 'w', encoding='utf-8') as f:
             f.write("UE Toolkit Release Version\n")
             f.write("========================\n")
-            f.write("Version: 1.0.0\n")
+            f.write("Version: 1.0.1 (Beta)\n")
             f.write("Build Date: " + time.strftime("%Y-%m-%d %H:%M:%S") + "\n")
             f.write("Build Type: Release\n")
             f.write("\nContents:\n")
-            f.write("- ue_toolkit.exe: Main executable\n")
-            f.write("- resources/: Resource files directory\n")
-            f.write("- modules/: Modules directory\n")
-            f.write("- PyQt6/: PyQt6 library files\n")
+            f.write("- ue_toolkit/ue_toolkit.exe: Main executable\n")
+            f.write("- run_with_console.bat: Run with console window\n")
+            f.write("- run_without_console.bat: Run without console window\n")
+            f.write("- ue_toolkit/resources/: Resource files directory\n")
+            f.write("- ue_toolkit/modules/: Modules directory\n")
+            f.write("- ue_toolkit/ui/: UI components directory\n")
+            f.write("- ue_toolkit/core/: Core functionality\n")
+            f.write("- ue_toolkit/PyQt6/: PyQt6 library files\n")
             f.write("- Other dependencies...\n")
+            f.write("\nNew Features (v1.0.1 Beta):\n")
+            f.write("- System tray support\n")
+            f.write("- Close confirmation dialog\n")
+            f.write("- Remember close behavior preference\n")
+            f.write("- Preview project management improvements\n")
+            f.write("- UE project selection dialog enhancements\n")
         print(f"创建版本信息文件: {version_info}")
     except Exception as e:
         print(f"创建版本信息文件失败: {e}")

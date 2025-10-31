@@ -72,6 +72,10 @@ class AssetManagerLogic(QObject):
         # 分类列表
         self.categories: List[str] = ["默认分类"]
         
+        # 当前预览工程的进程和路径（用于确保关闭的是预览工程而不是用户的其他项目）
+        self.current_preview_process = None
+        self.current_preview_project_path: Optional[Path] = None
+        
         self._load_config()
         
         logger.info("资产管理逻辑初始化完成")
@@ -1506,6 +1510,18 @@ class AssetManagerLogic(QObject):
                 self.error_occurred.emit(error_msg)
                 return False
             
+            # 先关闭当前正在运行的预览工程（如果有）
+            if self.current_preview_process or self.current_preview_project_path:
+                logger.info("检测到正在运行的预览工程，准备关闭...")
+                if progress_callback:
+                    progress_callback(0, 1, "正在关闭之前的预览工程...")
+                
+                if not self._close_current_preview_if_running():
+                    error_msg = "无法关闭当前正在运行的预览工程，请手动关闭后重试"
+                    logger.error(error_msg)
+                    self.error_occurred.emit(error_msg)
+                    return False
+            
             # 在后台线程中执行预览
             thread = threading.Thread(
                 target=self._do_preview_asset,
@@ -1786,6 +1802,12 @@ class AssetManagerLogic(QObject):
                 try:
                     process = self._launch_unreal_project(preview_project)
                     
+                    # 保存当前预览工程的进程和路径信息
+                    if process:
+                        self.current_preview_process = process
+                        self.current_preview_project_path = preview_project
+                        logger.info(f"已记录当前预览工程: {preview_project.name} (PID: {process.pid})")
+                    
                     # 如果成功获取进程，等待进程结束后自动清理
                     if process:
                         logger.info("监听虚幻引擎进程，等待关闭后自动清理...")
@@ -1802,11 +1824,18 @@ class AssetManagerLogic(QObject):
                             shutil.rmtree(content_dir)
                             content_dir.mkdir(parents=True, exist_ok=True)
                             logger.info("预览工程Content文件夹已自动清理完成")
+                        
+                        # 清除记录的进程信息（因为已经关闭）
+                        self.current_preview_process = None
+                        self.current_preview_project_path = None
                     
                     self.preview_finished.emit()
                 except Exception as e:
                     logger.error(f"启动或监听虚幻引擎时出错: {e}", exc_info=True)
                     self.error_occurred.emit(f"启动虚幻引擎失败: {e}")
+                    # 发生错误时也清除记录
+                    self.current_preview_process = None
+                    self.current_preview_project_path = None
             
             # 在新线程中启动和监听虚幻引擎，不阻塞当前线程
             monitor_thread = threading.Thread(target=launch_and_monitor, daemon=True)
@@ -1914,6 +1943,95 @@ class AssetManagerLogic(QObject):
         except Exception as e:
             logger.error(f"查找UE进程时出错: {e}")
             return None
+    
+    def _close_current_preview_if_running(self):
+        """关闭当前正在运行的预览工程（如果有）并清空Content文件夹
+        
+        Returns:
+            bool: 如果成功关闭或无需关闭返回True，失败返回False
+        """
+        if not self.current_preview_process or not self.current_preview_project_path:
+            # 没有正在运行的预览工程
+            return True
+        
+        try:
+            import psutil
+            
+            # 检查进程是否还在运行
+            if not psutil.pid_exists(self.current_preview_process.pid):
+                logger.info("之前的预览工程已关闭")
+                self.current_preview_process = None
+                self.current_preview_project_path = None
+                return True
+            
+            # 获取进程对象
+            try:
+                proc = psutil.Process(self.current_preview_process.pid)
+                
+                # 验证这确实是一个UE进程
+                ue_process_names = [
+                    'UE4Editor.exe',
+                    'UE4Editor-Win64-Debug.exe',
+                    'UE4Editor-Win64-DebugGame.exe',
+                    'UnrealEditor.exe',
+                    'UnrealEditor-Win64-Debug.exe',
+                    'UnrealEditor-Win64-DebugGame.exe',
+                ]
+                
+                if proc.name() not in ue_process_names:
+                    logger.warning(f"进程 {proc.pid} 不是UE进程，跳过关闭")
+                    self.current_preview_process = None
+                    self.current_preview_project_path = None
+                    return True
+                
+                # 关闭预览工程
+                logger.info(f"正在关闭预览工程: {self.current_preview_project_path.name} (PID: {proc.pid})")
+                proc.terminate()  # 优雅关闭
+                
+                # 保存工程路径到局部变量，因为监听线程可能会清除它
+                preview_project_path = self.current_preview_project_path
+                
+                # 等待进程结束，最多等待10秒
+                import time
+                for i in range(10):
+                    if not proc.is_running():
+                        logger.info("预览工程已成功关闭")
+                        break
+                    time.sleep(1)
+                else:
+                    # 如果优雅关闭失败，强制杀死
+                    logger.warning("优雅关闭超时，强制关闭预览工程")
+                    proc.kill()
+                    time.sleep(1)
+                
+                # 清空Content文件夹（使用局部变量）
+                content_dir = preview_project_path / "Content"
+                if content_dir.exists():
+                    logger.info(f"清空预览工程Content文件夹: {content_dir}")
+                    shutil.rmtree(content_dir)
+                    content_dir.mkdir(parents=True, exist_ok=True)
+                    logger.info("预览工程Content文件夹已清空")
+                
+                # 重置状态
+                self.current_preview_process = None
+                self.current_preview_project_path = None
+                return True
+                
+            except psutil.NoSuchProcess:
+                logger.info("预览工程进程已不存在")
+                self.current_preview_process = None
+                self.current_preview_project_path = None
+                return True
+            except psutil.AccessDenied:
+                logger.error("无权限关闭预览工程进程")
+                return False
+                
+        except ImportError:
+            logger.warning("psutil未安装，无法关闭预览工程")
+            return False
+        except Exception as e:
+            logger.error(f"关闭预览工程时出错: {e}", exc_info=True)
+            return False
     
     def migrate_asset(self, asset_id: str, target_project: Path, progress_callback=None) -> bool:
         """将资产从预览工程迁移到目标工程

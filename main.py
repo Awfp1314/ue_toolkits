@@ -8,12 +8,6 @@ import sys
 import os
 from pathlib import Path
 
-# 首先启用路径追踪（用于调试）
-try:
-    import core.path_tracer
-except:
-    pass
-
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
@@ -56,7 +50,7 @@ def main():
     # 创建应用实例
     app = QApplication(sys.argv)
     app.setApplicationName("ue_toolkit")  # 统一使用无空格的名称
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationVersion("1.0.1")
     
     # 设置应用程序图标
     icon_path = project_root / "resources" / "tubiao.ico"

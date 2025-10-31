@@ -951,7 +951,26 @@ class AssetManagerUI(QWidget):
             # 下拉框
             combo = QComboBox()
             combo.addItems(project_names)
-            combo.setCurrentIndex(0)
+            
+            # 尝试从配置中读取上次选择的预览工程名称
+            try:
+                user_config = self.logic.config_manager.load_user_config()
+                last_preview_project_name = user_config.get("last_preview_project_name", "")
+                
+                # 如果有上次的选择,尝试在当前列表中找到它并设置为默认选中
+                if last_preview_project_name and last_preview_project_name in project_names:
+                    idx = project_names.index(last_preview_project_name)
+                    combo.setCurrentIndex(idx)
+                    logger.info(f"恢复上次选择的预览工程: {last_preview_project_name}")
+                else:
+                    # 上次选择不在列表中或没有上次选择,使用第一个
+                    combo.setCurrentIndex(0)
+                    if last_preview_project_name:
+                        logger.info(f"上次选择的工程 '{last_preview_project_name}' 不在列表中,使用第一个: {project_names[0]}")
+            except Exception as e:
+                logger.warning(f"读取上次选择失败: {e}")
+                combo.setCurrentIndex(0)
+            
             layout.addWidget(combo)
             
             layout.addSpacing(8)
@@ -987,6 +1006,15 @@ class AssetManagerUI(QWidget):
                 selected_name = combo.currentText()
                 selected_index = project_names.index(selected_name)
                 preview_project = Path(additional_projects[selected_index]["path"])
+                
+                # 保存本次选择的名称到配置
+                try:
+                    config = self.logic.config_manager.load_user_config()
+                    config["last_preview_project_name"] = selected_name
+                    self.logic.config_manager.save_user_config(config, backup_reason="update_preview_project")
+                    logger.info(f"已保存预览工程选择: {selected_name} ({preview_project})")
+                except Exception as e:
+                    logger.warning(f"保存预览工程选择失败: {e}")
             else:
                 logger.info("用户取消了工程选择")
                 return

@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:\\Users\\wang\\Desktop\\ue_toolkits\\resources', 'resources'), ('C:\\Users\\wang\\Desktop\\ue_toolkits\\modules', 'modules'), ('C:\\Users\\wang\\Desktop\\ue_toolkits\\core', 'core')],
+    datas=[('C:\\Users\\wang\\Desktop\\ue_toolkits\\resources', 'resources'), ('C:\\Users\\wang\\Desktop\\ue_toolkits\\modules', 'modules'), ('C:\\Users\\wang\\Desktop\\ue_toolkits\\core', 'core'), ('C:\\Users\\wang\\Desktop\\ue_toolkits\\ui', 'ui')],
     hiddenimports=['PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'uuid', 'PIL', 'PIL.Image', 'PIL.ImageDraw', 'PIL.ImageFont', 'PIL.ImageQt'],
     hookspath=[],
     hooksconfig={},

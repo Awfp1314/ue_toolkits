@@ -5,7 +5,7 @@
 """
 
 from typing import Optional
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QApplication
 from PyQt6.QtCore import Qt, QPoint, QSize
 from PyQt6.QtGui import QMouseEvent, QPixmap, QIcon, QImage, QColor
 from pathlib import Path
@@ -79,8 +79,10 @@ class CustomTitleBar(QWidget):
         
         title_layout.addWidget(icon_label)
         
-        # 标题标签
-        self.title_label = QLabel("UE Toolkit - 虚幻引擎工具箱")
+        # 标题标签（包含版本号）
+        app = QApplication.instance()
+        version = app.applicationVersion() if app else "1.0.0"
+        self.title_label = QLabel(f"UE Toolkit v{version}")
         self.title_label.setObjectName("titleLabel")
         # 样式由title_bar.qss提供，无需内联设置
         title_layout.addWidget(self.title_label)
@@ -119,8 +121,13 @@ class CustomTitleBar(QWidget):
         self.parent_window.showMinimized()
     
     def close_window(self):
-        """关闭窗口"""
-        self.parent_window.close()
+        """关闭窗口 - 显示关闭确认对话框"""
+        # 触发主窗口的关闭确认逻辑
+        if hasattr(self.parent_window, 'show_close_confirmation'):
+            self.parent_window.show_close_confirmation()
+        else:
+            # 如果父窗口没有实现关闭确认，直接关闭
+            self.parent_window.close()
     
     def toggle_maximize(self):
         """切换最大化状态（已禁用全屏功能）"""
