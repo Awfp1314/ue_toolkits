@@ -20,9 +20,10 @@ logger = get_logger(__name__)
 class MenuEventFilter(QObject):
     """菜单事件过滤器 - 监听全局事件实现自动关闭"""
     
-    def __init__(self, menu: QMenu):
+    def __init__(self, menu: QMenu, card_widget=None):
         super().__init__()
         self.menu = menu
+        self.card_widget = card_widget  # 保存对卡片的引用
         self.mouse_was_inside = True  # 标记鼠标是否曾在菜单内
         
         # 安装到应用程序级别，捕获所有事件
@@ -100,6 +101,12 @@ class MenuEventFilter(QObject):
                 self.menu.hide()
                 self.menu.deleteLater()
                 self.menu = None
+                
+                # 清除卡片的悬停状态
+                if self.card_widget:
+                    # 模拟鼠标离开事件，清除 hover 状态
+                    self.card_widget.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
+                    self.card_widget.update()
         except RuntimeError:
             # 菜单已被删除，只需清理定时器和引用
             if hasattr(self, 'check_timer'):
@@ -234,24 +241,25 @@ class AssetCard(QFrame):
     description_updated = pyqtSignal(str, str)  # asset_id, new_description (已废弃)
     open_markdown_editor = pyqtSignal(str, str)  # asset_id, markdown_path
     
-    def __init__(self, asset: Asset, parent=None):
+    def __init__(self, asset: Asset, asset_manager_ui=None, parent=None):
         super().__init__(parent)
         self.asset = asset
+        self.asset_manager_ui = asset_manager_ui
         self.theme_manager = get_theme_manager()
         self._init_ui()
     
     def mousePressEvent(self, event):
         """鼠标点击事件 - 单击卡片显示描述编辑对话框"""
-        logger.debug(f"鼠标点击事件触发 - 资产: {self.asset.name}, 按钮: {event.button()}")
+        logger.info(f"[AssetCard] 鼠标点击事件触发 - 资产: {self.asset.name}, 按钮: {event.button()}")
         if event.button() == Qt.MouseButton.LeftButton:
             is_button_area = self._is_clicking_button(event.pos())
-            logger.debug(f"点击位置: {event.pos()}, 是否按钮区域: {is_button_area}")
+            logger.info(f"[AssetCard] 点击位置: {event.pos()}, 卡片高度: {self.height()}, 是否按钮区域: {is_button_area}")
             # 如果点击的是按钮，则不弹出对话框
             if not is_button_area:
-                logger.debug(f"准备调用_show_description_dialog")
+                logger.info(f"[AssetCard] 准备打开文档: {self.asset.id}.txt")
                 self._show_description_dialog()
             else:
-                logger.debug(f"点击在按钮区域，跳过")
+                logger.info(f"[AssetCard] 点击在按钮区域，跳过打开文档")
         super().mousePressEvent(event)
     
     def _is_clicking_button(self, pos):
@@ -266,30 +274,47 @@ class AssetCard(QFrame):
             import sys
             from pathlib import Path
             
+            logger.info(f"[AssetCard] _show_description_dialog 被调用 - 资产: {self.asset.name}")
+            
             # 构建文档文件名（与资产ID关联）
             doc_filename = f"{self.asset.id}.txt"
+            logger.info(f"[AssetCard] 文档文件名: {doc_filename}")
             
-            # 文档保存在: C:\Users\{user}\AppData\Roaming\ue_toolkit\user_data\documents
-            user_data_dir = Path.home() / "AppData" / "Roaming" / "ue_toolkit" / "user_data"
-            documents_dir = user_data_dir / "documents"
-            doc_path = documents_dir / doc_filename
+            # 优先使用本地文档目录，如果不存在则查找全局文档目录（向后兼容）
+            if hasattr(self.asset_manager_ui, 'logic') and hasattr(self.asset_manager_ui.logic, 'documents_dir'):
+                # 使用本地文档目录
+                documents_dir = self.asset_manager_ui.logic.documents_dir
+                doc_path = documents_dir / doc_filename
+                logger.info(f"[AssetCard] 使用本地文档目录: {documents_dir}")
+            else:
+                # 向后兼容：查找全局文档目录
+                user_data_dir = Path.home() / "AppData" / "Roaming" / "ue_toolkit" / "user_data"
+                documents_dir = user_data_dir / "documents"
+                doc_path = documents_dir / doc_filename
+                logger.info(f"[AssetCard] 使用全局文档目录: {documents_dir}")
+            
+            logger.info(f"[AssetCard] 完整文档路径: {doc_path}")
+            logger.info(f"[AssetCard] 文档是否存在: {doc_path.exists()}")
             
             # 如果文档存在，打开它
             if doc_path.exists():
-                logger.info(f"打开文本文档: {doc_path}")
+                logger.info(f"[AssetCard] 打开文本文档: {doc_path}")
                 if sys.platform == "win32":
                     subprocess.Popen(['notepad', str(doc_path)])
+                    logger.info(f"[AssetCard] 已启动 notepad 打开文档")
                 elif sys.platform == "darwin":
                     subprocess.Popen(['open', '-a', 'TextEdit', str(doc_path)])
+                    logger.info(f"[AssetCard] 已启动 TextEdit 打开文档")
                 else:
                     subprocess.Popen(['gedit', str(doc_path)])
+                    logger.info(f"[AssetCard] 已启动 gedit 打开文档")
             else:
-                logger.warning(f"文本文档不存在: {doc_path}")
-                logger.info(f"资产 {self.asset.name} 的关联文本文档位置应该是: {doc_path}")
-                logger.info(f"请通过添加资产时勾选'创建文档'选项来生成文档")
+                logger.warning(f"[AssetCard] 文本文档不存在: {doc_path}")
+                logger.info(f"[AssetCard] 资产 {self.asset.name} 的关联文本文档位置应该是: {doc_path}")
+                logger.info(f"[AssetCard] 请通过添加资产时勾选'创建文档'选项来生成文档")
         
         except Exception as e:
-            logger.error(f"打开文本文档失败: {e}", exc_info=True)
+            logger.error(f"[AssetCard] 打开文本文档失败: {e}", exc_info=True)
     
     def _init_ui(self):
         """初始化UI - 极简现代化卡片设计"""
@@ -421,12 +446,17 @@ class AssetCard(QFrame):
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         name_category_layout.addWidget(self.name_label, 1)  # stretch=1 让名称占据剩余空间
         
-        # 分类标签 - 右对齐小标签
-        self.category_label = QLabel(self.asset.category)
-        self.category_label.setObjectName("assetCardCategory")
+        # 类型标签 - 右对齐小标签(显示资产类型：资源包/文件)
+        type_name_map = {
+            AssetType.PACKAGE: "资源包",
+            AssetType.FILE: "文件"
+        }
+        type_display_name = type_name_map.get(self.asset.asset_type, "未知")
+        self.type_label = QLabel(type_display_name)
+        self.type_label.setObjectName("assetCardCategory")
         # 样式由上方 setStyleSheet 中的 #assetCardCategory 提供
-        self.category_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        name_category_layout.addWidget(self.category_label, 0)  # stretch=0 保持最小宽度
+        self.type_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        name_category_layout.addWidget(self.type_label, 0)  # stretch=0 保持最小宽度
         
         content_layout.addLayout(name_category_layout)
         
@@ -434,27 +464,20 @@ class AssetCard(QFrame):
         # 样式由上方 setStyleSheet 中的 .assetCardInfo 提供
         
         try:
-            # 中文类型映射
-            type_name_map = {
-                AssetType.PACKAGE: "资源包",
-                AssetType.FILE: "文件"
-            }
-            type_display_name = type_name_map.get(self.asset.asset_type, "未知")
+            # 资产分类 (显示在第一行)
+            self.category_info_label = QLabel(f"资产分类：{self.asset.category}")
+            self.category_info_label.setProperty("class", "assetCardInfo")
+            self.category_info_label.setAlignment(Qt.AlignmentFlag.AlignLeft)  # 左对齐
+            content_layout.addWidget(self.category_info_label)
             
-            # 资产大小
+            # 资产大小 (显示在第二行)
             size_text = self.asset._format_size() if hasattr(self.asset, '_format_size') else f"{getattr(self.asset, 'size', 0)} B"
             self.size_info_label = QLabel(f"资产大小：{size_text}")
             self.size_info_label.setProperty("class", "assetCardInfo")
             self.size_info_label.setAlignment(Qt.AlignmentFlag.AlignLeft)  # 左对齐
             content_layout.addWidget(self.size_info_label)
             
-            # 资产类型
-            self.type_info_label = QLabel(f"资产类型：{type_display_name}")
-            self.type_info_label.setProperty("class", "assetCardInfo")
-            self.type_info_label.setAlignment(Qt.AlignmentFlag.AlignLeft)  # 左对齐
-            content_layout.addWidget(self.type_info_label)
-            
-            logger.debug(f"资产信息显示: 大小={size_text}, 类型={type_display_name}")
+            logger.debug(f"资产信息显示: 分类={self.asset.category}, 大小={size_text}")
         except Exception as e:
             logger.error(f"创建资产信息标签失败: {e}", exc_info=True)
             self.error_label = QLabel("信息加载失败")
@@ -550,6 +573,48 @@ class AssetCard(QFrame):
         self.thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logger.debug(f"显示默认图标文本: {self.asset.name} - {icon_text}")
     
+    def _open_asset_location(self):
+        """打开资产所在文件夹"""
+        try:
+            import subprocess
+            import sys
+            from pathlib import Path
+            
+            asset_path = Path(self.asset.path)
+            
+            # 如果是文件，获取其父目录；如果是文件夹，直接使用该路径
+            if asset_path.is_file():
+                folder_path = asset_path.parent
+                # 打开文件夹并选中该文件
+                if sys.platform == "win32":
+                    # Windows: 使用 explorer /select 命令选中文件
+                    subprocess.run(['explorer', '/select,', str(asset_path)])
+                    logger.info(f"[AssetCard] 在资源管理器中打开并选中: {asset_path}")
+                elif sys.platform == "darwin":
+                    # macOS: 使用 open -R 命令选中文件
+                    subprocess.run(['open', '-R', str(asset_path)])
+                    logger.info(f"[AssetCard] 在 Finder 中打开并选中: {asset_path}")
+                else:
+                    # Linux: 打开父文件夹（大多数文件管理器不支持选中文件）
+                    subprocess.run(['xdg-open', str(folder_path)])
+                    logger.info(f"[AssetCard] 打开文件夹: {folder_path}")
+            elif asset_path.is_dir():
+                # 如果是文件夹，直接打开该文件夹
+                if sys.platform == "win32":
+                    subprocess.run(['explorer', str(asset_path)])
+                    logger.info(f"[AssetCard] 在资源管理器中打开文件夹: {asset_path}")
+                elif sys.platform == "darwin":
+                    subprocess.run(['open', str(asset_path)])
+                    logger.info(f"[AssetCard] 在 Finder 中打开文件夹: {asset_path}")
+                else:
+                    subprocess.run(['xdg-open', str(asset_path)])
+                    logger.info(f"[AssetCard] 打开文件夹: {asset_path}")
+            else:
+                logger.warning(f"[AssetCard] 资产路径不存在: {asset_path}")
+                
+        except Exception as e:
+            logger.error(f"[AssetCard] 打开资产所在位置失败: {e}", exc_info=True)
+    
     def _show_context_menu(self):
         """显示右键菜单 - 现代化设计，鼠标移开自动关闭"""
         tm = self.theme_manager
@@ -586,15 +651,20 @@ class AssetCard(QFrame):
             }}
         """)
         
+        # 迁移资产
+        migrate_action = QAction("迁移到工程", menu)
+        migrate_action.triggered.connect(lambda: self.migrate_clicked.emit(self.asset.id))
+        menu.addAction(migrate_action)
+        
         # 编辑信息
         edit_info_action = QAction("编辑信息", menu)
         edit_info_action.triggered.connect(lambda: self.edit_info_clicked.emit(self.asset.id))
         menu.addAction(edit_info_action)
         
-        # 迁移资产
-        migrate_action = QAction("迁移到工程", menu)
-        migrate_action.triggered.connect(lambda: self.migrate_clicked.emit(self.asset.id))
-        menu.addAction(migrate_action)
+        # 打开资产所在路径
+        open_location_action = QAction("打开所在位置", menu)
+        open_location_action.triggered.connect(self._open_asset_location)
+        menu.addAction(open_location_action)
         
         menu.addSeparator()
         
@@ -603,8 +673,8 @@ class AssetCard(QFrame):
         delete_action.triggered.connect(lambda: self.delete_clicked.emit(self.asset.id))
         menu.addAction(delete_action)
         
-        # 安装事件过滤器，实现鼠标移开自动关闭
-        self.menu_event_filter = MenuEventFilter(menu)
+        # 安装事件过滤器，实现鼠标移开自动关闭，并传递卡片引用用于清除悬停状态
+        self.menu_event_filter = MenuEventFilter(menu, card_widget=self)
         
         menu.popup(QCursor.pos())
     

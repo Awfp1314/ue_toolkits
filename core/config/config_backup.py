@@ -36,13 +36,14 @@ class ConfigBackupManager:
         # 确保备份目录存在
         self.backup_dir.mkdir(parents=True, exist_ok=True)
     
-    def backup_config(self, reason: str = "manual") -> bool:
-        """备份当前配置文件
+    def backup_config(self, reason: str = "manual", config: Optional[Dict[str, Any]] = None) -> bool:
+        """备份配置数据
         
         改进的备份策略：
-        1. 使用带时间戳和原因的文件名，确保唯一性
-        2. 验证备份文件的有效性
-        3. 自动清理旧备份
+        1. 备份新配置（即将保存的配置）
+        2. 使用带时间戳和原因的文件名，确保唯一性
+        3. 验证备份文件的有效性
+        4. 自动清理旧备份
         
         Args:
             reason: 备份原因（用于文件命名）
@@ -51,21 +52,36 @@ class ConfigBackupManager:
                 - auto_upgrade: 自动升级前备份
                 - recovery: 恢复前备份
                 - scheduled: 定时备份
+            config: 要备份的配置字典。如果为 None，则从现有文件读取
             
         Returns:
             bool: 备份是否成功
         """
-        if not self.user_config_path.exists():
-            self.logger.debug("配置文件不存在，无需备份")
-            return True
-            
         try:
+            # 如果没有提供新配置，尝试从现有文件读取
+            if config is None:
+                if not self.user_config_path.exists():
+                    self.logger.debug("配置文件不存在，无需备份")
+                    return True
+                try:
+                    with open(self.user_config_path, 'r', encoding='utf-8') as f:
+                        config = json.load(f)
+                except Exception as e:
+                    self.logger.error(f"读取现有配置文件失败: {e}")
+                    return False
+            
+            if not config or not isinstance(config, dict):
+                self.logger.error("配置数据无效")
+                return False
+            
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:19]  # 精确到毫秒的前3位
             safe_reason = reason.replace(" ", "_").replace("/", "_").replace("\\", "_")
             backup_filename = f"{self.module_name}_config_{timestamp}_{safe_reason}.json"
             backup_path = self.backup_dir / backup_filename
             
-            shutil.copy2(self.user_config_path, backup_path)
+            # 备份新配置
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
             
             if not self._verify_backup(backup_path):
                 self.logger.error(f"备份文件验证失败: {backup_path}")

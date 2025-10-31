@@ -95,11 +95,12 @@ class ConfigTemplateButton(QPushButton):
             
             progress_dialog = ProgressDialog("正在搜索工程", self.main_ui)
             progress_dialog.set_indeterminate(True)  # 设置为不确定进度模式
-            progress_dialog.set_status("正在检测和搜索UE工程...")
             
             # 创建并启动搜索线程
             self.search_thread = SearchProjectsThread()
-            self.search_thread.progress_updated.connect(lambda c, t, m: progress_dialog.update_progress(c, t, m))
+            self.search_thread.progress_updated.connect(
+                lambda c, t, m: progress_dialog.update_progress(c, t, m)
+            )
             self.search_thread.search_completed.connect(
                 lambda r, a: self._on_search_completed(r, a, progress_dialog)
             )
@@ -137,9 +138,9 @@ class ConfigTemplateButton(QPushButton):
         try:
             logger.info(f"搜索完成: {len(running_projects)} 个运行中，{len(all_projects)} 个所有工程")
             
-            # 关闭进度对话框
+            # 关闭进度对话框（立即关闭，不延迟）
             if progress_dialog:
-                progress_dialog.finish_success(300)
+                progress_dialog.close()
             
             # 修正运行中工程的名称
             for project in running_projects:

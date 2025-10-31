@@ -60,15 +60,17 @@ class PathUtils:
         return logs_path
     
     def create_dirs(self) -> None:
-        """检查并创建用户目录（如 configs, logs, cache, thumbnails）如果这些目录不存在"""
+        """检查并创建用户目录（如 configs, logs, cache）如果这些目录不存在
+        
+        注意：thumbnails 和 documents 不再在全局目录创建，而是在资产库本地目录创建
+        """
         user_data_dir = self.get_user_data_dir()
         
-        # 需要创建的目录列表
+        # 需要创建的目录列表（只保留全局配置和日志目录）
         dirs_to_create = [
             "configs",
             "logs",
-            "cache",
-            "thumbnails"
+            "cache"
         ]
         
         logger.info(f"开始创建用户数据目录: {user_data_dir}")

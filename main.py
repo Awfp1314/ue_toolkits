@@ -50,7 +50,7 @@ def main():
     # 创建应用实例
     app = QApplication(sys.argv)
     app.setApplicationName("ue_toolkit")  # 统一使用无空格的名称
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationVersion("1.0.1")
     
     # 设置应用程序图标
     icon_path = project_root / "resources" / "tubiao.ico"

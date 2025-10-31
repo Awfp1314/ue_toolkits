@@ -5,9 +5,10 @@
 """
 
 from typing import Optional
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
-from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtGui import QMouseEvent
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QApplication
+from PyQt6.QtCore import Qt, QPoint, QSize
+from PyQt6.QtGui import QMouseEvent, QPixmap, QIcon, QImage, QColor
+from pathlib import Path
 from core.utils.theme_manager import get_theme_manager
 
 
@@ -38,10 +39,50 @@ class CustomTitleBar(QWidget):
         self.setLayout(layout)
         
         title_layout = QHBoxLayout()
-        title_layout.setSpacing(5)
+        title_layout.setSpacing(8)
         
-        # 标题标签
-        self.title_label = QLabel("UE Toolkit - 虚幻引擎工具箱")
+        # 程序图标
+        icon_label = QLabel()
+        icon_label.setObjectName("iconLabel")
+        # 设置标签内容对齐方式为居中
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # 设置固定大小，防止图标过大
+        icon_label.setFixedSize(24, 24)
+        icon_path = Path(__file__).parent.parent.parent / "resources" / "tubiao.ico"
+        if icon_path.exists():
+            pixmap = QPixmap(str(icon_path))
+            
+            # 将图像转换为ARGB格式以支持透明度
+            image = pixmap.toImage()
+            image = image.convertToFormat(QImage.Format.Format_ARGB32)
+            
+            # 替换浅色像素（白色及接近白色的像素，包括边框）为透明
+            # 使用更宽松的阈值来处理边框
+            for x in range(image.width()):
+                for y in range(image.height()):
+                    color = image.pixelColor(x, y)
+                    # 如果像素是浅色（RGB值都 > 200），设置为透明
+                    # 这样可以处理白色背景和灰色边框
+                    if color.red() > 200 and color.green() > 200 and color.blue() > 200:
+                        # 根据亮度计算透明度，越亮越透明
+                        brightness = (color.red() + color.green() + color.blue()) / 3
+                        alpha = max(0, int(255 * (1 - (brightness - 200) / 55)))
+                        transparent_color = QColor(color.red(), color.green(), color.blue(), alpha)
+                        image.setPixelColor(x, y, transparent_color)
+            
+            # 转换回 QPixmap
+            pixmap = QPixmap.fromImage(image)
+            
+            # 缩放图标到合适的大小（20x20像素）
+            scaled_pixmap = pixmap.scaled(20, 20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            icon_label.setPixmap(scaled_pixmap)
+        
+        title_layout.addWidget(icon_label)
+        
+        # 标题标签（包含版本号）
+        app = QApplication.instance()
+        version = app.applicationVersion() if app else "1.0.0"
+        self.title_label = QLabel(f"UE Toolkit v{version}")
         self.title_label.setObjectName("titleLabel")
         # 样式由title_bar.qss提供，无需内联设置
         title_layout.addWidget(self.title_label)
@@ -57,7 +98,7 @@ class CustomTitleBar(QWidget):
         
         self.maximize_button = QPushButton("□")
         self.maximize_button.setObjectName("maximizeButton")
-        self.maximize_button.setEnabled(False)  # 禁用全屏按钮
+        self.maximize_button.setEnabled(False)
         self.maximize_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # 禁用焦点
         self.maximize_button.clicked.connect(self.toggle_maximize)
         
@@ -80,8 +121,13 @@ class CustomTitleBar(QWidget):
         self.parent_window.showMinimized()
     
     def close_window(self):
-        """关闭窗口"""
-        self.parent_window.close()
+        """关闭窗口 - 显示关闭确认对话框"""
+        # 触发主窗口的关闭确认逻辑
+        if hasattr(self.parent_window, 'show_close_confirmation'):
+            self.parent_window.show_close_confirmation()
+        else:
+            # 如果父窗口没有实现关闭确认，直接关闭
+            self.parent_window.close()
     
     def toggle_maximize(self):
         """切换最大化状态（已禁用全屏功能）"""

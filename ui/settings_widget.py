@@ -6,7 +6,8 @@
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QFileDialog, QGroupBox, 
-                             QFrame, QComboBox, QMessageBox, QScrollArea)
+                             QFrame, QComboBox, QMessageBox, QScrollArea, QRadioButton,
+                             QButtonGroup)
 from PyQt6.QtCore import Qt, QStandardPaths
 from PyQt6.QtGui import QFont
 from pathlib import Path
@@ -15,6 +16,7 @@ from core.logger import get_logger
 from core.utils.theme_manager import get_theme_manager, Theme
 from core.utils.custom_widgets import NoContextMenuLineEdit
 from modules.config_tool.ui.dialogs.name_input_dialog import NameInputDialog
+from ui.dialogs.close_confirmation_dialog import CloseConfirmationDialog
 
 logger = get_logger(__name__)
 
@@ -34,12 +36,29 @@ class SettingsWidget(QWidget):
         
         # 加载保存的主题设置（在UI创建之后）
         self._load_theme_from_config()
+        
+        # 加载保存的关闭方式设置
+        self._load_close_behavior_from_config()
     
     def init_ui(self):
         """初始化UI"""
+        # 主布局
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(30, 30, 30, 30)
-        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        
+        # 创建滚动区域
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        # 创建内容容器
+        content_widget = QWidget()
+        content_layout = QVBoxLayout()
+        content_layout.setContentsMargins(30, 30, 30, 30)
+        content_layout.setSpacing(20)
         
         # 路径设置组
         paths_group = QGroupBox("资产管理路径设置")
@@ -91,7 +110,7 @@ class SettingsWidget(QWidget):
         paths_layout.addLayout(add_preview_layout)
         
         paths_group.setLayout(paths_layout)
-        main_layout.addWidget(paths_group)
+        content_layout.addWidget(paths_group)
         
         theme_group = QGroupBox("主题设置")
         theme_layout = QVBoxLayout()
@@ -144,9 +163,60 @@ class SettingsWidget(QWidget):
         theme_layout.addWidget(self.theme_hint_label)
         
         theme_group.setLayout(theme_layout)
-        main_layout.addWidget(theme_group)
+        content_layout.addWidget(theme_group)
         
-        main_layout.addStretch()
+        # 关闭方式设置组
+        close_behavior_group = QGroupBox("关闭方式设置")
+        close_behavior_layout = QVBoxLayout()
+        close_behavior_layout.setSpacing(15)
+        
+        close_behavior_label = QLabel("选择点击关闭按钮时的行为：")
+        close_behavior_layout.addWidget(close_behavior_label)
+        
+        # 单选按钮组 - 放在同一行
+        radio_layout = QHBoxLayout()
+        radio_layout.setSpacing(20)
+        
+        self.close_button_group = QButtonGroup(self)
+        
+        self.close_directly_radio = QRadioButton("直接关闭程序")
+        self.close_button_group.addButton(self.close_directly_radio, CloseConfirmationDialog.RESULT_CLOSE)
+        radio_layout.addWidget(self.close_directly_radio)
+        
+        self.minimize_to_tray_radio = QRadioButton("最小化到系统托盘")
+        self.close_button_group.addButton(self.minimize_to_tray_radio, CloseConfirmationDialog.RESULT_MINIMIZE)
+        radio_layout.addWidget(self.minimize_to_tray_radio)
+        
+        self.ask_every_time_radio = QRadioButton("每次询问（默认）")
+        self.close_button_group.addButton(self.ask_every_time_radio, 0)
+        self.ask_every_time_radio.setChecked(True)  # 默认选中
+        radio_layout.addWidget(self.ask_every_time_radio)
+        
+        radio_layout.addStretch()  # 添加弹性空间
+        close_behavior_layout.addLayout(radio_layout)
+        
+        # 连接信号
+        self.close_button_group.idClicked.connect(self._on_close_behavior_changed)
+        
+        close_behavior_hint = QLabel("提示：更改设置后将立即生效。")
+        close_behavior_hint.setStyleSheet("font-size: 12px; padding-top: 5px;")
+        close_behavior_hint.setWordWrap(True)
+        close_behavior_layout.addWidget(close_behavior_hint)
+        
+        close_behavior_group.setLayout(close_behavior_layout)
+        content_layout.addWidget(close_behavior_group)
+        
+        content_layout.addStretch()
+        
+        # 设置内容容器的布局
+        content_widget.setLayout(content_layout)
+        
+        # 将内容容器添加到滚动区域
+        scroll_area.setWidget(content_widget)
+        
+        # 将滚动区域添加到主布局
+        main_layout.addWidget(scroll_area)
+        
         self.setLayout(main_layout)
         
         # 应用动态主题样式（在所有UI元素创建之后）
@@ -967,4 +1037,93 @@ class SettingsWidget(QWidget):
             logger.error(f"加载主题设置失败: {e}", exc_info=True)
             # 即使加载失败，也要在下拉框中选中默认主题
             self._load_current_theme()
+    
+    def _on_close_behavior_changed(self, button_id: int):
+        """关闭方式选项变更时的处理
+        
+        Args:
+            button_id: 按钮ID (0=每次询问, 1=直接关闭, 2=最小化到托盘)
+        """
+        try:
+            logger.info(f"用户选择了关闭方式: {button_id}")
+            
+            # 保存到配置文件
+            self._save_close_behavior_setting(button_id)
+            
+            # 更新主窗口的关闭行为偏好
+            main_window = self.window()
+            if hasattr(main_window, '_close_action_preference'):
+                if button_id == CloseConfirmationDialog.RESULT_CLOSE:
+                    main_window._close_action_preference = "close"
+                    logger.info("关闭方式已设置为：直接关闭")
+                elif button_id == CloseConfirmationDialog.RESULT_MINIMIZE:
+                    main_window._close_action_preference = "minimize"
+                    logger.info("关闭方式已设置为：最小化到托盘")
+                else:  # 0 = 每次询问
+                    main_window._close_action_preference = None
+                    logger.info("关闭方式已设置为：每次询问")
+            
+        except Exception as e:
+            logger.error(f"保存关闭方式设置失败: {e}", exc_info=True)
+    
+    def _save_close_behavior_setting(self, button_id: int):
+        """保存关闭方式设置到配置文件
+        
+        Args:
+            button_id: 按钮ID
+        """
+        try:
+            # 使用 ConfigManager 来保存配置
+            from core.config.config_manager import ConfigManager
+            config_manager = ConfigManager("app")
+            
+            # 读取现有配置
+            config = config_manager.load_user_config()
+            
+            # 如果配置是空的或者没有版本号，初始化版本号
+            if not config or '_version' not in config:
+                config['_version'] = "1.0.0"
+            
+            # 保存关闭方式
+            if button_id == CloseConfirmationDialog.RESULT_CLOSE:
+                config['close_action_preference'] = "close"
+            elif button_id == CloseConfirmationDialog.RESULT_MINIMIZE:
+                config['close_action_preference'] = "minimize"
+            else:  # 0 = 每次询问
+                config['close_action_preference'] = None
+            
+            # 保存配置
+            success = config_manager.save_user_config(config)
+            
+            if success:
+                logger.info(f"关闭方式设置已保存到 app_config: {config['close_action_preference']}")
+            else:
+                logger.error("保存关闭方式设置失败")
+            
+        except Exception as e:
+            logger.error(f"保存关闭方式设置失败: {e}", exc_info=True)
+    
+    def _load_close_behavior_from_config(self):
+        """从配置文件加载关闭方式设置"""
+        try:
+            # 使用 ConfigManager 来加载配置
+            from core.config.config_manager import ConfigManager
+            config_manager = ConfigManager("app")
+            
+            # 读取配置
+            config = config_manager.load_user_config()
+            close_preference = config.get('close_action_preference')
+            
+            if close_preference == "close":
+                self.close_directly_radio.setChecked(True)
+                logger.info("已从 app_config 加载关闭方式: 直接关闭")
+            elif close_preference == "minimize":
+                self.minimize_to_tray_radio.setChecked(True)
+                logger.info("已从 app_config 加载关闭方式: 最小化到托盘")
+            else:
+                self.ask_every_time_radio.setChecked(True)
+                logger.info("已从 app_config 加载关闭方式: 每次询问")
+            
+        except Exception as e:
+            logger.error(f"加载关闭方式设置失败: {e}", exc_info=True)
 

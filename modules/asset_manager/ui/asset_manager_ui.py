@@ -731,7 +731,7 @@ class AssetManagerUI(QWidget):
         # 添加资产卡片（网格布局，每行4个）
         columns = 4
         for i, asset in enumerate(assets):
-            card = AssetCard(asset)
+            card = AssetCard(asset, asset_manager_ui=self)
             card.preview_clicked.connect(self._preview_asset)
             card.delete_clicked.connect(self._delete_asset)
             card.migrate_clicked.connect(self._migrate_asset)
@@ -782,24 +782,242 @@ class AssetManagerUI(QWidget):
             # 多个工程时，弹出选择对话框
             project_names = [p.get("name", "未命名") for p in additional_projects]
             
-            # 创建一个简单的项目选择对话框
-            from PyQt6.QtWidgets import QInputDialog
-            selected_name, ok = QInputDialog.getItem(
-                self,
-                "选择预览工程",
-                "请选择要预览的工程：",
-                project_names,
-                0,
-                False
-            )
+            # 创建一个应用主题的项目选择对话框（无标题栏风格）
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QWidget
+            from PyQt6.QtCore import Qt, QPoint
+            from PyQt6.QtGui import QMouseEvent
             
-            if not ok:
+            class PreviewProjectDialog(QDialog):
+                """预览工程选择对话框（带自定义标题栏）"""
+                def __init__(self, parent=None):
+                    super().__init__(parent)
+                    self.drag_position = QPoint()
+                    self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+                    
+                mousePressEvent_orig = None
+                mouseMoveEvent_orig = None
+                
+                def mousePressEvent(self, event: QMouseEvent):
+                    """处理鼠标按下事件"""
+                    if event.position().y() < 45:
+                        self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                        event.accept()
+                    else:
+                        super().mousePressEvent(event)
+                
+                def mouseMoveEvent(self, event: QMouseEvent):
+                    """处理鼠标移动事件"""
+                    if event.buttons() == Qt.MouseButton.LeftButton and event.position().y() < 45:
+                        self.move(event.globalPosition().toPoint() - self.drag_position)
+                        event.accept()
+                    else:
+                        super().mouseMoveEvent(event)
+            
+            dialog = PreviewProjectDialog(self)
+            dialog.setMinimumWidth(420)
+            dialog.setMinimumHeight(200)
+            dialog.theme_manager = self.theme_manager
+            
+            # 应用主题样式
+            tm = dialog.theme_manager
+            dialog.setStyleSheet(f"""
+                QDialog {{
+                    background-color: {tm.get_variable('bg_secondary')};
+                    border: 1px solid {tm.get_variable('border')};
+                    border-radius: 8px;
+                }}
+                /* 自定义标题栏 */
+                QDialog #titleBar {{
+                    background-color: {tm.get_variable('bg_tertiary')};
+                    border-bottom: 1px solid {tm.get_variable('border')};
+                    border-radius: 8px 8px 0px 0px;
+                    padding: 0px;
+                }}
+                QDialog #titleLabel {{
+                    color: {tm.get_variable('text_primary')};
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding-left: 15px;
+                    background-color: transparent;
+                    border: none;
+                }}
+                QDialog #closeBtn {{
+                    background-color: transparent;
+                    color: {tm.get_variable('text_primary')};
+                    border: none;
+                    font-size: 16px;
+                    width: 30px;
+                    height: 30px;
+                    padding: 0px;
+                    margin-right: 5px;
+                }}
+                QDialog #closeBtn:hover {{
+                    background-color: {tm.get_variable('error')};
+                    color: white;
+                    border-radius: 3px;
+                }}
+                QLabel {{
+                    color: {tm.get_variable('text_primary')};
+                    font-size: 14px;
+                    padding: 2px 0px;
+                    height: auto;
+                }}
+                QComboBox {{
+                    background-color: {tm.get_variable('bg_tertiary')};
+                    border: 1px solid {tm.get_variable('border')};
+                    border-radius: 4px;
+                    padding: 4px 6px;
+                    color: {tm.get_variable('text_primary')};
+                    font-size: 13px;
+                    min-height: 28px;
+                    max-height: 28px;
+                }}
+                QComboBox::item {{
+                    height: 26px;
+                    padding: 2px 0px;
+                }}
+                QComboBox:focus {{
+                    border: 1px solid {tm.get_variable('accent')};
+                }}
+                QComboBox::drop-down {{
+                    border: none;
+                    width: 30px;
+                }}
+                QPushButton {{
+                    background-color: {tm.get_variable('accent')};
+                    color: white;
+                    border: none;
+                    padding: 6px 20px;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    min-width: 70px;
+                    min-height: 28px;
+                    font-weight: bold;
+                }}
+                QPushButton:hover {{
+                    background-color: {tm.get_variable('accent_hover')};
+                }}
+                QPushButton:pressed {{
+                    background-color: {tm.get_variable('accent_pressed')};
+                }}
+                QPushButton#cancelBtn {{
+                    background-color: {tm.get_variable('bg_tertiary')};
+                    color: {tm.get_variable('text_primary')};
+                    border: 1px solid {tm.get_variable('border')};
+                    min-width: 70px;
+                    min-height: 28px;
+                }}
+                QPushButton#cancelBtn:hover {{
+                    background-color: {tm.get_variable('bg_hover')};
+                }}
+            """)
+            
+            # 创建自定义标题栏
+            title_bar = QWidget()
+            title_bar.setObjectName("titleBar")
+            title_bar.setFixedHeight(45)
+            title_bar_layout = QHBoxLayout()
+            title_bar_layout.setSpacing(0)
+            title_bar_layout.setContentsMargins(0, 0, 0, 0)
+            
+            title_label = QLabel("选择预览工程")
+            title_label.setObjectName("titleLabel")
+            title_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+            title_bar_layout.addWidget(title_label, 1)
+            
+            close_btn = QPushButton("×")
+            close_btn.setObjectName("closeBtn")
+            close_btn.clicked.connect(dialog.reject)
+            title_bar_layout.addWidget(close_btn)
+            
+            title_bar.setLayout(title_bar_layout)
+            
+            # 主布局
+            main_layout = QVBoxLayout()
+            main_layout.setSpacing(0)
+            main_layout.setContentsMargins(0, 0, 0, 0)
+            main_layout.addWidget(title_bar)
+            
+            # 内容布局
+            layout = QVBoxLayout()
+            layout.setSpacing(12)
+            layout.setContentsMargins(20, 20, 20, 20)
+            
+            # 标签
+            label = QLabel("请选择要预览的工程：")
+            label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            layout.addWidget(label)
+            
+            # 下拉框
+            combo = QComboBox()
+            combo.addItems(project_names)
+            
+            # 尝试从配置中读取上次选择的预览工程名称
+            try:
+                user_config = self.logic.config_manager.load_user_config()
+                last_preview_project_name = user_config.get("last_preview_project_name", "")
+                
+                # 如果有上次的选择,尝试在当前列表中找到它并设置为默认选中
+                if last_preview_project_name and last_preview_project_name in project_names:
+                    idx = project_names.index(last_preview_project_name)
+                    combo.setCurrentIndex(idx)
+                    logger.info(f"恢复上次选择的预览工程: {last_preview_project_name}")
+                else:
+                    # 上次选择不在列表中或没有上次选择,使用第一个
+                    combo.setCurrentIndex(0)
+                    if last_preview_project_name:
+                        logger.info(f"上次选择的工程 '{last_preview_project_name}' 不在列表中,使用第一个: {project_names[0]}")
+            except Exception as e:
+                logger.warning(f"读取上次选择失败: {e}")
+                combo.setCurrentIndex(0)
+            
+            layout.addWidget(combo)
+            
+            layout.addSpacing(8)
+            
+            # 按钮
+            button_layout = QHBoxLayout()
+            button_layout.setSpacing(10)
+            
+            ok_btn = QPushButton("确定")
+            ok_btn.clicked.connect(dialog.accept)
+            button_layout.addStretch()
+            button_layout.addWidget(ok_btn)
+            
+            cancel_btn = QPushButton("取消")
+            cancel_btn.setObjectName("cancelBtn")
+            cancel_btn.clicked.connect(dialog.reject)
+            button_layout.addWidget(cancel_btn)
+            
+            layout.addLayout(button_layout)
+            main_layout.addLayout(layout, 1)
+            dialog.setLayout(main_layout)
+            
+            # 显示对话框（居中于主窗口）
+            # 计算对话框的中心位置
+            parent_geometry = self.geometry()
+            parent_center_x = parent_geometry.x() + parent_geometry.width() // 2
+            parent_center_y = parent_geometry.y() + parent_geometry.height() // 2
+            dialog_x = parent_center_x - dialog.width() // 2
+            dialog_y = parent_center_y - dialog.height() // 2
+            dialog.move(dialog_x, dialog_y)
+            
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                selected_name = combo.currentText()
+                selected_index = project_names.index(selected_name)
+                preview_project = Path(additional_projects[selected_index]["path"])
+                
+                # 保存本次选择的名称到配置
+                try:
+                    config = self.logic.config_manager.load_user_config()
+                    config["last_preview_project_name"] = selected_name
+                    self.logic.config_manager.save_user_config(config, backup_reason="update_preview_project")
+                    logger.info(f"已保存预览工程选择: {selected_name} ({preview_project})")
+                except Exception as e:
+                    logger.warning(f"保存预览工程选择失败: {e}")
+            else:
                 logger.info("用户取消了工程选择")
                 return
-            
-            # 找到选中的工程路径
-            selected_index = project_names.index(selected_name)
-            preview_project = Path(additional_projects[selected_index]["path"])
         
         if not preview_project or not preview_project.exists():
             StyledMessageBox.warning(
@@ -843,25 +1061,84 @@ class AssetManagerUI(QWidget):
     def _migrate_asset(self, asset_id: str):
         """迁移资产到目标工程（使用工程选择器）"""
         try:
-            # 1. 检测运行的UE工程和搜索所有UE工程
-            from core.utils.ue_process_utils import UEProcessUtils
-            ue_utils = UEProcessUtils()
+            # 保存 asset_id 供后续使用
+            self._migrate_asset_id = asset_id
             
-            # 首先检测运行中的工程
-            running_projects = ue_utils.detect_running_ue_projects()
-            logger.info(f"检测到 {len(running_projects)} 个运行中的UE工程")
+            # 创建进度对话框
+            progress_dialog = ProgressDialog("正在搜索工程", self)
+            progress_dialog.set_indeterminate(True)  # 设置为不确定进度模式
+            progress_dialog.set_status("正在检测和搜索UE工程...")
             
-            # 如果没有运行的工程，则搜索所有UE工程
-            all_projects = []
-            if not running_projects:
-                logger.info("未检测到运行的UE工程，开始搜索所有UE工程")
-                all_projects = ue_utils.search_all_ue_projects()
-                logger.info(f"搜索到 {len(all_projects)} 个UE工程")
+            # 创建并启动搜索线程
+            from PyQt6.QtCore import QThread, pyqtSignal
+            
+            class SearchProjectsThread(QThread):
+                """后台搜索UE工程的线程"""
+                search_completed = pyqtSignal(list, list)  # (running_projects, all_projects)
+                search_error = pyqtSignal(str)
+                progress_updated = pyqtSignal(int, int, str)  # (current, total, message)
+                
+                def run(self):
+                    """在后台线程执行搜索"""
+                    try:
+                        from core.utils.ue_process_utils import UEProcessUtils
+                        ue_utils = UEProcessUtils()
+                        
+                        # 1. 检测运行中的工程
+                        logger.info("开始检测运行中的工程...")
+                        self.progress_updated.emit(0, 100, "正在检测运行中的工程...")
+                        running_projects = ue_utils.detect_running_ue_projects()
+                        logger.info(f"检测到 {len(running_projects)} 个运行中的工程")
+                        
+                        # 2. 搜索所有工程
+                        logger.info("开始搜索所有工程...")
+                        self.progress_updated.emit(50, 100, "正在搜索所有工程...")
+                        all_projects = ue_utils.search_all_ue_projects()
+                        logger.info(f"搜索到 {len(all_projects)} 个工程")
+                        
+                        # 3. 搜索完成
+                        self.progress_updated.emit(100, 100, "搜索完成！")
+                        self.search_completed.emit(running_projects, all_projects)
+                        
+                    except Exception as e:
+                        logger.error(f"搜索工程时出错: {e}", exc_info=True)
+                        self.search_error.emit(str(e))
+            
+            self.search_thread = SearchProjectsThread()
+            self.search_thread.progress_updated.connect(
+                lambda c, t, m: progress_dialog.update_progress(c, t, m)
+            )
+            self.search_thread.search_completed.connect(
+                lambda r, a: self._on_search_completed_for_migrate(r, a, progress_dialog)
+            )
+            self.search_thread.search_error.connect(
+                lambda e: self._on_search_error_for_migrate(e, progress_dialog)
+            )
+            
+            # 显示进度对话框（模态）
+            progress_dialog.show()
+            
+            # 启动搜索线程
+            self.search_thread.start()
+            
+        except Exception as e:
+            logger.error(f"迁移资产时出错: {e}", exc_info=True)
+            StyledMessageBox.error(
+                self,
+                "错误",
+                f"迁移资产时发生错误：\n{str(e)}"
+            )
+    
+    def _on_search_completed_for_migrate(self, running_projects, all_projects, progress_dialog):
+        """搜索完成回调"""
+        try:
+            # 关闭进度对话框
+            progress_dialog.close()
             
             # 合并运行的工程和搜索到的工程
             ue_projects = running_projects + all_projects
             
-            # 2. 如果没有找到任何工程，显示提示
+            # 如果没有找到任何工程，显示提示
             if not ue_projects:
                 StyledMessageBox.warning(
                     self,
@@ -870,7 +1147,7 @@ class AssetManagerUI(QWidget):
                 )
                 return
             
-            # 3. 选择目标工程
+            # 选择目标工程
             selected_project = self._select_ue_project(ue_projects)
             if not selected_project:
                 return
@@ -878,8 +1155,8 @@ class AssetManagerUI(QWidget):
             target_project = selected_project.project_path.parent
             logger.info(f"选择的目标工程: {target_project}")
             
-            # 4. 确认迁移
-            asset = self.logic.get_asset(asset_id)
+            # 确认迁移
+            asset = self.logic.get_asset(self._migrate_asset_id)
             dialog = ConfirmDialog(
                 "确认迁移",
                 f"确定要将资产 \"{asset.name}\" 迁移到目标工程吗？",
@@ -888,32 +1165,42 @@ class AssetManagerUI(QWidget):
             )
             
             if dialog.exec() == QDialog.DialogCode.Accepted:
-                progress_dialog = ProgressDialog("迁移资产", self)
+                migrate_progress_dialog = ProgressDialog("迁移资产", self)
                 
                 # 在后台线程执行迁移
                 def do_migrate():
                     try:
-                        if self.logic.migrate_asset(asset_id, target_project, progress_callback=progress_dialog.update_progress):
+                        if self.logic.migrate_asset(self._migrate_asset_id, target_project, progress_callback=migrate_progress_dialog.update_progress):
                             logger.info(f"资产迁移成功")
                         else:
                             # 迁移失败，使用QTimer在主线程显示错误
-                            QTimer.singleShot(0, lambda: progress_dialog.finish_error("迁移失败"))
+                            QTimer.singleShot(0, lambda: migrate_progress_dialog.finish_error("迁移失败"))
                     except Exception as e:
                         logger.error(f"迁移时出错: {e}", exc_info=True)
                         # 使用QTimer在主线程显示错误
-                        QTimer.singleShot(0, lambda: progress_dialog.finish_error(str(e)))
+                        QTimer.singleShot(0, lambda: migrate_progress_dialog.finish_error(str(e)))
                 
                 thread = threading.Thread(target=do_migrate, daemon=True)
                 thread.start()
                 
-                progress_dialog.exec()
+                migrate_progress_dialog.exec()
+                
         except Exception as e:
-            logger.error(f"迁移资产时出错: {e}", exc_info=True)
+            logger.error(f"处理搜索结果时出错: {e}", exc_info=True)
             StyledMessageBox.error(
                 self,
                 "错误",
-                f"迁移资产时发生错误：\n{str(e)}"
+                f"处理搜索结果时发生错误：\n{str(e)}"
             )
+    
+    def _on_search_error_for_migrate(self, error_msg, progress_dialog):
+        """搜索错误回调"""
+        progress_dialog.close()
+        StyledMessageBox.error(
+            self,
+            "搜索错误",
+            f"搜索UE工程时发生错误：\n{error_msg}"
+        )
     
     def _select_ue_project(self, ue_projects):
         """选择UE工程

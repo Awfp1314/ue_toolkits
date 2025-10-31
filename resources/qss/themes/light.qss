@@ -1,5 +1,16 @@
 /* 浅色主题 - 全局样式 */
 
+/* 移除所有控件的焦点虚线框 (按Alt键时显示的虚线) */
+* {
+    outline: none;
+}
+
+QPushButton:focus, QComboBox:focus, QLineEdit:focus, QTextEdit:focus,
+QCheckBox:focus, QRadioButton:focus, QSpinBox:focus, QDoubleSpinBox:focus,
+QListWidget:focus, QTreeWidget:focus, QTableWidget:focus, QTabWidget:focus {
+    outline: none;
+}
+
 /* 主窗口 */
 QMainWindow {
     background-color: ${bg_primary};

@@ -5,18 +5,24 @@
 """
 
 from typing import Optional, Dict, Any, List, Set
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QFrame, QStackedWidget
+    QLabel, QPushButton, QFrame, QStackedWidget, QSystemTrayIcon
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QRegion, QPainterPath, QPainter, QColor, QBrush
+from PyQt6.QtGui import QMouseEvent
 
 from core.module_interface import IModuleProvider
 from core.logger import get_logger
 from core.utils.theme_manager import get_theme_manager
+from core.config.config_manager import ConfigManager
 
 from .main_window_components import CustomTitleBar
 from .main_window_handlers import NavigationHandler, ModuleLoader
+from .system_tray_manager import SystemTrayManager
+from .dialogs.close_confirmation_dialog import CloseConfirmationDialog
 
 logger = get_logger(__name__)
 
@@ -37,10 +43,54 @@ class UEMainWindow(QMainWindow):
         self.content_stack: Optional[QStackedWidget] = None  # QStackedWidget用于页面切换
         self.nav_buttons: List[Dict[str, Any]] = []  # 导航按钮列表
         self.tool_title_label: Optional[QLabel] = None  # 工具标题标签
+        self._is_closing = False  # 标记是否正在关闭
+        self._quit_on_close = False  # 标记是否退出应用
+        
+        # 初始化UI配置管理器
+        self.ui_config_manager = ConfigManager("app")
+        self._close_action_preference = None  # 用户记住的关闭行为偏好
+        self._load_close_action_preference()
         
         self.navigation_handler = NavigationHandler(self)
         
+        # 初始化系统托盘
+        self.tray_manager = SystemTrayManager(self)
+        self._init_system_tray()
+        
         self.init_ui()
+    
+    def _init_system_tray(self):
+        """初始化系统托盘"""
+        try:
+            # 获取图标路径
+            icon_path = Path(__file__).parent.parent / "resources" / "tubiao.ico"
+            self.tray_manager.initialize(icon_path)
+            
+            # 连接信号
+            self.tray_manager.show_window_requested.connect(self._on_tray_show_window)
+            self.tray_manager.quit_requested.connect(self._on_tray_quit)
+            
+        except Exception as e:
+            logger.error(f"初始化系统托盘失败: {e}", exc_info=True)
+    
+    def _on_tray_show_window(self):
+        """托盘图标点击 - 显示窗口"""
+        self.show()
+        self.activateWindow()
+        self.raise_()
+        logger.info("从系统托盘恢复主窗口")
+        
+    def _on_tray_quit(self):
+        """托盘菜单 - 退出应用"""
+        logger.info("托盘菜单退出：设置退出标志并关闭窗口")
+        self._quit_on_close = True
+        self._is_closing = True
+        self.close()
+        
+        # 确保应用程序退出
+        from PyQt6.QtWidgets import QApplication
+        QApplication.quit()
+        logger.info("已调用 QApplication.quit()")
     
     def init_ui(self) -> None:
         """初始化用户界面"""
@@ -460,6 +510,131 @@ class UEMainWindow(QMainWindow):
         
         logger.info(f"模块UI清理完成 - 成功: {cleaned_count} 个，失败: {error_count} 个")
     
+    def _load_close_action_preference(self):
+        """从配置文件加载关闭行为偏好"""
+        try:
+            config = self.ui_config_manager.load_user_config()
+            self._close_action_preference = config.get("close_action_preference")
+            if self._close_action_preference:
+                logger.info(f"已加载用户关闭行为偏好: {self._close_action_preference}")
+        except Exception as e:
+            logger.error(f"加载关闭行为偏好失败: {e}", exc_info=True)
+            self._close_action_preference = None
+    
+    def _save_close_action_preference(self, action: int):
+        """保存关闭行为偏好到配置文件
+        
+        Args:
+            action: CloseConfirmationDialog.RESULT_CLOSE 或 RESULT_MINIMIZE
+        """
+        try:
+            config = self.ui_config_manager.load_user_config()
+            
+            # 如果配置是空的或者没有版本号，初始化版本号
+            if not config or '_version' not in config:
+                config['_version'] = "1.0.0"
+            
+            if action == CloseConfirmationDialog.RESULT_CLOSE:
+                config["close_action_preference"] = "close"
+            elif action == CloseConfirmationDialog.RESULT_MINIMIZE:
+                config["close_action_preference"] = "minimize"
+            
+            # 保存配置
+            success = self.ui_config_manager.save_user_config(config)
+            
+            if success:
+                self._close_action_preference = config["close_action_preference"]
+                logger.info(f"已保存用户关闭行为偏好: {self._close_action_preference}")
+            else:
+                logger.error("保存用户关闭行为偏好失败")
+        except Exception as e:
+            logger.error(f"保存关闭行为偏好失败: {e}", exc_info=True)
+    
+    def _sync_close_behavior_to_settings(self, preference: str):
+        """同步关闭行为到设置界面的单选按钮
+        
+        Args:
+            preference: "close" 或 "minimize"
+        """
+        try:
+            # 检查设置界面是否已创建
+            if not hasattr(self, 'settings_widget') or self.settings_widget is None:
+                logger.debug("设置界面尚未创建，跳过同步")
+                return
+            
+            # 更新设置界面的单选按钮状态
+            if preference == "close":
+                self.settings_widget.close_directly_radio.setChecked(True)
+                logger.info("已同步设置界面单选按钮: 直接关闭")
+            elif preference == "minimize":
+                self.settings_widget.minimize_to_tray_radio.setChecked(True)
+                logger.info("已同步设置界面单选按钮: 最小化到托盘")
+                
+        except Exception as e:
+            logger.error(f"同步关闭行为到设置界面失败: {e}", exc_info=True)
+    
+    def show_close_confirmation(self):
+        """显示关闭确认对话框"""
+        if self._is_closing:
+            return
+        
+        # 检查是否已经记住了用户选择
+        if self._close_action_preference == "close":
+            # 直接关闭
+            logger.info("根据用户偏好直接关闭程序（不显示对话框）")
+            self._quit_on_close = True
+            self._is_closing = True
+            self.close()
+            return
+        elif self._close_action_preference == "minimize":
+            # 直接最小化到托盘
+            logger.info("根据用户偏好最小化到托盘（不显示对话框）")
+            self.hide()
+            self.tray_manager.show_message(
+                "UE Toolkit",
+                "程序已最小化到系统托盘，点击托盘图标可恢复窗口",
+                QSystemTrayIcon.MessageIcon.Information,
+                2000
+            )
+            return
+            
+        # 显示确认对话框
+        result, remember_choice = CloseConfirmationDialog.ask_close_action(self)
+        
+        if result == CloseConfirmationDialog.RESULT_CLOSE:
+            # 直接关闭
+            logger.info("用户选择直接关闭程序")
+            if remember_choice:
+                # 用户勾选了"记住我的选择"，保存偏好
+                self._save_close_action_preference(result)
+                logger.info("已保存用户关闭行为偏好: 直接关闭")
+                # 同步更新设置界面的单选按钮
+                self._sync_close_behavior_to_settings("close")
+            self._quit_on_close = True
+            self._is_closing = True
+            self.close()
+            
+        elif result == CloseConfirmationDialog.RESULT_MINIMIZE:
+            # 最小化到托盘
+            logger.info("用户选择最小化到托盘")
+            if remember_choice:
+                # 用户勾选了"记住我的选择"，保存偏好
+                self._save_close_action_preference(result)
+                logger.info("已保存用户关闭行为偏好: 最小化到托盘")
+                # 同步更新设置界面的单选按钮
+                self._sync_close_behavior_to_settings("minimize")
+            self.hide()
+            # 显示托盘提示
+            self.tray_manager.show_message(
+                "UE Toolkit",
+                "程序已最小化到系统托盘，点击托盘图标可恢复窗口",
+                QSystemTrayIcon.MessageIcon.Information,
+                2000
+            )
+        else:
+            # 取消
+            logger.info("用户取消关闭操作")
+    
     def closeEvent(self, a0) -> None:
         """窗口关闭事件处理
         
@@ -468,9 +643,19 @@ class UEMainWindow(QMainWindow):
         Args:
             a0: 关闭事件对象
         """
+        # 如果不是通过确认对话框触发的关闭，显示确认对话框
+        if not self._is_closing and not self._quit_on_close:
+            a0.ignore()
+            self.show_close_confirmation()
+            return
+            
         logger.info("主窗口正在关闭，清理资源...")
         
         try:
+            # 清理系统托盘
+            if hasattr(self, 'tray_manager'):
+                self.tray_manager.cleanup()
+            
             self.cleanup_module_uis()
             
             # 调用父类的closeEvent
