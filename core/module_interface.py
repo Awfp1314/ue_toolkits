@@ -200,7 +200,7 @@ class ModuleProviderAdapter(IModuleProvider):
         self._module_cache: Dict[str, ModuleAdapter] = {}
     
     def get_all_modules(self) -> Dict[str, IModule]:
-        """获取所有可用模块"""
+        """获取所有可用模块（按自定义顺序排序）"""
         modules = {}
         all_modules = self.module_manager.get_all_modules()
         
@@ -214,7 +214,28 @@ class ModuleProviderAdapter(IModuleProvider):
                     )
                 modules[module_name] = self._module_cache[module_name]
         
-        return modules
+        # 自定义模块显示顺序
+        module_order = [
+            "asset_manager",      # 资产管理器
+            "ai_assistant",       # AI 助手
+            "config_tool",        # 配置工具
+            "site_recommendations" # 网站推荐
+        ]
+        
+        # 按照自定义顺序重新排序
+        sorted_modules = {}
+        
+        # 首先添加在顺序列表中的模块
+        for module_name in module_order:
+            if module_name in modules:
+                sorted_modules[module_name] = modules[module_name]
+        
+        # 然后添加不在顺序列表中的其他模块
+        for module_name, module in modules.items():
+            if module_name not in sorted_modules:
+                sorted_modules[module_name] = module
+        
+        return sorted_modules
     
     def get_module(self, module_name: str) -> Optional[IModule]:
         """根据名称获取模块"""

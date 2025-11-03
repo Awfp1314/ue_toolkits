@@ -165,12 +165,58 @@ class UEMainWindow(QMainWindow):
             # 标记为已加载
             self.loaded_modules.add(module_name)
             
+            # 🎯 建立模块之间的连接
+            self._connect_modules(module_name, module)
+            
             logger.info(f"成功懒加载模块 {module_name} UI")
             return True
             
         except Exception as e:
             logger.error(f"懒加载模块 {module_name} UI时出错: {e}", exc_info=True)
             return False
+    
+    def _connect_modules(self, module_name: str, module):
+        """建立模块之间的连接
+        
+        Args:
+            module_name: 模块名称
+            module: 模块实例
+        """
+        try:
+            # 如果是 AI 助手模块，连接 asset_manager
+            if module_name == "ai_assistant":
+                logger.info("建立 AI 助手与 asset_manager 的连接")
+                
+                # 获取 asset_manager 模块
+                asset_manager_module = self.module_provider.get_module("asset_manager")
+                if asset_manager_module:
+                    # 获取 asset_manager 的逻辑层
+                    # asset_manager_module 是 IModule 接口，实际是 ModuleAdapter
+                    if hasattr(asset_manager_module, 'instance'):
+                        asset_manager_instance = asset_manager_module.instance
+                        if hasattr(asset_manager_instance, 'logic'):
+                            asset_manager_logic = asset_manager_instance.logic
+                            
+                            # 设置到 AI 助手模块
+                            # module 是 IModule 接口，实际是 ModuleAdapter
+                            if hasattr(module, 'instance'):
+                                ai_assistant_instance = module.instance
+                                if hasattr(ai_assistant_instance, 'set_asset_manager_logic'):
+                                    ai_assistant_instance.set_asset_manager_logic(asset_manager_logic)
+                                    logger.info("✓ AI 助手已连接到 asset_manager")
+                                else:
+                                    logger.warning("AI 助手模块没有 set_asset_manager_logic 方法")
+                            else:
+                                logger.warning("AI 助手模块没有 instance 属性")
+                        else:
+                            logger.warning("asset_manager 模块没有 logic 属性")
+                    else:
+                        logger.warning("asset_manager 模块没有 instance 属性")
+                else:
+                    logger.warning("未找到 asset_manager 模块，AI 助手将无法访问资产数据")
+        
+        except Exception as e:
+            logger.error(f"建立模块连接时出错: {e}", exc_info=True)
     
     def center_window(self) -> None:
         """将窗口居中显示"""

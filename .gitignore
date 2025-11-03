@@ -1,49 +1,63 @@
-# Python
+# Python 字节码缓存
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
 
-# PyQt6
-*.ui.py
+# 构建文件
+build/
+dist/
+*.egg-info/
+*.egg
 
-# Virtual Environment
-venv/
-env/
-ENV/
+# PyInstaller
+*.manifest
+*.spec
 
-# IDE
+# IDE 和编辑器
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
-Thumbs.db
-desktop.ini
 
-# Logs
-*.log
-logs/
-
-# User Data
-user_data/
-
-# Distribution / packaging
-build/
-dist/
-release/
-*.egg-info/
-
-# Testing
+# 测试和覆盖率
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+.nox/
 
-# Temporary files
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
 *.tmp
-*.bak
-*.old
+temp/
+tmp/
+
+# 用户数据（可选）
+# user_data/
+
+# 操作系统
+Thumbs.db
+desktop.ini
+
+# Release 构建产物（保留启动脚本）
+release/ue_toolkit/
+release/version_info.txt
+
+# 测试数据
+test_memory_data/
+
+# 临时运行文件
+tempCodeRunnerFile.py

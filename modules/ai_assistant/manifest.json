@@ -1,0 +1,11 @@
+{
+  "name": "ai_assistant",
+  "display_name": "AI 助手",
+  "version": "1.0.0",
+  "description": "ChatGPT 风格的 AI 聊天助手，支持流式输出、多轮对话、Markdown 渲染",
+  "author": "AI Assistant",
+  "icon": "",
+  "dependencies": [],
+  "entry_point": "__main__:AIAssistantModule"
+}
+

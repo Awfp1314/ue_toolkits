@@ -1,0 +1,759 @@
+"""
+ChatGPT 风格的输入框组件
+悬浮圆角设计
+"""
+
+from PyQt6.QtWidgets import (
+    QWidget, QHBoxLayout, QVBoxLayout, QTextEdit, 
+    QPushButton, QLabel, QFrame, QGraphicsDropShadowEffect, QGraphicsBlurEffect,
+    QScrollArea
+)
+from PyQt6.QtCore import Qt, pyqtSignal, QSize, QBuffer, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QFont, QIcon, QTextCursor, QColor, QPalette, QImage, QPixmap
+import base64
+
+
+class AdaptiveTextEdit(QTextEdit):
+    """
+    自适应高度的文本编辑框（带平滑动画）
+    支持图片粘贴、最小/最大高度限制、平滑高度过渡
+    """
+    
+    image_pasted = pyqtSignal(QImage)  # 图片粘贴信号，传递 QImage 对象
+    height_changing = pyqtSignal()  # 高度正在变化的信号（动画过程中）
+    
+    def __init__(self, parent=None, min_height=36, max_height=160):
+        super().__init__(parent)
+        
+        # 高度配置
+        self.min_height = min_height
+        self.max_height = max_height
+        self._current_height = min_height
+        self._is_locked = False  # 锁定标志，用于阻止用户编辑
+        
+        # 初始化动画
+        self._height_animation = QPropertyAnimation(self, b"minimumHeight")
+        self._height_animation.setDuration(100)  # 100ms 平滑动画
+        self._height_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        
+        # 同步设置 maximumHeight 的动画（确保动画流畅）
+        self._max_height_animation = QPropertyAnimation(self, b"maximumHeight")
+        self._max_height_animation.setDuration(100)
+        self._max_height_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        
+        # 初始设置
+        self.setMinimumHeight(min_height)
+        self.setMaximumHeight(min_height)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        # 监听内容变化
+        self.textChanged.connect(self._adjust_height_animated)
+    
+    def lock(self):
+        """锁定输入框，阻止用户编辑"""
+        self._is_locked = True
+    
+    def unlock(self):
+        """解锁输入框，允许用户编辑"""
+        self._is_locked = False
+    
+    def keyPressEvent(self, event):
+        """重写键盘事件，支持锁定状态"""
+        if self._is_locked:
+            # 锁定时忽略所有键盘输入
+            event.ignore()
+            return
+        super().keyPressEvent(event)
+    
+    def insertFromMimeData(self, source):
+        """重写粘贴方法，支持图片粘贴和锁定状态"""
+        if self._is_locked:
+            # 锁定时不允许粘贴
+            return
+        
+        if source.hasImage():
+            # 获取图片数据
+            image = source.imageData()
+            if isinstance(image, QImage):
+                # 发送信号给父组件处理（不插入到 QTextEdit 中）
+                self.image_pasted.emit(image)
+                # 不调用 super().insertFromMimeData(source)，避免图片插入到文本框
+            else:
+                # 如果不是有效图片，调用父类方法
+                super().insertFromMimeData(source)
+        else:
+            # 非图片内容，保持原文字粘贴逻辑
+            super().insertFromMimeData(source)
+    
+    def _adjust_height_animated(self):
+        """根据内容自动调整高度（带平滑动画）"""
+        # 获取文档高度
+        doc_height = self.document().size().height()
+        
+        # 计算新高度（文档高度 + 边距）
+        # padding: 6px(top) + 6px(bottom) = 12px
+        # documentMargin: 4px(top) + 4px(bottom) = 8px
+        # 总计: 20px
+        content_height = int(doc_height) + 20
+        
+        # 基于文档高度判断是否需要增高
+        # 单行文本的文档高度约为 27-30px（字体行高）
+        # 如果文档高度超过这个值，说明内容已经自动换行或手动换行了
+        single_line_height = 30  # 单行文档的最大高度阈值
+        
+        if doc_height <= single_line_height:
+            # 单行文本，保持最小高度
+            new_height = self.min_height
+        else:
+            # 多行文本（自动换行或手动换行），根据内容高度计算新高度
+            new_height = min(max(self.min_height, content_height), self.max_height)
+        
+        # 只在高度变化时更新
+        if self._current_height != new_height:
+            # 停止当前动画（如果正在运行）
+            if self._height_animation.state() == QPropertyAnimation.State.Running:
+                self._height_animation.stop()
+            if self._max_height_animation.state() == QPropertyAnimation.State.Running:
+                self._max_height_animation.stop()
+            
+            # 设置动画的起始和结束值
+            self._height_animation.setStartValue(self._current_height)
+            self._height_animation.setEndValue(new_height)
+            
+            self._max_height_animation.setStartValue(self._current_height)
+            self._max_height_animation.setEndValue(new_height)
+            
+            # 连接动画的 valueChanged 信号，在动画过程中持续更新父容器
+            def on_height_changed(value):
+                self.updateGeometry()
+                # 发出高度变化信号
+                self.height_changing.emit()
+                # 通知父容器更新布局
+                parent = self.parent()
+                if parent:
+                    parent.updateGeometry()
+                    # 继续向上通知到 ChatInputArea
+                    grandparent = parent.parent()
+                    if grandparent:
+                        grandparent.updateGeometry()
+            
+            # 动画完成后的回调
+            def on_animation_finished():
+                self.updateGeometry()
+                # 发出高度变化信号
+                self.height_changing.emit()
+                if self.parent():
+                    self.parent().updateGeometry()
+                    if self.parent().parent():
+                        self.parent().parent().updateGeometry()
+            
+            # 断开之前的连接（避免重复连接）
+            try:
+                self._height_animation.valueChanged.disconnect()
+            except:
+                pass
+            
+            try:
+                self._height_animation.finished.disconnect()
+            except:
+                pass
+            
+            self._height_animation.valueChanged.connect(on_height_changed)
+            self._height_animation.finished.connect(on_animation_finished)
+            
+            # 启动动画
+            self._height_animation.start()
+            self._max_height_animation.start()
+            
+            # 更新当前高度
+            self._current_height = new_height
+            
+            # 如果超过最大高度，显示滚动条
+            if content_height > self.max_height:
+                self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            else:
+                self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    
+    def clear(self):
+        """清空文本并重置高度"""
+        super().clear()
+        # 重置高度到最小值（带动画）
+        self._adjust_height_animated()
+    
+    def set_height_limits(self, min_height, max_height):
+        """动态设置最小/最大高度"""
+        self.min_height = min_height
+        self.max_height = max_height
+        self._adjust_height_animated()
+
+
+class ChatInputArea(QWidget):
+    """
+    ChatGPT 风格的输入区域
+    带悬浮圆角效果
+    """
+    # 信号
+    message_sent = pyqtSignal(str)  # 发送消息信号（纯文本，保持兼容）
+    message_with_images_sent = pyqtSignal(str, list)  # 发送消息信号（文本 + 图片列表）
+    height_changed = pyqtSignal()  # 输入区域高度变化信号
+    stop_generation = pyqtSignal()  # 停止生成信号
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.image_list = []  # 存储粘贴的图片 base64 数据
+        self.image_widgets = []  # 存储图片预览卡片 widget
+        self.is_generating = False  # 是否正在生成（AI 回复中）
+        self.last_sent_message = ""  # 保存最后发送的消息
+        self.last_sent_images = []  # 保存最后发送的图片
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化 UI"""
+        self.setObjectName("BottomBar")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        
+        # 主布局（垂直）
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(80, 0, 80, 12)  # 左右80px与消息对齐
+        main_layout.setSpacing(6)  # 图片预览与输入框间距
+        
+        # 输入容器（最大宽度900px，与AI回复宽度一致）
+        input_container = QFrame()
+        input_container.setObjectName("ChatInputBar")
+        input_container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        input_container.setMaximumWidth(900)  # 与AI消息容器宽度一致
+        
+        # 设置 SizePolicy，使其能够根据内容自动调整高度
+        from PyQt6.QtWidgets import QSizePolicy as SizePolicy
+        input_container.setSizePolicy(
+            SizePolicy.Policy.Preferred,
+            SizePolicy.Policy.Minimum  # 垂直方向根据内容最小尺寸调整
+        )
+        
+        # 添加柔和的内嵌阴影效果
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(20)
+        shadow.setOffset(0, 1)
+        shadow.setColor(QColor(0, 0, 0, 40))
+        input_container.setGraphicsEffect(shadow)
+        
+        container_layout = QHBoxLayout(input_container)
+        container_layout.setContentsMargins(14, 6, 14, 6)  # 减少垂直边距
+        container_layout.setSpacing(8)
+        container_layout.setSizeConstraint(QHBoxLayout.SizeConstraint.SetMinimumSize)  # 布局根据内容调整
+        
+        # 保存输入容器的引用，用于后续高度调整
+        self.input_container = input_container
+        
+        # 左侧加号按钮（可选功能）
+        self.add_button = QPushButton("+")
+        self.add_button.setObjectName("add_button")
+        self.add_button.setFixedSize(32, 32)
+        self.add_button.setFont(QFont("Microsoft YaHei UI", 14, QFont.Weight.Bold))
+        self.add_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.add_button.setToolTip("附加功能（未来扩展）")
+        
+        # 中间输入框（使用自适应高度的 AdaptiveTextEdit）
+        self.input_field = AdaptiveTextEdit(
+            parent=self,
+            min_height=36,  # 最小高度，紧凑型
+            max_height=160  # 最大高度，约 8 行
+        )
+        self.input_field.setObjectName("input_field_chatgpt")
+        self.input_field.setPlaceholderText("输入消息...")
+        self.input_field.setFont(QFont("Microsoft YaHei UI", 11))  # 稍大字体
+        
+        # 设置文档边距，让提示文本与+按钮垂直对齐
+        self.input_field.document().setDocumentMargin(4)
+        
+        # 只接受纯文本，粘贴时自动去除格式（但图片会在 insertFromMimeData 中特殊处理）
+        self.input_field.setAcceptRichText(False)
+        
+        # 连接图片粘贴信号
+        self.input_field.image_pasted.connect(self.on_image_pasted)
+        
+        # 连接文本变化信号，用于更新发送按钮状态
+        self.input_field.textChanged.connect(self.update_send_button_state)
+        
+        # 连接高度变化信号，转发给外部
+        self.input_field.height_changing.connect(self.height_changed.emit)
+        
+        self.input_field.installEventFilter(self)
+        
+        # 图片预览容器（在输入框上方独立显示，支持多张图片横向排列）
+        self.image_preview_scroll = QScrollArea()
+        self.image_preview_scroll.setObjectName("image_preview_scroll")
+        self.image_preview_scroll.setWidgetResizable(True)
+        self.image_preview_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.image_preview_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.image_preview_scroll.setMaximumWidth(900)  # 与输入容器宽度一致
+        self.image_preview_scroll.setFixedHeight(140)  # 固定高度，适合 120px 的图片
+        self.image_preview_scroll.setStyleSheet("""
+            QScrollArea#image_preview_scroll {
+                background-color: transparent;
+                border: none;
+                margin: 0px;
+            }
+            QScrollBar:horizontal {
+                height: 6px;
+                background-color: #2a2b32;
+                border-radius: 3px;
+                margin: 0px 80px 0px 80px;
+            }
+            QScrollBar::handle:horizontal {
+                background-color: #444654;
+                border-radius: 3px;
+                min-width: 40px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background-color: #565869;
+            }
+        """)
+        
+        # 图片预览容器的内容区域
+        self.image_preview_container = QWidget()
+        self.image_preview_container.setObjectName("image_preview_container")
+        self.image_preview_container.setStyleSheet("""
+            QWidget#image_preview_container {
+                background-color: transparent;
+                border: none;
+            }
+        """)
+        self.image_preview_layout = QHBoxLayout(self.image_preview_container)
+        self.image_preview_layout.setContentsMargins(0, 10, 0, 10)  # 上下边距
+        self.image_preview_layout.setSpacing(8)
+        # 不使用 AlignLeft，让布局自然流动
+        self.image_preview_layout.addStretch(1)  # 添加弹簧，使图片靠左对齐
+        
+        self.image_preview_scroll.setWidget(self.image_preview_container)
+        
+        # 默认隐藏预览容器（高度设为0）
+        self.image_preview_scroll.setFixedHeight(0)
+        self.image_preview_scroll.setVisible(False)
+        
+        # 右侧发送按钮（ChatGPT 风格：白色圆形，向上箭头）
+        self.send_button = QPushButton("↑")
+        self.send_button.setObjectName("send_button_chatgpt")
+        self.send_button.setFixedSize(36, 36)
+        # 使用 Arial 字体，16px 大小，确保箭头完美居中
+        font = QFont("Arial", 16, QFont.Weight.Bold)
+        font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0)
+        self.send_button.setFont(font)
+        # 样式由全局 QSS 控制
+        self.send_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.send_button.setToolTip("发送消息 (Enter)")
+        self.send_button.clicked.connect(self.on_send_button_clicked)
+        # 初始状态为禁用（因为输入框为空）
+        self.send_button.setEnabled(False)
+        
+        # 添加到容器（按钮底部对齐，保持位置不变）
+        container_layout.addWidget(self.add_button, 0, Qt.AlignmentFlag.AlignBottom)
+        container_layout.addWidget(self.input_field, 1)
+        container_layout.addWidget(self.send_button, 0, Qt.AlignmentFlag.AlignBottom)
+        
+        # 先添加图片预览容器（在输入框上方）
+        main_layout.addWidget(self.image_preview_scroll)
+        
+        # 然后添加输入容器
+        main_layout.addWidget(input_container)
+        
+        # 底部提示文本
+        hint_label = QLabel("Enter 发送 · Shift+Enter 换行")
+        hint_label.setFont(QFont("Microsoft YaHei UI", 9))  # 使用合适的字体大小
+        hint_label.setObjectName("hint_label")
+        hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        main_layout.addWidget(hint_label)
+        
+        # 初始化发送按钮状态
+        self.update_send_button_state()
+    
+    def update_send_button_state(self):
+        """更新发送按钮的启用状态"""
+        # 如果正在生成，暂停按钮应始终可点击
+        if self.is_generating:
+            self.send_button.setEnabled(True)
+            return
+        
+        # 只有当输入框有文本或有图片时才启用发送按钮
+        text = self.input_field.toPlainText().strip()
+        self.send_button.setEnabled(len(text) > 0 or len(self.image_list) > 0)
+    
+    def eventFilter(self, obj, event):
+        """事件过滤器（处理 Enter 键）"""
+        if obj == self.input_field and event.type() == event.Type.KeyPress:
+            if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+                # Shift+Enter 换行，Enter 发送
+                if event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
+                    return False
+                else:
+                    # 如果正在生成，忽略 Enter 键
+                    if not self.is_generating:
+                        self.send_message()
+                    return True
+        return super().eventFilter(obj, event)
+    
+    def on_send_button_clicked(self):
+        """处理发送按钮点击（发送或暂停）"""
+        print(f"[DEBUG] 按钮被点击，当前状态: is_generating={self.is_generating}")
+        if self.is_generating:
+            # 当前正在生成，点击暂停
+            print("[DEBUG] 执行暂停操作")
+            self.stop_generation_clicked()
+        else:
+            # 当前未生成，点击发送
+            print("[DEBUG] 执行发送操作")
+            self.send_message()
+    
+    def stop_generation_clicked(self):
+        """点击暂停按钮"""
+        print("[DEBUG] 用户点击暂停按钮")
+        # 发送停止生成信号
+        self.stop_generation.emit()
+        # 状态会在 restore_message 中更新
+    
+    def set_generating_state(self, is_generating):
+        """设置生成状态"""
+        self.is_generating = is_generating
+        if is_generating:
+            # 切换为暂停按钮（红色，正方形图标）
+            self.send_button.setText("■")  # 停止符号
+            self.send_button.setEnabled(True)  # 确保按钮可点击
+            self.send_button.setToolTip("停止生成")
+            # 修改样式为红色，增大字体
+            self.send_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #ef4444;
+                    color: white;
+                    border: none;
+                    border-radius: 18px;
+                    font-size: 20px;
+                    font-weight: bold;
+                }
+                QPushButton:enabled {
+                    background-color: #ef4444;
+                }
+                QPushButton:hover:enabled {
+                    background-color: #dc2626;
+                }
+                QPushButton:pressed:enabled {
+                    background-color: #b91c1c;
+                }
+            """)
+        else:
+            # 切换回发送按钮（原始样式）
+            self.send_button.setText("↑")
+            self.send_button.setToolTip("发送消息 (Enter)")
+            # 清除自定义样式，恢复全局 QSS
+            self.send_button.setStyleSheet("")
+            # 强制刷新样式（重新应用全局 QSS）
+            self.send_button.style().unpolish(self.send_button)
+            self.send_button.style().polish(self.send_button)
+            self.send_button.update()
+            # 根据输入框内容更新按钮状态
+            self.update_send_button_state()
+    
+    def save_and_clear_message(self):
+        """保存当前消息并清空输入框"""
+        self.last_sent_message = self.input_field.toPlainText().strip()
+        self.last_sent_images = self.image_list.copy()
+        print(f"[DEBUG] 保存消息: {self.last_sent_message[:50] if self.last_sent_message else '(空)'}")
+        print(f"[DEBUG] 保存图片数量: {len(self.last_sent_images)}")
+        
+        # 清空输入框和图片
+        self.input_field.clear()
+        self.clear_all_images()
+        
+        # 切换为生成状态
+        print("[DEBUG] 切换为生成状态（暂停按钮）")
+        self.set_generating_state(True)
+        print(f"[DEBUG] 暂停按钮状态: enabled={self.send_button.isEnabled()}, is_generating={self.is_generating}")
+    
+    def restore_message(self):
+        """恢复之前保存的消息"""
+        print(f"[DEBUG] 恢复消息: {self.last_sent_message[:50] if self.last_sent_message else '(空)'}")
+        print(f"[DEBUG] 恢复图片数量: {len(self.last_sent_images)}")
+        
+        # 恢复文本
+        if self.last_sent_message:
+            self.input_field.setPlainText(self.last_sent_message)
+        
+        # 恢复图片
+        if self.last_sent_images:
+            self.image_list = self.last_sent_images.copy()
+            # TODO: 如果需要，可以恢复图片预览
+        
+        # 切换回发送状态
+        self.set_generating_state(False)
+        
+        # 聚焦输入框
+        self.input_field.setFocus()
+    
+    def send_message(self):
+        """发送消息"""
+        message = self.input_field.toPlainText().strip()
+        if message or len(self.image_list) > 0:
+            # 如果有图片，发送带图片的信号
+            if len(self.image_list) > 0:
+                images = self.image_list.copy()
+                self.message_with_images_sent.emit(message, images)
+            else:
+                # 兼容旧的纯文本信号
+                self.message_sent.emit(message)
+            
+            # 清空输入框和图片
+            self.input_field.clear()
+            self.clear_all_images()
+            
+            # 显式更新发送按钮状态（确保变为禁用）
+            self.update_send_button_state()
+    
+    def get_message(self):
+        """获取输入的消息"""
+        return self.input_field.toPlainText().strip()
+    
+    def clear_input(self):
+        """清空输入框"""
+        self.input_field.clear()
+    
+    def set_enabled(self, enabled):
+        """设置启用状态"""
+        self.input_field.setEnabled(enabled)
+        self.send_button.setEnabled(enabled)
+        self.add_button.setEnabled(enabled)
+    
+    def focus_input(self):
+        """聚焦到输入框"""
+        self.input_field.setFocus()
+    
+    def on_image_pasted(self, image):
+        """处理图片粘贴事件"""
+        # 将图片转为 base64 存储
+        buffer = QBuffer()
+        buffer.open(QBuffer.OpenModeFlag.ReadWrite)
+        image.save(buffer, "PNG")
+        base64_data = base64.b64encode(buffer.data()).decode("utf-8")
+        buffer.close()
+        
+        # 存储到列表
+        self.image_list.append(base64_data)
+        
+        # 添加预览卡片
+        self.add_image_preview_card(image, base64_data)
+        
+        # 显示预览容器（确保高度正确）
+        self.image_preview_scroll.setFixedHeight(140)
+        self.image_preview_scroll.setVisible(True)
+        
+        # 强制刷新布局（从内到外）
+        self.image_preview_container.adjustSize()
+        self.image_preview_container.updateGeometry()
+        self.image_preview_scroll.adjustSize()
+        self.image_preview_scroll.updateGeometry()
+        
+        # 激活并更新主布局
+        main_layout = self.layout()
+        if main_layout:
+            main_layout.invalidate()
+            main_layout.activate()
+            main_layout.update()
+        
+        # 调整自身大小
+        self.adjustSize()
+        self.updateGeometry()
+        
+        # 通知父窗口更新
+        if self.parent():
+            self.parent().adjustSize()
+            self.parent().updateGeometry()
+        
+        # 处理所有待处理的事件
+        from PyQt6.QtCore import QCoreApplication
+        QCoreApplication.processEvents()
+        
+        # 更新发送按钮状态
+        self.update_send_button_state()
+        
+        print(f"[DEBUG] 图片已粘贴，大小: {len(base64_data)} bytes，总数: {len(self.image_list)}")
+        print(f"[DEBUG] 预览容器高度: {self.image_preview_scroll.height()}，可见: {self.image_preview_scroll.isVisible()}")
+    
+    def add_image_preview_card(self, image, base64_data):
+        """添加图片预览卡片（ChatGPT 风格）"""
+        # 创建外层容器（用于放置删除按钮）
+        outer_container = QWidget()
+        outer_container.setFixedSize(120, 120)
+        outer_container.setStyleSheet("background-color: transparent;")
+        
+        # 创建卡片容器
+        card = QFrame(outer_container)
+        card.setObjectName("image_card")
+        card.setFixedSize(120, 120)
+        card.setStyleSheet("""
+            QFrame#image_card {
+                background-color: #2a2b32;
+                border-radius: 8px;
+                border: 1px solid #565869;
+            }
+            QFrame#image_card:hover {
+                border-color: #6b7280;
+                background-color: #2f2f2f;
+            }
+        """)
+        
+        # 添加轻微阴影效果
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(8)
+        shadow.setOffset(0, 2)
+        shadow.setColor(QColor(0, 0, 0, 80))
+        card.setGraphicsEffect(shadow)
+        
+        # 卡片布局
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(2, 2, 2, 2)
+        card_layout.setSpacing(0)
+        
+        # 图片标签
+        image_label = QLabel()
+        pixmap = QPixmap.fromImage(image).scaled(
+            116, 116,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+        image_label.setPixmap(pixmap)
+        image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        image_label.setStyleSheet("""
+            QLabel {
+                background-color: transparent;
+                border-radius: 6px;
+            }
+        """)
+        
+        card_layout.addWidget(image_label)
+        
+        # 删除按钮（右上角，放在 outer_container 上）
+        close_btn = QPushButton("✕", outer_container)
+        close_btn.setFixedSize(20, 20)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(0, 0, 0, 0.75);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: rgba(220, 38, 38, 0.9);
+            }
+        """)
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        close_btn.move(96, 4)
+        close_btn.raise_()
+        
+        # 连接删除事件，添加调试输出
+        def on_remove():
+            print(f"[DEBUG] 删除按钮被点击")
+            self.remove_image_card(outer_container, base64_data)
+        
+        close_btn.clicked.connect(on_remove)
+        
+        # 添加到预览布局（插入到 stretch 之前）
+        # 布局中最后一个是 stretch，所以插入到倒数第二个位置
+        insert_pos = self.image_preview_layout.count() - 1
+        self.image_preview_layout.insertWidget(insert_pos, outer_container)
+        self.image_widgets.append(outer_container)
+        
+        # 强制更新布局
+        self.image_preview_container.updateGeometry()
+        self.image_preview_layout.update()
+    
+    def remove_image_card(self, card, base64_data):
+        """删除指定的图片预览卡片"""
+        # 从图片列表中删除
+        if base64_data in self.image_list:
+            self.image_list.remove(base64_data)
+        
+        # 从 widget 列表中删除
+        if card in self.image_widgets:
+            self.image_widgets.remove(card)
+        
+        # 从布局中移除并删除 widget
+        self.image_preview_layout.removeWidget(card)
+        card.deleteLater()
+        
+        # 如果没有图片了，完全隐藏预览容器
+        if len(self.image_list) == 0:
+            self.image_preview_scroll.setFixedHeight(0)
+            self.image_preview_scroll.setVisible(False)
+        
+        # 强制刷新布局（从内到外）
+        self.image_preview_container.adjustSize()
+        self.image_preview_container.updateGeometry()
+        self.image_preview_scroll.adjustSize()
+        self.image_preview_scroll.updateGeometry()
+        
+        # 激活并更新主布局
+        main_layout = self.layout()
+        if main_layout:
+            main_layout.invalidate()
+            main_layout.activate()
+            main_layout.update()
+        
+        # 调整自身大小
+        self.adjustSize()
+        self.updateGeometry()
+        
+        # 通知父窗口更新
+        if self.parent():
+            self.parent().adjustSize()
+            self.parent().updateGeometry()
+        
+        # 处理所有待处理的事件
+        from PyQt6.QtCore import QCoreApplication
+        QCoreApplication.processEvents()
+        
+        # 更新发送按钮状态
+        self.update_send_button_state()
+        
+        print(f"[DEBUG] 图片已删除，剩余: {len(self.image_list)}")
+        print(f"[DEBUG] 预览容器高度: {self.image_preview_scroll.height()}，可见: {self.image_preview_scroll.isVisible()}")
+    
+    def clear_all_images(self):
+        """清空所有图片"""
+        # 清空图片列表
+        self.image_list.clear()
+        
+        # 删除所有预览卡片
+        for widget in self.image_widgets:
+            self.image_preview_layout.removeWidget(widget)
+            widget.deleteLater()
+        self.image_widgets.clear()
+        
+        # 完全隐藏预览容器
+        self.image_preview_scroll.setFixedHeight(0)
+        self.image_preview_scroll.setVisible(False)
+        
+        # 强制刷新布局
+        self.image_preview_container.adjustSize()
+        self.image_preview_scroll.adjustSize()
+        
+        # 激活并更新主布局
+        main_layout = self.layout()
+        if main_layout:
+            main_layout.invalidate()
+            main_layout.activate()
+        
+        # 调整自身大小
+        self.adjustSize()
+        self.updateGeometry()
+        
+        # 通知父窗口
+        if self.parent():
+            self.parent().adjustSize()
+        
+        print("[DEBUG] 所有图片已清空")
+    
+    def get_selected_model(self):
+        """获取选中的模型（默认）"""
+        return "gpt-3.5-turbo"
+

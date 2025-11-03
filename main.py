@@ -137,6 +137,100 @@ def main():
                 from core.module_interface import ModuleProviderAdapter
                 module_provider = ModuleProviderAdapter(app_manager.module_manager)
                 
+                # 建立模块间的连接（AI助手、资产管理器、配置工具）
+                try:
+                    logger.info("========== 开始建立模块间连接 ==========")
+                    print("[DEBUG] ========== 开始建立模块间连接 ==========")
+                    
+                    asset_manager_module = app_manager.module_manager.get_module("asset_manager")
+                    config_tool_module = app_manager.module_manager.get_module("config_tool")
+                    ai_assistant_module = app_manager.module_manager.get_module("ai_assistant")
+                    
+                    print(f"[DEBUG] asset_manager 模块: {asset_manager_module}")
+                    print(f"[DEBUG] config_tool 模块: {config_tool_module}")
+                    print(f"[DEBUG] ai_assistant 模块: {ai_assistant_module}")
+                    
+                    if ai_assistant_module:
+                        print(f"[DEBUG] ai_assistant 实例: {ai_assistant_module.instance}")
+                        
+                        # 连接 asset_manager
+                        if asset_manager_module:
+                            print(f"[DEBUG] asset_manager 实例: {asset_manager_module.instance}")
+                            
+                            # 获取 asset_manager 的逻辑层实例
+                            if hasattr(asset_manager_module.instance, 'logic'):
+                                asset_logic = asset_manager_module.instance.logic
+                                print(f"[DEBUG] [OK] 通过 .logic 属性获取到 asset_manager 逻辑层: {asset_logic}")
+                                logger.info("获取到 asset_manager 逻辑层")
+                            elif hasattr(asset_manager_module.instance, 'get_logic'):
+                                asset_logic = asset_manager_module.instance.get_logic()
+                                print(f"[DEBUG] [OK] 通过 get_logic() 获取到 asset_manager 逻辑层: {asset_logic}")
+                                logger.info("通过 get_logic 获取到 asset_manager 逻辑层")
+                            else:
+                                asset_logic = None
+                                print("[DEBUG] [ERROR] 无法获取 asset_manager 逻辑层")
+                                logger.warning("无法获取 asset_manager 逻辑层")
+                            
+                            # 将 asset_manager 逻辑层传递给 AI助手
+                            if asset_logic and hasattr(ai_assistant_module.instance, 'set_asset_manager_logic'):
+                                print(f"[DEBUG] 正在调用 ai_assistant.set_asset_manager_logic({asset_logic})...")
+                                ai_assistant_module.instance.set_asset_manager_logic(asset_logic)
+                                print("[DEBUG] [OK] 已将 asset_manager 逻辑层连接到 AI助手")
+                                logger.info("已将 asset_manager 逻辑层连接到 AI助手")
+                            else:
+                                if not asset_logic:
+                                    print("[DEBUG] [ERROR] asset_logic 为 None，无法连接")
+                                if not hasattr(ai_assistant_module.instance, 'set_asset_manager_logic'):
+                                    print("[DEBUG] [ERROR] AI助手模块缺少 set_asset_manager_logic 方法")
+                                    logger.warning("AI助手模块缺少 set_asset_manager_logic 方法")
+                        else:
+                            print("[DEBUG] [WARN] asset_manager 模块未加载")
+                            logger.info("asset_manager 模块未加载，跳过连接")
+                        
+                        # 连接 config_tool
+                        if config_tool_module:
+                            print(f"[DEBUG] config_tool 实例: {config_tool_module.instance}")
+                            
+                            # 获取 config_tool 的逻辑层实例
+                            if hasattr(config_tool_module.instance, 'logic'):
+                                config_logic = config_tool_module.instance.logic
+                                print(f"[DEBUG] [OK] 通过 .logic 属性获取到 config_tool 逻辑层: {config_logic}")
+                                logger.info("获取到 config_tool 逻辑层")
+                            elif hasattr(config_tool_module.instance, 'get_logic'):
+                                config_logic = config_tool_module.instance.get_logic()
+                                print(f"[DEBUG] [OK] 通过 get_logic() 获取到 config_tool 逻辑层: {config_logic}")
+                                logger.info("通过 get_logic 获取到 config_tool 逻辑层")
+                            else:
+                                config_logic = None
+                                print("[DEBUG] [ERROR] 无法获取 config_tool 逻辑层")
+                                logger.warning("无法获取 config_tool 逻辑层")
+                            
+                            # 将 config_tool 逻辑层传递给 AI助手
+                            if config_logic and hasattr(ai_assistant_module.instance, 'set_config_tool_logic'):
+                                print(f"[DEBUG] 正在调用 ai_assistant.set_config_tool_logic({config_logic})...")
+                                ai_assistant_module.instance.set_config_tool_logic(config_logic)
+                                print("[DEBUG] [OK] 已将 config_tool 逻辑层连接到 AI助手")
+                                logger.info("已将 config_tool 逻辑层连接到 AI助手")
+                            else:
+                                if not config_logic:
+                                    print("[DEBUG] [ERROR] config_logic 为 None，无法连接")
+                                if not hasattr(ai_assistant_module.instance, 'set_config_tool_logic'):
+                                    print("[DEBUG] [ERROR] AI助手模块缺少 set_config_tool_logic 方法")
+                                    logger.warning("AI助手模块缺少 set_config_tool_logic 方法")
+                        else:
+                            print("[DEBUG] [WARN] config_tool 模块未加载")
+                            logger.info("config_tool 模块未加载，跳过连接")
+                    else:
+                        print("[DEBUG] [WARN] ai_assistant 模块未加载")
+                        logger.info("ai_assistant 模块未加载，跳过连接")
+                    
+                    print("[DEBUG] ========== 模块连接流程结束 ==========")
+                except Exception as e:
+                    print(f"[DEBUG] [ERROR] 建立模块间连接时发生异常: {e}")
+                    logger.error(f"建立模块间连接失败: {e}", exc_info=True)
+                    import traceback
+                    traceback.print_exc()
+                
                 # 创建主窗口
                 logger.info("创建主窗口")
                 main_window = UEMainWindow(module_provider)
