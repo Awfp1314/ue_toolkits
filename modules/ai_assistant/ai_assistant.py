@@ -77,16 +77,34 @@ class AIAssistantModule:
         
         def preload_task():
             try:
-                logger.info("开始异步预加载 embedding 模型...")
-                from modules.ai_assistant.logic.intent_parser import IntentEngine
+                import os
                 
-                # 创建临时引擎并触发模型加载
+                # 设置 HuggingFace 镜像（如果未设置）
+                if "HF_ENDPOINT" not in os.environ:
+                    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+                    logger.info("已设置 HuggingFace 镜像: https://hf-mirror.com")
+                
+                logger.info("🚀 开始后台预加载 AI 模型（约需 10-30 秒）...")
+                
+                # 1. 预加载语义模型
+                from modules.ai_assistant.logic.intent_parser import IntentEngine
                 temp_engine = IntentEngine(model_type="bge-small")
                 temp_engine.parse("测试")  # 触发延迟加载
+                logger.info("✅ 语义模型加载完成")
                 
-                logger.info("Embedding 模型预加载完成")
+                # 2. 预热 ChromaDB（触发 ONNX 模型下载）
+                try:
+                    from modules.ai_assistant.logic.local_retriever import LocalDocIndex
+                    temp_index = LocalDocIndex()
+                    # 执行一次简单查询触发初始化
+                    temp_index.search("test", top_k=1)
+                    logger.info("✅ ChromaDB 预热完成")
+                except Exception as e:
+                    logger.warning(f"ChromaDB 预热失败（首次查询时会自动初始化）: {e}")
+                
+                logger.info("🎉 所有 AI 模型预加载完成！")
             except Exception as e:
-                logger.warning(f"预加载模型失败（不影响功能）: {e}")
+                logger.warning(f"⚠️ 预加载模型失败（首次提问时会自动加载）: {e}")
         
         # 在后台线程运行
         thread = threading.Thread(target=preload_task, daemon=True, name="EmbeddingPreload")
