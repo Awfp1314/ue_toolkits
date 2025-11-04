@@ -15,6 +15,12 @@ from modules.ai_assistant.logic.log_analyzer import LogAnalyzer
 from modules.ai_assistant.logic.config_reader import ConfigReader
 from modules.ai_assistant.logic.enhanced_memory_manager import EnhancedMemoryManager, MemoryLevel
 
+# v0.1 新增：意图解析、运行态上下文、本地/远程检索
+from modules.ai_assistant.logic.intent_parser import IntentEngine, IntentType
+from modules.ai_assistant.logic.runtime_context import RuntimeContextManager
+from modules.ai_assistant.logic.local_retriever import LocalDocIndex
+from modules.ai_assistant.logic.remote_retriever import RemoteRetriever
+
 logger = get_logger(__name__)
 
 
@@ -28,13 +34,15 @@ class ContextManager:
     - 从日志学习
     """
     
-    def __init__(self, asset_manager_logic=None, config_tool_logic=None, user_id: str = "default"):
+    def __init__(self, asset_manager_logic=None, config_tool_logic=None, runtime_context=None, user_id: str = "default", debug: bool = False):
         """初始化上下文管理器
         
         Args:
             asset_manager_logic: asset_manager 模块的逻辑层实例
             config_tool_logic: config_tool 模块的逻辑层实例
+            runtime_context: 运行态上下文管理器（可选，会自动创建）
             user_id: 用户ID（用于记忆持久化）
+            debug: 是否开启 debug 模式（输出完整上下文快照到日志）
         """
         self.asset_reader = AssetReader(asset_manager_logic)
         self.document_reader = DocumentReader()
@@ -44,96 +52,72 @@ class ContextManager:
         # 增强型记忆管理器（基于 Mem0 设计）
         self.memory = EnhancedMemoryManager(user_id=user_id)
         
+        # v0.1 新增：意图引擎（延迟加载）
+        self.intent_engine = IntentEngine(model_type="bge-small")
+        
+        # v0.1 新增：运行态上下文管理器
+        self.runtime_context = runtime_context or RuntimeContextManager()
+        
+        # v0.1 新增：本地文档索引（延迟加载）
+        self.local_index = LocalDocIndex()
+        
+        # v0.1 新增：远程检索器（延迟加载）
+        self.remote_retriever = RemoteRetriever()
+        
         # 上下文缓存（避免重复计算）
         self._context_cache = {}
         self._cache_ttl = 60  # 缓存有效期（秒）
         
+        # Debug 模式
+        self.debug = debug
+        
         self.logger = logger
-        self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，支持记忆、理解、学习）")
+        self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，debug: {debug}，支持记忆、理解、学习、检索）")
     
     def analyze_query(self, query: str) -> Dict[str, Any]:
         """分析用户查询，判断需要什么类型的上下文
+        
+        v0.1 更新：使用 IntentEngine 进行语义意图解析
         
         Args:
             query: 用户查询
             
         Returns:
-            Dict: 分析结果
+            Dict: 分析结果，包含 needs_assets/docs/logs/configs, intent, confidence
         """
-        query_lower = query.lower()
-        
-        result = {
-            'needs_assets': False,
-            'needs_docs': False,
-            'needs_logs': False,
-            'needs_configs': False,
-            'keywords': [],
-            'intent': 'general'
-        }
-        
-        # 资产相关关键词
-        asset_keywords = [
-            '资产', 'asset', '模型', 'model', '纹理', 'texture',
-            '蓝图', 'blueprint', '材质', 'material', '动画', 'animation',
-            '查找', '搜索', 'search', '有哪些', '列表'
-        ]
-        
-        # 文档相关关键词
-        doc_keywords = [
-            '文档', 'document', '说明', 'readme', '教程', 'tutorial',
-            '如何', 'how', '怎么', '使用', 'use', '帮助', 'help'
-        ]
-        
-        # 日志/错误相关关键词
-        log_keywords = [
-            '错误', 'error', '警告', 'warning', '日志', 'log',
-            '出错', '失败', 'failed', '问题', 'problem', '异常', 'exception',
-            '崩溃', 'crash', '不工作', 'not working'
-        ]
-        
-        # 配置相关关键词
-        config_keywords = [
-            '配置', 'config', 'configuration', '设置', 'settings',
-            '模板', 'template', 'ini', '引擎配置', 'engine config',
-            'defaultengine', 'defaultgame', 'defaultinput'
-        ]
-        
-        # 检查是否需要各种上下文
-        for keyword in asset_keywords:
-            if keyword in query_lower:
-                result['needs_assets'] = True
-                result['keywords'].append(keyword)
-                break
-        
-        for keyword in doc_keywords:
-            if keyword in query_lower:
-                result['needs_docs'] = True
-                result['keywords'].append(keyword)
-                break
-        
-        for keyword in log_keywords:
-            if keyword in query_lower:
-                result['needs_logs'] = True
-                result['keywords'].append(keyword)
-                break
-        
-        for keyword in config_keywords:
-            if keyword in query_lower:
-                result['needs_configs'] = True
-                result['keywords'].append(keyword)
-                break
-        
-        # 判断意图
-        if result['needs_logs']:
-            result['intent'] = 'troubleshooting'
-        elif result['needs_assets']:
-            result['intent'] = 'asset_query'
-        elif result['needs_docs']:
-            result['intent'] = 'documentation'
-        elif result['needs_configs']:
-            result['intent'] = 'configuration'
-        
-        return result
+        try:
+            # 使用意图引擎进行语义解析
+            intent_result = self.intent_engine.parse(query)
+            
+            intent = intent_result['intent']
+            entities = intent_result['entities']
+            confidence = intent_result['confidence']
+            
+            # 根据意图类型映射到需要的上下文
+            result = {
+                'needs_assets': intent in [IntentType.ASSET_QUERY, IntentType.ASSET_DETAIL],
+                'needs_docs': intent == IntentType.DOC_SEARCH,
+                'needs_logs': intent in [IntentType.LOG_ANALYZE, IntentType.LOG_SEARCH],
+                'needs_configs': intent in [IntentType.CONFIG_QUERY, IntentType.CONFIG_COMPARE],
+                'keywords': entities,
+                'intent': str(intent),
+                'confidence': confidence
+            }
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"意图解析失败: {e}", exc_info=True)
+            # 降级到空结果（触发 fallback）
+            return {
+                'needs_assets': False,
+                'needs_docs': False,
+                'needs_logs': False,
+                'needs_configs': False,
+                'keywords': [],
+                'intent': 'chitchat',
+                'confidence': 0.0
+            }
     
     def build_context(self, query: str, include_system_prompt: bool = True) -> str:
         """构建智能融合的上下文信息（基于 Mem0 设计）
@@ -177,10 +161,17 @@ class ContextManager:
             self.logger.info("已添加最近对话上下文")
         
         # ===== 第五层：运行时状态 =====
-        runtime_status = self._build_runtime_status()
-        if runtime_status:
-            context_sections['runtime_status'] = runtime_status
-            self.logger.info("已添加运行时状态")
+        # v0.1 更新：使用 RuntimeContextManager 获取完整快照
+        runtime_snapshot = self.runtime_context.get_formatted_snapshot()
+        if runtime_snapshot:
+            context_sections['runtime_status'] = runtime_snapshot
+            self.logger.info("已添加运行态快照")
+        
+        # ===== 第五点五层：检索证据（本地优先，远程 fallback）=====
+        retrieval_evidence = self._build_retrieval_evidence(query)
+        if retrieval_evidence:
+            context_sections['retrieval_evidence'] = retrieval_evidence
+            self.logger.info("已添加检索证据")
         
         # ===== 第六层：领域特定上下文 =====
         analysis = self.analyze_query(query)
@@ -200,6 +191,18 @@ class ContextManager:
         
         # ===== 上下文优化和去重 =====
         optimized_context = self._optimize_context(context_sections, query)
+        
+        # v0.1 新增：Debug 模式输出
+        if self.debug:
+            self.logger.info("="*60)
+            self.logger.info("[DEBUG] 完整上下文快照:")
+            self.logger.info(f"查询: {query}")
+            self.logger.info(f"意图: {analysis}")
+            self.logger.info(f"上下文段数: {len(context_sections)}")
+            for key, value in context_sections.items():
+                self.logger.info(f"  - {key}: {len(value)} 字符")
+            self.logger.info(f"优化后长度: {len(optimized_context)} 字符")
+            self.logger.info("="*60)
         
         return optimized_context
     
@@ -641,6 +644,77 @@ class ContextManager:
         keywords = [word for word in words if word not in stop_words and len(word) > 1]
         
         return keywords
+    
+    def _build_retrieval_evidence(self, query: str) -> str:
+        """
+        构建检索证据（本地优先，远程 fallback）
+        
+        v0.1 新增：集成本地文档检索和远程代码搜索
+        
+        Args:
+            query: 用户查询
+            
+        Returns:
+            str: 检索证据文本，附带来源标签
+        """
+        try:
+            evidence_parts = []
+            
+            # 1. 优先本地文档检索
+            try:
+                local_results = self.local_index.search(query, top_k=3)
+                
+                if local_results:
+                    evidence_parts.append("[本地文档检索结果]")
+                    for i, result in enumerate(local_results, 1):
+                        content = result['content'][:300]  # 限制长度
+                        metadata = result.get('metadata', {})
+                        source = metadata.get('source', 'unknown')
+                        path = metadata.get('path', '')
+                        
+                        # 添加来源标签
+                        evidence_parts.append(f"\n{i}. {content}...")
+                        evidence_parts.append(f"   [来源: {source}]" + (f" [路径: {path}]" if path else ""))
+                    
+                    self.logger.info(f"本地检索到 {len(local_results)} 条结果")
+            
+            except Exception as e:
+                self.logger.warning(f"本地检索失败: {e}")
+            
+            # 2. 如果本地无结果，尝试远程检索（GitHub）
+            if not evidence_parts:
+                try:
+                    # 只在特定意图下启用远程搜索（避免过度调用 API）
+                    analysis = self.analyze_query(query)
+                    if analysis.get('intent') in ['doc.search', 'asset.query']:
+                        remote_results = self.remote_retriever.search(
+                            query, 
+                            source="github",
+                            repo="EpicGames/UnrealEngine",  # 可配置
+                            top_k=2
+                        )
+                        
+                        if remote_results:
+                            evidence_parts.append("[远程代码检索结果]")
+                            for i, result in enumerate(remote_results, 1):
+                                snippet = result.get('content_snippet', '')[:200]
+                                url = result.get('url', '')
+                                path = result.get('path', '')
+                                
+                                evidence_parts.append(f"\n{i}. {snippet}...")
+                                evidence_parts.append(f"   [来源: GitHub - {path}]")
+                                evidence_parts.append(f"   [链接: {url}]")
+                            
+                            self.logger.info(f"远程检索到 {len(remote_results)} 条结果")
+                
+                except Exception as e:
+                    self.logger.warning(f"远程检索失败（可能未配置 token）: {e}")
+            
+            return "\n".join(evidence_parts) if evidence_parts else ""
+        
+        except Exception as e:
+            self.logger.error(f"构建检索证据失败: {e}", exc_info=True)
+            return ""
     
     def execute_command(self, command: str) -> Optional[str]:
         """执行特定命令
