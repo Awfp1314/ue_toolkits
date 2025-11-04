@@ -54,6 +54,7 @@ class ChatWindow(QWidget):
         self.context_manager: Optional[ContextManager] = None
         self.asset_manager_logic = None
         self.config_tool_logic = None
+        self.runtime_context = None  # v0.1 新增：运行态上下文管理器
         
         self.init_ui()
         self.load_theme(self.current_theme)
@@ -88,15 +89,34 @@ class ChatWindow(QWidget):
         self.config_tool_logic = config_tool_logic
         self._init_context_manager(logger)
     
+    def set_runtime_context(self, runtime_context):
+        """设置运行态上下文管理器（v0.1 新增）
+        
+        Args:
+            runtime_context: RuntimeContextManager 实例
+        """
+        from core.logger import get_logger
+        logger = get_logger(__name__)
+        
+        print("[DEBUG] ===== set_runtime_context 被调用 =====")
+        print(f"[DEBUG] runtime_context 类型: {type(runtime_context)}")
+        
+        self.runtime_context = runtime_context
+        self._init_context_manager(logger)
+    
     def _init_context_manager(self, logger):
-        """初始化上下文管理器（内部方法）"""
+        """初始化上下文管理器（内部方法）
+        
+        v0.1 更新：传递 runtime_context
+        """
         try:
             self.context_manager = ContextManager(
                 asset_manager_logic=self.asset_manager_logic,
-                config_tool_logic=self.config_tool_logic
+                config_tool_logic=self.config_tool_logic,
+                runtime_context=self.runtime_context  # v0.1 新增
             )
-            print("[DEBUG] [OK] ChatWindow 上下文管理器已成功初始化")
-            logger.info("ChatWindow上下文管理器已初始化")
+            print("[DEBUG] [OK] ChatWindow 上下文管理器已成功初始化（包含运行态上下文）")
+            logger.info("ChatWindow上下文管理器已初始化（包含运行态上下文）")
         except Exception as e:
             print(f"[DEBUG] [ERROR] 初始化上下文管理器失败: {e}")
             logger.error(f"初始化上下文管理器失败: {e}", exc_info=True)
