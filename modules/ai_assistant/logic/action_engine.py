@@ -7,7 +7,7 @@
 
 import time
 import json
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 from core.logger import get_logger
 
 logger = get_logger(__name__)
