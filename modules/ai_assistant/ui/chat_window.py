@@ -65,6 +65,8 @@ class ChatWindow(QWidget):
         self._model_check_timer = None
         self._model_loading_displayed = False
         self._intent_question_sent = False  # 是否已发送询问意图的消息
+        self._streaming_index = 0  # 流式输出当前索引
+        self._streaming_chunks = []  # 流式输出片段列表
         
         self.init_ui()
         self.load_theme(self.current_theme)
@@ -221,8 +223,9 @@ class ChatWindow(QWidget):
         pass
     
     def _send_intent_question(self):
-        """自动发送询问用户意图的消息"""
+        """自动发送询问用户意图的消息（使用流式输出动画）"""
         from core.logger import get_logger
+        from PyQt6.QtCore import QTimer
         logger = get_logger(__name__)
         
         # 检查是否已发送过询问消息
@@ -230,7 +233,7 @@ class ChatWindow(QWidget):
             logger.info("询问意图消息已发送过，跳过")
             return
         
-        # 发送询问消息
+        # 完整的询问消息
         intent_message = (
             "👋 你好！我是虚幻引擎工具箱的 AI 助手。\n\n"
             "我可以帮你：\n"
@@ -244,7 +247,38 @@ class ChatWindow(QWidget):
             "请告诉我你需要什么帮助？"
         )
         
-        self.add_message(intent_message, is_user=False, is_system=False)
+        # 创建流式输出气泡
+        self.add_streaming_bubble()
+        
+        # 分段发送，模拟流式输出
+        # 将消息分成多个片段，每个片段逐步添加
+        chunks = []
+        chunk_size = 5  # 每次添加5个字符
+        for i in range(0, len(intent_message), chunk_size):
+            chunks.append(intent_message[i:i+chunk_size])
+        
+        # 使用定时器逐段添加
+        self._streaming_index = 0
+        self._streaming_chunks = chunks
+        
+        def stream_next_chunk():
+            if self._streaming_index < len(self._streaming_chunks):
+                chunk = self._streaming_chunks[self._streaming_index]
+                if self.current_streaming_bubble:
+                    self.current_streaming_bubble.append_text(chunk)
+                self._streaming_index += 1
+                # 继续下一个片段（每20ms一个片段，模拟打字速度）
+                QTimer.singleShot(20, stream_next_chunk)
+            else:
+                # 流式输出完成，标记气泡为完成状态
+                if self.current_streaming_bubble:
+                    self.current_streaming_bubble.finalize()
+                self.current_streaming_bubble = None
+                logger.info("询问意图消息流式输出完成")
+        
+        # 开始流式输出
+        stream_next_chunk()
+        
         self._intent_question_sent = True
         logger.info("已自动发送询问意图消息")
     
