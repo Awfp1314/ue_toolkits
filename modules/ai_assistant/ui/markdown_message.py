@@ -524,26 +524,7 @@ class MarkdownMessage(QFrame):
         # 用户消息气泡（ChatGPT 粉紫渐变风格）
         self.bubble = QFrame()
         self.bubble.setObjectName("user_bubble")
-        
-        # 设置气泡样式 - ChatGPT 粉紫渐变
-        self.bubble.setStyleSheet("""
-            QFrame#user_bubble {
-                background: qlineargradient(
-                    x1: 0, y1: 0, x2: 1, y2: 0,
-                    stop: 0 #a454b1,
-                    stop: 1 #d66cd3
-                );
-                border-radius: 18px;
-                border: none;
-            }
-            QFrame#user_bubble:hover {
-                background: qlineargradient(
-                    x1: 0, y1: 0, x2: 1, y2: 0,
-                    stop: 0 #b565c2,
-                    stop: 1 #e77de4
-                );
-            }
-        """)
+        # 样式由 QSS 文件控制
         
         bubble_layout = QVBoxLayout(self.bubble)
         bubble_layout.setContentsMargins(16, 7, 16, 7)  # 左右16px，上下7px（更紧凑）
@@ -555,21 +536,7 @@ class MarkdownMessage(QFrame):
         self.text_label.setWordWrap(True)  # 自动换行
         self.text_label.setTextFormat(Qt.TextFormat.PlainText)  # 纯文本格式
         self.text_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        
-        # 设置文字样式 - ChatGPT 风格清晰文字
-        self.text_label.setStyleSheet("""
-            QLabel#user_text_label {
-                background: transparent;
-                color: #ffffff;
-                font-size: 15px;
-                font-family: "Inter", "Noto Sans", "Microsoft YaHei UI", 
-                             "PingFang SC", "Hiragino Sans GB", "Helvetica Neue",
-                             "Segoe UI", Arial, sans-serif;
-                font-weight: 400;
-                letter-spacing: 0.2px;
-                border: none;
-            }
-        """)
+        # 样式由 QSS 文件控制
         
         # 设置字体以确保清晰度（ChatGPT 风格）
         font = QFont()
@@ -608,12 +575,13 @@ class MarkdownMessage(QFrame):
         # 复制按钮（使用自定义图标）
         self.user_copy_button = QPushButton()
         self.user_copy_button.setObjectName("action_button")
+        self.user_copy_button.setProperty("theme", self.theme)  # 设置主题属性
         self.user_copy_button.setFixedSize(30, 30)
         self.user_copy_button.setToolTip("复制内容")
         self.user_copy_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.user_copy_button.setIcon(self._create_copy_icon())
         self.user_copy_button.setIconSize(QSize(20, 20))
-        self.user_copy_button.setStyleSheet(self._get_button_style())
+        # 样式由 QSS 文件控制
         self.user_copy_button.clicked.connect(self.on_user_copy_clicked)
         
         button_container_layout.addWidget(self.user_copy_button)
@@ -707,27 +675,13 @@ class MarkdownMessage(QFrame):
         # 系统消息容器（固定宽度 650px，浅色背景）
         system_container = QWidget()
         system_container.setObjectName("system_message_container")
+        system_container.setProperty("theme", self.theme)  # 设置主题属性
         system_container.setFixedWidth(650)
         
         # 设置容器大小策略
         from PyQt6.QtWidgets import QSizePolicy
         system_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
-        
-        # 设置背景样式（半透明、圆角）
-        if self.theme == "dark":
-            bg_color = "rgba(64, 65, 79, 0.5)"  # 深色主题
-            text_color = "#d1d5db"
-        else:
-            bg_color = "rgba(247, 247, 248, 0.8)"  # 浅色主题
-            text_color = "#374151"
-        
-        system_container.setStyleSheet(f"""
-            QWidget#system_message_container {{
-                background-color: {bg_color};
-                border-radius: 8px;
-                padding: 16px;
-            }}
-        """)
+        # 样式由 QSS 文件控制
         
         # 容器的垂直布局
         container_layout = QVBoxLayout(system_container)
@@ -738,17 +692,10 @@ class MarkdownMessage(QFrame):
         from PyQt6.QtWidgets import QLabel
         message_label = QLabel(self.message)
         message_label.setObjectName("system_message_content")
+        message_label.setProperty("theme", self.theme)  # 设置主题属性
         message_label.setWordWrap(True)
         message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        message_label.setStyleSheet(f"""
-            QLabel#system_message_content {{
-                color: {text_color};
-                font-size: 14px;
-                line-height: 1.6;
-                background: transparent;
-                border: none;
-            }}
-        """)
+        # 样式由 QSS 文件控制
         
         container_layout.addWidget(message_label)
         
@@ -838,38 +785,37 @@ class MarkdownMessage(QFrame):
         painter.end()
         return QIcon(pixmap)
     
-    def _get_button_style(self):
-        """获取按钮样式"""
-        if self.theme == "dark":
-            return """
-                QPushButton#action_button {
-                    background-color: transparent;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 4px;
-                }
-                QPushButton#action_button:hover {
-                    background-color: #40414f;
-                }
-                QPushButton#action_button:pressed {
-                    background-color: #2a2b32;
-                }
-            """
-        else:
-            return """
-                QPushButton#action_button {
-                    background-color: transparent;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 4px;
-                }
-                QPushButton#action_button:hover {
-                    background-color: #f6f8fa;
-                }
-                QPushButton#action_button:pressed {
-                    background-color: #e1e4e8;
-                }
-            """
+    def set_theme(self, theme):
+        """更新主题并重新生成图标和内容"""
+        self.theme = theme
+        
+        # 如果是用户消息，重新创建复制按钮图标
+        if self.role == "user" and hasattr(self, 'user_copy_button'):
+            self.user_copy_button.setIcon(self._create_copy_icon())
+            self.user_copy_button.setProperty("theme", theme)
+            # 刷新样式
+            self.user_copy_button.style().unpolish(self.user_copy_button)
+            self.user_copy_button.style().polish(self.user_copy_button)
+        
+        # 如果是助手消息，重新渲染 Markdown HTML（使用新主题的CSS）
+        if self.role == "assistant" and hasattr(self, 'markdown_browser'):
+            html_content = markdown_to_html(self.message, self.theme)
+            self.markdown_browser.setHtml(html_content)
+        
+        # 如果是系统消息，更新容器和标签的主题属性
+        if self.role == "system":
+            # 查找系统消息容器和标签，更新它们的主题属性
+            system_container = self.findChild(QWidget, "system_message_container")
+            if system_container:
+                system_container.setProperty("theme", theme)
+                system_container.style().unpolish(system_container)
+                system_container.style().polish(system_container)
+            
+            message_label = self.findChild(QLabel, "system_message_content")
+            if message_label:
+                message_label.setProperty("theme", theme)
+                message_label.style().unpolish(message_label)
+                message_label.style().polish(message_label)
     
     def on_user_copy_clicked(self):
         """用户消息复制按钮点击"""
@@ -897,6 +843,8 @@ class StreamingMarkdownMessage(QFrame):
         self.role = "assistant"  # 流式消息总是 AI 的回答
         self.current_text = ""
         self.theme = theme
+        self.first_text_received = False  # 标记是否收到第一个文本块
+        self.thinking_animation_started = False  # 标记思考动画是否已启动
         self.init_ui()
     
     def init_ui(self):
@@ -968,23 +916,25 @@ class StreamingMarkdownMessage(QFrame):
         # 复制按钮（使用自定义图标）
         self.copy_button = QPushButton()
         self.copy_button.setObjectName("action_button")
+        self.copy_button.setProperty("theme", self.theme)  # 设置主题属性
         self.copy_button.setFixedSize(30, 30)
         self.copy_button.setToolTip("复制内容")
         self.copy_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.copy_button.setIcon(self._create_copy_icon())
         self.copy_button.setIconSize(QSize(20, 20))
-        self.copy_button.setStyleSheet(self._get_button_style())
+        # 样式由 QSS 文件控制
         self.copy_button.clicked.connect(self.on_copy_clicked)
         
         # 重新生成按钮（使用自定义图标）
         self.regenerate_button = QPushButton()
         self.regenerate_button.setObjectName("action_button")
+        self.regenerate_button.setProperty("theme", self.theme)  # 设置主题属性
         self.regenerate_button.setFixedSize(30, 30)
         self.regenerate_button.setToolTip("重新生成回答")
         self.regenerate_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.regenerate_button.setIcon(self._create_regenerate_icon())
         self.regenerate_button.setIconSize(QSize(20, 20))
-        self.regenerate_button.setStyleSheet(self._get_button_style())
+        # 样式由 QSS 文件控制
         self.regenerate_button.clicked.connect(self.on_regenerate_clicked)
         
         buttons_layout.addWidget(self.copy_button)
@@ -1000,8 +950,22 @@ class StreamingMarkdownMessage(QFrame):
         # 添加右侧弹性空间
         outer_layout.addStretch(1)
         
-        # 标记是否收到第一个文本块
-        self.first_text_received = False
+        # 延迟启动思考动画，确保最小显示时间（300ms）
+        QTimer.singleShot(50, self._start_thinking_animation)
+    
+    def _start_thinking_animation(self):
+        """启动思考动画（确保最小显示时间）"""
+        if not self.first_text_received:
+            self.thinking_animation_started = True
+            self.thinking_indicator.show()  # 确保显示
+    
+    def _stop_thinking_animation(self):
+        """停止思考动画（内部方法）"""
+        if hasattr(self, 'thinking_indicator') and self.thinking_indicator:
+            self.thinking_indicator.stop()
+            self.thinking_indicator.hide()
+        if hasattr(self, 'markdown_browser') and self.markdown_browser:
+            self.markdown_browser.show()
     
     def _create_copy_icon(self):
         """创建复制图标（两个重叠的圆角正方形）"""
@@ -1132,39 +1096,6 @@ class StreamingMarkdownMessage(QFrame):
         painter.end()
         return QIcon(pixmap)
     
-    def _get_button_style(self):
-        """获取按钮样式"""
-        if self.theme == "dark":
-            return """
-                QPushButton#action_button {
-                    background-color: transparent;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 4px;
-                }
-                QPushButton#action_button:hover {
-                    background-color: #40414f;
-                }
-                QPushButton#action_button:pressed {
-                    background-color: #2a2b32;
-                }
-            """
-        else:
-            return """
-                QPushButton#action_button {
-                    background-color: transparent;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 4px;
-                }
-                QPushButton#action_button:hover {
-                    background-color: #f6f8fa;
-                }
-                QPushButton#action_button:pressed {
-                    background-color: #e1e4e8;
-                }
-            """
-    
     def on_copy_clicked(self):
         """复制按钮点击"""
         from PyQt6.QtWidgets import QApplication
@@ -1180,6 +1111,30 @@ class StreamingMarkdownMessage(QFrame):
         """重新生成按钮点击"""
         self.regenerate_clicked.emit()
     
+    def set_theme(self, theme):
+        """更新主题并重新生成图标和内容"""
+        self.theme = theme
+        
+        # 重新创建复制和重新生成按钮图标
+        if hasattr(self, 'copy_button'):
+            self.copy_button.setIcon(self._create_copy_icon())
+            self.copy_button.setProperty("theme", theme)
+            # 刷新样式
+            self.copy_button.style().unpolish(self.copy_button)
+            self.copy_button.style().polish(self.copy_button)
+        
+        if hasattr(self, 'regenerate_button'):
+            self.regenerate_button.setIcon(self._create_regenerate_icon())
+            self.regenerate_button.setProperty("theme", theme)
+            # 刷新样式
+            self.regenerate_button.style().unpolish(self.regenerate_button)
+            self.regenerate_button.style().polish(self.regenerate_button)
+        
+        # 重新渲染 Markdown HTML（使用新主题的CSS）
+        if hasattr(self, 'markdown_browser') and self.current_text:
+            html_content = markdown_to_html(self.current_text, self.theme)
+            self.markdown_browser.setHtml(html_content)
+    
     def adjust_height(self):
         """自动调整高度"""
         doc_height = self.markdown_browser.document().size().height()
@@ -1188,12 +1143,17 @@ class StreamingMarkdownMessage(QFrame):
     def append_text(self, text):
         """追加文本"""
         try:
-            # 收到第一个文本块时，移除思考动画
-            if not self.first_text_received and text.strip():
+            # 收到第一个文本块时（不管是否为空），移除思考动画
+            # 这表示API已经开始响应，即使第一个块是空白
+            if not self.first_text_received:
                 self.first_text_received = True
-                self.thinking_indicator.stop()
-                self.thinking_indicator.hide()
-                self.markdown_browser.show()
+                # 确保思考动画至少显示300ms后才停止（避免闪烁）
+                if self.thinking_animation_started:
+                    # 动画已经启动，延迟停止以保证最小显示时间
+                    QTimer.singleShot(300, self._stop_thinking_animation)
+                else:
+                    # 动画还没启动（文本太快到达），直接停止
+                    self._stop_thinking_animation()
             
             self.current_text += text
             html_content = markdown_to_html(self.current_text, self.theme)
@@ -1206,9 +1166,8 @@ class StreamingMarkdownMessage(QFrame):
         try:
             # 如果还没有收到任何文本（思考动画还在显示），先移除它
             if not self.first_text_received:
-                self.thinking_indicator.stop()
-                self.thinking_indicator.hide()
-                self.markdown_browser.show()
+                self.first_text_received = True
+                self._stop_thinking_animation()
             
             # 确保最终内容被正确渲染为 HTML
             # 断开 contentsChanged 信号，避免在设置内容时触发高度调整
@@ -1253,9 +1212,7 @@ class StreamingMarkdownMessage(QFrame):
             # 停止思考动画
             if not self.first_text_received:
                 self.first_text_received = True
-                self.thinking_indicator.stop()
-                self.thinking_indicator.hide()
-                self.markdown_browser.show()
+                self._stop_thinking_animation()
             
             # 流式输出每个字符
             self._stream_error_text(full_error_text, 0)

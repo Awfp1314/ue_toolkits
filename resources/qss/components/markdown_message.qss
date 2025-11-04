@@ -1,0 +1,114 @@
+/* ========================================
+   Markdown 消息组件样式
+   支持：用户消息、助手消息、系统消息
+   ======================================== */
+
+/* ========================================
+   用户消息气泡 - ChatGPT 粉紫渐变风格
+   ======================================== */
+QFrame#user_bubble {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #a454b1,
+        stop: 1 #d66cd3
+    );
+    border-radius: 18px;
+    border: none;
+}
+
+QFrame#user_bubble:hover {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #b565c2,
+        stop: 1 #e77de4
+    );
+}
+
+/* ========================================
+   用户消息文字样式 - ChatGPT 清晰文字
+   ======================================== */
+QLabel#user_text_label {
+    background: transparent;
+    color: #ffffff;
+    font-size: 15px;
+    font-family: "Inter", "Noto Sans", "Microsoft YaHei UI", 
+                 "PingFang SC", "Hiragino Sans GB", "Helvetica Neue",
+                 "Segoe UI", Arial, sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.2px;
+    border: none;
+}
+
+/* ========================================
+   系统消息容器 - 半透明背景（主题切换）
+   ======================================== */
+/* 深色主题 */
+QWidget#system_message_container[theme="dark"] {
+    background-color: rgba(64, 65, 79, 0.5);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+/* 浅色主题 */
+QWidget#system_message_container[theme="light"] {
+    background-color: rgba(247, 247, 248, 0.8);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+/* ========================================
+   系统消息文字样式（主题切换）
+   ======================================== */
+/* 深色主题 */
+QLabel#system_message_content[theme="dark"] {
+    color: #d1d5db;
+    font-size: 14px;
+    line-height: 1.6;
+    background: transparent;
+    border: none;
+}
+
+/* 浅色主题 */
+QLabel#system_message_content[theme="light"] {
+    color: #374151;
+    font-size: 14px;
+    line-height: 1.6;
+    background: transparent;
+    border: none;
+}
+
+/* ========================================
+   操作按钮（复制、重新生成）- 主题切换
+   ======================================== */
+/* 深色主题按钮 */
+QPushButton#action_button[theme="dark"] {
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 4px;
+}
+
+QPushButton#action_button[theme="dark"]:hover {
+    background-color: #40414f;
+}
+
+QPushButton#action_button[theme="dark"]:pressed {
+    background-color: #2a2b32;
+}
+
+/* 浅色主题按钮 */
+QPushButton#action_button[theme="light"] {
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 4px;
+}
+
+QPushButton#action_button[theme="light"]:hover {
+    background-color: #f6f8fa;
+}
+
+QPushButton#action_button[theme="light"]:pressed {
+    background-color: #e1e4e8;
+}
+

@@ -48,7 +48,17 @@ class ChatWindow(QWidget):
         ]
         self.current_api_client = None
         self.current_streaming_bubble = None
-        self.current_theme = "dark"  # 默认深色主题
+        
+        # 从全局主题管理器获取当前主题
+        try:
+            from core.utils.theme_manager import get_theme_manager, Theme
+            theme_manager = get_theme_manager()
+            current_theme = theme_manager.get_theme()
+            self.current_theme = "light" if current_theme == Theme.LIGHT else "dark"
+            print(f"[DEBUG] AI助手初始化，使用全局主题: {self.current_theme}")
+        except Exception as e:
+            print(f"[WARNING] 无法获取全局主题，使用默认深色主题: {e}")
+            self.current_theme = "dark"  # 降级方案：默认深色主题
         
         # 上下文管理器（延迟初始化，需要asset_manager_logic和config_tool_logic）
         self.context_manager: Optional[ContextManager] = None
@@ -1043,31 +1053,57 @@ class ChatWindow(QWidget):
             else:
                 self.current_theme = "dark"
             
+            # 加载主题样式
             self.load_theme(self.current_theme)
-            print(f"[DEBUG] AI助手主题已刷新: {self.current_theme}")
+            
+            # 更新所有已存在消息的主题（重新生成图标）
+            if hasattr(self, 'messages_layout') and self.messages_layout:
+                from .markdown_message import MarkdownMessage, StreamingMarkdownMessage
+                for i in range(self.messages_layout.count()):
+                    widget = self.messages_layout.itemAt(i).widget()
+                    if widget and isinstance(widget, (MarkdownMessage, StreamingMarkdownMessage)):
+                        widget.set_theme(self.current_theme)
+            
+            print(f"[DEBUG] AI助手主题已刷新: {self.current_theme}，已更新 {self.messages_layout.count() if hasattr(self, 'messages_layout') else 0} 条消息")
         except Exception as e:
             print(f"[ERROR] 刷新AI助手主题失败: {e}")
             import traceback
             traceback.print_exc()
     
     def load_theme(self, theme_name):
-        """加载主题样式"""
+        """加载主题样式 + 组件样式"""
         from pathlib import Path
         
         # 获取模块资源目录
         module_dir = Path(__file__).parent.parent
         theme_file = module_dir / "resources" / "themes" / f"{theme_name}.qss"
         
+        # 加载主主题样式
         if theme_file.exists():
             with open(theme_file, "r", encoding="utf-8") as f:
-                stylesheet = f.read()
-                self.setStyleSheet(stylesheet)
+                main_stylesheet = f.read()
         else:
             # 如果文件不存在，使用内置样式
             if theme_name == "dark":
-                self.setStyleSheet(self.get_dark_theme())
+                main_stylesheet = self.get_dark_theme()
             else:
-                self.setStyleSheet(self.get_light_theme())
+                main_stylesheet = self.get_light_theme()
+        
+        # 加载组件样式（markdown_message.qss）
+        workspace_root = Path(__file__).parent.parent.parent.parent  # 回到工作空间根目录
+        component_qss_file = workspace_root / "resources" / "qss" / "components" / "markdown_message.qss"
+        
+        component_stylesheet = ""
+        if component_qss_file.exists():
+            with open(component_qss_file, "r", encoding="utf-8") as f:
+                component_stylesheet = f.read()
+                print(f"[DEBUG] 已加载组件样式: {component_qss_file}")
+        else:
+            print(f"[WARNING] 组件样式文件不存在: {component_qss_file}")
+        
+        # 合并主题样式 + 组件样式
+        full_stylesheet = main_stylesheet + "\n" + component_stylesheet
+        self.setStyleSheet(full_stylesheet)
     
     def get_dark_theme(self):
         """获取深色主题（内置）"""
