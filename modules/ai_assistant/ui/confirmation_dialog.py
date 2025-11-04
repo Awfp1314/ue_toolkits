@@ -1,0 +1,132 @@
+# -*- coding: utf-8 -*-
+
+"""
+工具执行确认对话框
+用于受控写入工具的用户确认
+"""
+
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+    QPushButton, QTextEdit, QGroupBox
+)
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
+
+
+class ToolConfirmationDialog(QDialog):
+    """
+    工具执行确认对话框
+    
+    v0.3: 显示工具名称、参数、预览结果，要求用户确认
+    """
+    
+    def __init__(self, tool_name: str, preview_data: dict, parent=None):
+        """
+        初始化确认对话框
+        
+        Args:
+            tool_name: 工具名称
+            preview_data: 预览数据 {preview, description, confirm_prompt}
+            parent: 父窗口
+        """
+        super().__init__(parent)
+        
+        self.tool_name = tool_name
+        self.preview_data = preview_data
+        self.confirmed = False
+        
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化 UI"""
+        self.setWindowTitle("工具执行确认")
+        self.setMinimumWidth(600)
+        self.setMinimumHeight(400)
+        self.setModal(True)
+        
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        # 标题
+        title_label = QLabel(f"⚠️ 确认工具执行")
+        title_font = QFont()
+        title_font.setPointSize(14)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+        layout.addWidget(title_label)
+        
+        # 工具信息组
+        info_group = QGroupBox("工具信息")
+        info_layout = QVBoxLayout()
+        
+        tool_name_label = QLabel(f"**工具名称**: {self.tool_name}")
+        description = self.preview_data.get('description', '无描述')
+        desc_label = QLabel(f"**操作说明**: {description}")
+        
+        info_layout.addWidget(tool_name_label)
+        info_layout.addWidget(desc_label)
+        info_group.setLayout(info_layout)
+        layout.addWidget(info_group)
+        
+        # 预览组
+        preview_group = QGroupBox("预览结果")
+        preview_layout = QVBoxLayout()
+        
+        preview_text = QTextEdit()
+        preview_text.setReadOnly(True)
+        preview_text.setPlainText(self.preview_data.get('preview', '无预览'))
+        preview_text.setMaximumHeight(200)
+        
+        preview_layout.addWidget(preview_text)
+        preview_group.setLayout(preview_layout)
+        layout.addWidget(preview_group)
+        
+        # 确认提示
+        confirm_prompt = self.preview_data.get('confirm_prompt', '确认执行此操作吗？')
+        prompt_label = QLabel(confirm_prompt)
+        prompt_label.setStyleSheet("color: #FFA500; font-weight: bold;")
+        prompt_label.setWordWrap(True)
+        layout.addWidget(prompt_label)
+        
+        # 按钮
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        cancel_button = QPushButton("取消")
+        cancel_button.setMinimumWidth(100)
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        confirm_button = QPushButton("确认执行")
+        confirm_button.setMinimumWidth(100)
+        confirm_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        confirm_button.clicked.connect(self.accept)
+        button_layout.addWidget(confirm_button)
+        
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+    
+    def exec(self) -> bool:
+        """
+        显示对话框并等待用户响应
+        
+        Returns:
+            bool: True 表示用户确认，False 表示取消
+        """
+        result = super().exec()
+        return result == QDialog.DialogCode.Accepted
+
