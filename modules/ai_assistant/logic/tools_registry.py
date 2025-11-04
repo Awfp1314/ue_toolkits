@@ -31,12 +31,13 @@ class ToolDefinition:
 
 class ToolsRegistry:
     """
-    只读工具注册表
+    工具注册表
     
-    v0.2: 注册和管理所有只读工具，提供 OpenAI tools 描述
+    v0.2: 注册和管理所有只读工具
+    v0.3: 扩展支持受控写入工具
     """
     
-    def __init__(self, asset_reader=None, config_reader=None, log_analyzer=None, document_reader=None):
+    def __init__(self, asset_reader=None, config_reader=None, log_analyzer=None, document_reader=None, controlled_tools=None):
         """
         初始化工具注册表
         
@@ -45,18 +46,24 @@ class ToolsRegistry:
             config_reader: 配置读取器
             log_analyzer: 日志分析器
             document_reader: 文档读取器
+            controlled_tools: 受控工具集（v0.3 新增）
         """
         self.logger = logger
         self.asset_reader = asset_reader
         self.config_reader = config_reader
         self.log_analyzer = log_analyzer
         self.document_reader = document_reader
+        self.controlled_tools = controlled_tools  # v0.3 新增
         
         # 工具注册表
         self.tools: Dict[str, ToolDefinition] = {}
         
         # 注册所有只读工具
         self._register_readonly_tools()
+        
+        # v0.3: 注册受控写入工具
+        if self.controlled_tools:
+            self._register_controlled_tools()
         
         self.logger.info(f"工具注册表初始化完成，共注册 {len(self.tools)} 个工具")
     
@@ -274,4 +281,73 @@ class ToolsRegistry:
         if self.document_reader:
             return self.document_reader.search_in_documents(keyword)
         return "[错误] 文档读取器未初始化"
+    
+    def _register_controlled_tools(self):
+        """
+        v0.3 新增：注册受控写入工具
+        
+        所有受控工具标记 requires_confirmation=True
+        """
+        # 1. 导出配置模板
+        self.register_tool(ToolDefinition(
+            name="export_config_template",
+            description="导出UE配置模板到指定路径（需要确认）",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "template_name": {
+                        "type": "string",
+                        "description": "配置模板名称"
+                    },
+                    "export_path": {
+                        "type": "string",
+                        "description": "导出路径"
+                    }
+                },
+                "required": ["template_name", "export_path"]
+            },
+            function=self._tool_export_config_template,
+            requires_confirmation=True  # 需要确认
+        ))
+        
+        # 2. 批量重命名预览
+        self.register_tool(ToolDefinition(
+            name="batch_rename_preview",
+            description="批量重命名资产（需要确认）",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "pattern": {
+                        "type": "string",
+                        "description": "匹配模式"
+                    },
+                    "replacement": {
+                        "type": "string",
+                        "description": "替换文本"
+                    },
+                    "asset_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "资产ID列表"
+                    }
+                },
+                "required": ["pattern", "replacement", "asset_ids"]
+            },
+            function=self._tool_batch_rename_preview,
+            requires_confirmation=True  # 需要确认
+        ))
+    
+    def _tool_export_config_template(self, template_name: str, export_path: str) -> str:
+        """导出配置模板工具实现（返回预览）"""
+        if self.controlled_tools:
+            result = self.controlled_tools.export_config_template(template_name, export_path)
+            return result.get('preview', '[错误] 无预览')
+        return "[错误] 受控工具集未初始化"
+    
+    def _tool_batch_rename_preview(self, pattern: str, replacement: str, asset_ids: list) -> str:
+        """批量重命名工具实现（返回预览）"""
+        if self.controlled_tools:
+            result = self.controlled_tools.batch_rename_preview(pattern, replacement, asset_ids)
+            return result.get('preview', '[错误] 无预览')
+        return "[错误] 受控工具集未初始化"
 

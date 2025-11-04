@@ -18,27 +18,27 @@ class ActionEngine:
     动作引擎
     
     v0.2: 实现两段式工具调用流程
-    1. 第一次请求：带 tools 描述 → 接收 tool_calls
-    2. 执行工具 → 形成 tool outputs
-    3. 第二次请求：追加 tool outputs → 生成最终答复
+    v0.3: 添加确认对话框和审计日志
     """
     
-    def __init__(self, tools_registry, api_client_factory):
+    def __init__(self, tools_registry, api_client_factory, audit_logger=None):
         """
         初始化动作引擎
         
         Args:
             tools_registry: ToolsRegistry 实例
             api_client_factory: API 客户端工厂函数
+            audit_logger: 审计日志记录器（v0.3 新增）
         """
         self.logger = logger
         self.tools_registry = tools_registry
         self.api_client_factory = api_client_factory
+        self.audit_logger = audit_logger  # v0.3 新增
         
         # 调用记录
         self.call_history: List[Dict[str, Any]] = []
         
-        self.logger.info("动作引擎初始化完成")
+        self.logger.info("动作引擎初始化完成（包含审计日志）")
     
     def execute_with_tools(
         self,
@@ -219,11 +219,35 @@ class ActionEngine:
                 arguments_str = tool_call["function"]["arguments"]
                 arguments = json.loads(arguments_str)
                 
-                # v0.2: 安全检查 - 是否需要确认
+                # v0.3: 安全检查 - 是否需要确认
                 tool_def = self.tools_registry.tools.get(tool_name)
                 if tool_def and tool_def.requires_confirmation:
-                    # TODO v0.3: 触发确认对话框
-                    self.logger.warning(f"工具 {tool_name} 需要确认，但确认机制未实现（v0.3）")
+                    # 触发确认对话框
+                    confirmed, preview_data = self._request_user_confirmation(
+                        tool_name, 
+                        arguments, 
+                        tool_def
+                    )
+                    
+                    # 记录审计日志
+                    if self.audit_logger:
+                        self.audit_logger.log_tool_call(
+                            tool_name=tool_name,
+                            arguments=arguments,
+                            preview=preview_data.get('preview', ''),
+                            user_confirmed=confirmed
+                        )
+                    
+                    if not confirmed:
+                        # 用户取消
+                        self.logger.info(f"用户取消工具调用: {tool_name}")
+                        tool_outputs.append({
+                            "tool_call_id": tool_call.get("id", "unknown"),
+                            "role": "tool",
+                            "name": tool_name,
+                            "content": "[用户取消] 操作已取消"
+                        })
+                        continue
                 
                 # 调度执行
                 result = self.tools_registry.dispatch(tool_name, arguments)
@@ -343,4 +367,57 @@ class ActionEngine:
             List[Dict]: 最近的工具调用记录
         """
         return self.call_history[-limit:] if self.call_history else []
+    
+    def _request_user_confirmation(self, tool_name: str, arguments: Dict, tool_def) -> tuple:
+        """
+        v0.3 新增：请求用户确认
+        
+        Args:
+            tool_name: 工具名称
+            arguments: 工具参数
+            tool_def: 工具定义
+            
+        Returns:
+            tuple: (confirmed: bool, preview_data: dict)
+        """
+        try:
+            # 1. 执行预览（获取预览数据）
+            preview_result = tool_def.function(**arguments)
+            
+            # preview_result 可能是字符串或字典
+            if isinstance(preview_result, str):
+                preview_data = {
+                    'preview': preview_result,
+                    'description': f'执行工具: {tool_name}',
+                    'confirm_prompt': f'确认执行 {tool_name} 吗？'
+                }
+            else:
+                preview_data = preview_result
+            
+            # 2. 显示确认对话框
+            from modules.ai_assistant.ui.confirmation_dialog import ToolConfirmationDialog
+            from PyQt6.QtWidgets import QApplication
+            
+            # 获取主窗口作为 parent
+            app = QApplication.instance()
+            parent = app.activeWindow() if app else None
+            
+            dialog = ToolConfirmationDialog(
+                tool_name=tool_name,
+                preview_data=preview_data,
+                parent=parent
+            )
+            
+            confirmed = dialog.exec()
+            
+            return confirmed, preview_data
+        
+        except Exception as e:
+            self.logger.error(f"请求用户确认失败: {e}", exc_info=True)
+            # 异常时默认拒绝
+            return False, {
+                'preview': f'[错误] 无法生成预览: {str(e)}',
+                'description': f'工具: {tool_name}',
+                'confirm_prompt': ''
+            }
 
