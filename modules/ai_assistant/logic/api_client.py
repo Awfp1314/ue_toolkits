@@ -31,7 +31,7 @@ class APIClient(QThread):
         self.api_url = "https://api.openai-hk.com/v1/chat/completions"
         self.headers = {
             "Content-Type": "application/json",
-            "Authorization": "hk-cmh6l362a9aqn89v9yqyy6yngxulzd9cpnsi9snpnv2xcaxj"
+            "Authorization": "hk-rf256210000027899536cbcb497417e8dfc70c2960229c22"
         }
     
     def run(self):
