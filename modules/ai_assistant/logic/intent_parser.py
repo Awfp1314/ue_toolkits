@@ -12,6 +12,9 @@ from core.logger import get_logger
 
 logger = get_logger(__name__)
 
+# 全局模型缓存（多个 IntentEngine 实例共享同一个模型，避免重复加载）
+_CACHED_EMBEDDER = None
+
 
 class IntentType(str, Enum):
     """意图类型枚举"""
@@ -95,7 +98,17 @@ class IntentEngine:
         延迟加载模型（首次调用时执行）
         
         注意：此方法在首次 parse() 时才执行，避免影响 PyQt6 启动速度
+        
+        优化：使用全局缓存，多个 IntentEngine 实例共享同一个模型
         """
+        # 检查全局缓存
+        global _CACHED_EMBEDDER
+        if _CACHED_EMBEDDER is not None:
+            self.logger.info("使用已缓存的语义模型")
+            self._embedder = _CACHED_EMBEDDER
+            self._model_loaded = True
+            return
+        
         self._model_loaded = True
         
         if self.model_type == ModelType.RULE_BASED:
@@ -110,7 +123,10 @@ class IntentEngine:
             model_name = self.model_path or "BAAI/bge-small-zh-v1.5"
             self._embedder = SentenceTransformer(model_name)
             
-            self.logger.info(f"模型加载成功: {model_name}")
+            # 保存到全局缓存（供其他 IntentEngine 实例复用）
+            _CACHED_EMBEDDER = self._embedder
+            
+            self.logger.info(f"模型加载成功: {model_name}（已缓存到全局）")
             
         except Exception as e:
             self.logger.warning(f"模型加载失败，将使用规则匹配作为 fallback: {e}")
