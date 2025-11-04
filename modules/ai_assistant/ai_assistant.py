@@ -70,7 +70,13 @@ class AIAssistantModule:
             raise
     
     def _preload_embedding_model_async(self):
-        """异步预加载 embedding 模型（后台线程）"""
+        """异步预加载 embedding 模型（后台线程）
+        
+        优化策略：
+        1. 立即加载最关键的语义模型（IntentEngine）
+        2. 记录加载耗时
+        3. 失败时优雅降级
+        """
         if not V01_V02_AVAILABLE:
             logger.info("v0.1/v0.2 功能不可用，跳过模型预加载")
             return
@@ -78,33 +84,41 @@ class AIAssistantModule:
         def preload_task():
             try:
                 import os
+                import time
+                start_time = time.time()
                 
                 # 设置 HuggingFace 镜像（如果未设置）
                 if "HF_ENDPOINT" not in os.environ:
                     os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
                     logger.info("已设置 HuggingFace 镜像: https://hf-mirror.com")
                 
-                logger.info("🚀 开始后台预加载 AI 模型（约需 10-30 秒）...")
+                logger.info("🚀 开始后台预加载 AI 模型...")
                 
-                # 1. 预加载语义模型
+                # 1. 预加载语义模型（这是最耗时的，约 2-5 秒）
+                model_start = time.time()
                 from modules.ai_assistant.logic.intent_parser import IntentEngine
                 temp_engine = IntentEngine(model_type="bge-small")
-                temp_engine.parse("测试")  # 触发延迟加载
-                logger.info("✅ 语义模型加载完成")
+                temp_engine.parse("预热测试")  # 触发延迟加载
+                model_elapsed = time.time() - model_start
+                logger.info(f"✅ 语义模型加载完成（耗时 {model_elapsed:.1f} 秒）")
                 
-                # 2. 预热 ChromaDB（触发 ONNX 模型下载）
+                # 2. 预热 ChromaDB（触发 ONNX 模型下载，约 1-2 秒）
                 try:
+                    chroma_start = time.time()
                     from modules.ai_assistant.logic.local_retriever import LocalDocIndex
                     temp_index = LocalDocIndex()
                     # 执行一次简单查询触发初始化
                     temp_index.search("test", top_k=1)
-                    logger.info("✅ ChromaDB 预热完成")
+                    chroma_elapsed = time.time() - chroma_start
+                    logger.info(f"✅ ChromaDB 预热完成（耗时 {chroma_elapsed:.1f} 秒）")
                 except Exception as e:
                     logger.warning(f"ChromaDB 预热失败（首次查询时会自动初始化）: {e}")
                 
-                logger.info("🎉 所有 AI 模型预加载完成！")
+                total_elapsed = time.time() - start_time
+                logger.info(f"🎉 所有 AI 模型预加载完成！总耗时: {total_elapsed:.1f} 秒")
+                
             except Exception as e:
-                logger.warning(f"⚠️ 预加载模型失败（首次提问时会自动加载）: {e}")
+                logger.warning(f"⚠️ 预加载模型失败（首次提问时会自动加载）: {e}", exc_info=True)
         
         # 在后台线程运行
         thread = threading.Thread(target=preload_task, daemon=True, name="EmbeddingPreload")

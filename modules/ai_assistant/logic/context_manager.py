@@ -157,34 +157,37 @@ class ContextManager:
         """
         context_sections = {}  # 使用字典避免重复
         
-        # ===== 第一层：系统级上下文 =====
-        if include_system_prompt:
-            context_sections['system_prompt'] = self._build_system_prompt()
-        
-        # ===== 第二层：用户画像 =====
-        user_profile = self.memory.get_user_profile()
-        if user_profile:
-            context_sections['user_profile'] = user_profile
-            self.logger.info("已添加用户画像")
-        
-        # ===== 第三层：智能记忆检索 =====
-        relevant_memories = self.memory.get_relevant_memories(query, limit=3, min_importance=0.4)
-        if relevant_memories:
-            context_sections['relevant_memories'] = "[相关历史记忆]\n" + "\n".join(f"- {m}" for m in relevant_memories)
-            self.logger.info(f"已检索到 {len(relevant_memories)} 条相关记忆")
-        
-        # ===== 第四层：最近上下文 =====
-        recent_context = self.memory.get_recent_context(limit=3)
-        if recent_context:
-            context_sections['recent_context'] = recent_context
-            self.logger.info("已添加最近对话上下文")
-        
-        # ===== 第五层：查询意图分析 =====
+        # ===== 第一层：查询意图分析（提前分析，优化加载策略）=====
         analysis = self.analyze_query(query)
         self.logger.info(f"查询意图分析: {analysis}")
         
         # 判断是否为简单问候/闲聊
         is_chitchat = analysis.get('intent') == 'chitchat' or analysis.get('intent') == str(IntentType.CHITCHAT) if V01_AVAILABLE and IntentType else False
+        
+        # ===== 第二层：系统级上下文 =====
+        if include_system_prompt:
+            context_sections['system_prompt'] = self._build_system_prompt()
+        
+        # ===== 第三层：用户画像（闲聊时跳过）=====
+        if not is_chitchat:
+            user_profile = self.memory.get_user_profile()
+            if user_profile:
+                context_sections['user_profile'] = user_profile
+                self.logger.info("已添加用户画像")
+        
+        # ===== 第四层：智能记忆检索（闲聊时限制为1条）=====
+        memory_limit = 1 if is_chitchat else 3
+        relevant_memories = self.memory.get_relevant_memories(query, limit=memory_limit, min_importance=0.4)
+        if relevant_memories:
+            context_sections['relevant_memories'] = "[相关历史记忆]\n" + "\n".join(f"- {m}" for m in relevant_memories)
+            self.logger.info(f"已检索到 {len(relevant_memories)} 条相关记忆")
+        
+        # ===== 第五层：最近上下文（闲聊时跳过）=====
+        if not is_chitchat:
+            recent_context = self.memory.get_recent_context(limit=3)
+            if recent_context:
+                context_sections['recent_context'] = recent_context
+                self.logger.info("已添加最近对话上下文")
         
         # ===== 第六层：运行时状态（非闲聊时添加）=====
         # v0.1 更新：使用 RuntimeContextManager 获取完整快照
