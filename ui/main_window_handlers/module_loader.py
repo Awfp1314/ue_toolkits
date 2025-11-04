@@ -51,6 +51,9 @@ class ModuleLoader:
         
         logger.info(f"切换到模块 {module_name} 的UI")
         
+        # v0.1 新增：更新运行态上下文（仅添加，不改变现有逻辑）
+        self._update_runtime_context_on_module_switch(module_name)
+        
         # 强制设置UI组件属性确保可见
         widget.setVisible(True)
         widget.show()
@@ -94,4 +97,30 @@ class ModuleLoader:
         if self.main_window.content_stack:
             self.main_window.content_stack.addWidget(default_widget)
             self.main_window.content_stack.setCurrentWidget(default_widget)
+    
+    def _update_runtime_context_on_module_switch(self, module_name: str):
+        """
+        v0.1 新增：模块切换时更新运行态上下文
+        
+        不改变现有逻辑，仅添加状态记录
+        
+        Args:
+            module_name: 模块名称
+        """
+        try:
+            # 尝试获取 AI 助手模块的 runtime_context
+            if hasattr(self.main_window, 'module_provider') and self.main_window.module_provider:
+                ai_module = self.main_window.module_provider.get_module("ai_assistant")
+                
+                if ai_module and hasattr(ai_module, 'instance'):
+                    ai_instance = ai_module.instance
+                    
+                    if hasattr(ai_instance, 'get_runtime_context'):
+                        runtime_context = ai_instance.get_runtime_context()
+                        runtime_context.set_current_module(module_name)
+                        logger.debug(f"已更新运行态上下文：当前模块 = {module_name}")
+        
+        except Exception as e:
+            # 不影响主流程，静默失败
+            logger.debug(f"更新运行态上下文失败（不影响功能）: {e}")
 
