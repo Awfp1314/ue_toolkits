@@ -50,6 +50,7 @@ class AssetManagerLogic(QObject):
     thumbnail_updated = pyqtSignal(str, str)  # asset_id, thumbnail_path
     error_occurred = pyqtSignal(str)  # error_message
     progress_updated = pyqtSignal(int, int, str)  # current, total, message
+    asset_selected = pyqtSignal(dict)  # v0.1 新增：资产选中信号 {name, type, path, ...}
     
     def __init__(self, config_dir: Path):
         super().__init__()
