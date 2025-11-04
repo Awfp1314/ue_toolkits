@@ -166,7 +166,7 @@ class ContextManager:
         
         # ===== 第二层：系统级上下文 =====
         if include_system_prompt:
-            context_sections['system_prompt'] = self._build_system_prompt()
+            context_sections['system_prompt'] = self._build_system_prompt(is_chitchat=is_chitchat)
         
         # ===== 第三层：用户画像（闲聊时跳过）=====
         if not is_chitchat:
@@ -212,12 +212,16 @@ class ContextManager:
             context_sections.update(domain_contexts)
         
         # ===== 第九层：智能回退（仅在非闲聊且无特定领域需求时）=====
+        # 闲聊时完全跳过 fallback，避免加载系统概览
         if not is_chitchat and not any([analysis['needs_assets'], analysis['needs_docs'], 
                    analysis['needs_logs'], analysis['needs_configs']]):
             self.logger.info("触发智能回退策略")
             fallback = self._build_fallback_context(query)
             if fallback:
                 context_sections['fallback'] = fallback
+        elif is_chitchat:
+            # 闲聊模式：只保留最基本的系统角色说明
+            self.logger.info("闲聊模式：跳过所有领域上下文和系统概览")
         
         # ===== 上下文优化和去重 =====
         optimized_context = self._optimize_context(context_sections, query)
@@ -412,13 +416,22 @@ class ContextManager:
             self.logger.error(f"构建配置上下文失败: {e}")
             return ""
     
-    def _build_system_prompt(self) -> str:
+    def _build_system_prompt(self, is_chitchat: bool = False) -> str:
         """构建系统提示词
         
+        Args:
+            is_chitchat: 是否为闲聊模式
+            
         Returns:
             str: 系统提示词
         """
-        return """[系统角色]
+        if is_chitchat:
+            # 闲聊模式：简洁版提示词
+            return """[系统角色]
+你是虚幻引擎工具箱的 AI 助手。请自然、友好地回答用户的问候和闲聊。"""
+        else:
+            # 工作模式：完整版提示词
+            return """[系统角色]
 你是虚幻引擎工具箱的智能助手，专注于帮助用户管理 UE 项目资产、配置和日志。
 你拥有记忆能力，能记住之前的对话内容，并结合用户习惯提供个性化建议。"""
     
