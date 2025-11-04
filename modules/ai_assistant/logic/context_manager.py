@@ -63,8 +63,9 @@ class ContextManager:
         # 增强型记忆管理器（基于 Mem0 设计）
         self.memory = EnhancedMemoryManager(user_id=user_id)
         
-        # v0.1 新增：意图引擎（延迟加载）
-        self.intent_engine = IntentEngine(model_type="bge-small") if V01_AVAILABLE and IntentEngine else None
+        # v0.1 新增：意图引擎（延迟创建，避免与后台预加载冲突）
+        self._intent_engine = None
+        self._intent_engine_type = "bge-small" if V01_AVAILABLE and IntentEngine else None
         
         # v0.1 新增：运行态上下文管理器
         self.runtime_context = runtime_context or (RuntimeContextManager() if V01_AVAILABLE and RuntimeContextManager else None)
@@ -84,6 +85,14 @@ class ContextManager:
         
         self.logger = logger
         self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，debug: {debug}，支持记忆、理解、学习、检索）")
+    
+    @property
+    def intent_engine(self):
+        """延迟创建意图引擎（首次访问时创建，确保后台预加载已完成）"""
+        if self._intent_engine is None and self._intent_engine_type and V01_AVAILABLE and IntentEngine:
+            self._intent_engine = IntentEngine(model_type=self._intent_engine_type)
+            self.logger.info("意图引擎延迟创建完成")
+        return self._intent_engine
     
     def analyze_query(self, query: str) -> Dict[str, Any]:
         """分析用户查询，判断需要什么类型的上下文
