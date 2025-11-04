@@ -10,12 +10,21 @@ import threading
 
 from core.logger import get_logger
 from modules.ai_assistant.ui.chat_window import ChatWindow
-from modules.ai_assistant.logic.runtime_context import RuntimeContextManager
-# v0.2 新增：工具系统
-from modules.ai_assistant.logic.tools_registry import ToolsRegistry
-from modules.ai_assistant.logic.action_engine import ActionEngine
 
 logger = get_logger(__name__)
+
+# v0.1/v0.2 新增：延迟导入，避免启动时加载重量级库
+try:
+    from modules.ai_assistant.logic.runtime_context import RuntimeContextManager
+    from modules.ai_assistant.logic.tools_registry import ToolsRegistry
+    from modules.ai_assistant.logic.action_engine import ActionEngine
+    V01_V02_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"v0.1/v0.2 功能不可用（缺少依赖）：{e}")
+    RuntimeContextManager = None
+    ToolsRegistry = None
+    ActionEngine = None
+    V01_V02_AVAILABLE = False
 
 
 class AIAssistantModule:
@@ -33,13 +42,14 @@ class AIAssistantModule:
         self.config_tool_logic = None  # 存储config_tool逻辑层引用
         
         # v0.1 新增：运行态上下文管理器（全局单例）
-        self.runtime_context = RuntimeContextManager()
+        self.runtime_context = RuntimeContextManager() if V01_V02_AVAILABLE and RuntimeContextManager else None
         
         # v0.2 新增：工具注册表和动作引擎（延迟初始化）
         self.tools_registry: Optional[ToolsRegistry] = None
         self.action_engine: Optional[ActionEngine] = None
         
-        logger.info("AIAssistantModule 初始化（包含运行态上下文 + 工具系统）")
+        status = "（包含运行态上下文 + 工具系统）" if V01_V02_AVAILABLE else "（v0.1/v0.2 功能不可用）"
+        logger.info(f"AIAssistantModule 初始化{status}")
     
     def initialize(self, config_dir: str):
         """初始化模块
@@ -61,6 +71,10 @@ class AIAssistantModule:
     
     def _preload_embedding_model_async(self):
         """异步预加载 embedding 模型（后台线程）"""
+        if not V01_V02_AVAILABLE:
+            logger.info("v0.1/v0.2 功能不可用，跳过模型预加载")
+            return
+        
         def preload_task():
             try:
                 logger.info("开始异步预加载 embedding 模型...")
