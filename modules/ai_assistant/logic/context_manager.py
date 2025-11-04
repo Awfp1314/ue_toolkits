@@ -15,13 +15,24 @@ from modules.ai_assistant.logic.log_analyzer import LogAnalyzer
 from modules.ai_assistant.logic.config_reader import ConfigReader
 from modules.ai_assistant.logic.enhanced_memory_manager import EnhancedMemoryManager, MemoryLevel
 
-# v0.1 新增：意图解析、运行态上下文、本地/远程检索
-from modules.ai_assistant.logic.intent_parser import IntentEngine, IntentType
-from modules.ai_assistant.logic.runtime_context import RuntimeContextManager
-from modules.ai_assistant.logic.local_retriever import LocalDocIndex
-from modules.ai_assistant.logic.remote_retriever import RemoteRetriever
-
 logger = get_logger(__name__)
+
+# v0.1 新增：意图解析、运行态上下文、本地/远程检索
+# 可选导入，如果依赖未安装则跳过（优雅降级）
+try:
+    from modules.ai_assistant.logic.intent_parser import IntentEngine, IntentType
+    from modules.ai_assistant.logic.runtime_context import RuntimeContextManager
+    from modules.ai_assistant.logic.local_retriever import LocalDocIndex
+    from modules.ai_assistant.logic.remote_retriever import RemoteRetriever
+    V01_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"v0.1 功能不可用（缺少依赖）：{e}")
+    IntentEngine = None
+    IntentType = None
+    RuntimeContextManager = None
+    LocalDocIndex = None
+    RemoteRetriever = None
+    V01_AVAILABLE = False
 
 
 class ContextManager:
@@ -53,16 +64,16 @@ class ContextManager:
         self.memory = EnhancedMemoryManager(user_id=user_id)
         
         # v0.1 新增：意图引擎（延迟加载）
-        self.intent_engine = IntentEngine(model_type="bge-small")
+        self.intent_engine = IntentEngine(model_type="bge-small") if V01_AVAILABLE and IntentEngine else None
         
         # v0.1 新增：运行态上下文管理器
-        self.runtime_context = runtime_context or RuntimeContextManager()
+        self.runtime_context = runtime_context or (RuntimeContextManager() if V01_AVAILABLE and RuntimeContextManager else None)
         
         # v0.1 新增：本地文档索引（延迟加载）
-        self.local_index = LocalDocIndex()
+        self.local_index = LocalDocIndex() if V01_AVAILABLE and LocalDocIndex else None
         
         # v0.1 新增：远程检索器（延迟加载）
-        self.remote_retriever = RemoteRetriever()
+        self.remote_retriever = RemoteRetriever() if V01_AVAILABLE and RemoteRetriever else None
         
         # 上下文缓存（避免重复计算）
         self._context_cache = {}
@@ -86,38 +97,46 @@ class ContextManager:
             Dict: 分析结果，包含 needs_assets/docs/logs/configs, intent, confidence
         """
         try:
-            # 使用意图引擎进行语义解析
-            intent_result = self.intent_engine.parse(query)
-            
-            intent = intent_result['intent']
-            entities = intent_result['entities']
-            confidence = intent_result['confidence']
-            
-            # 根据意图类型映射到需要的上下文
-            result = {
-                'needs_assets': intent in [IntentType.ASSET_QUERY, IntentType.ASSET_DETAIL],
-                'needs_docs': intent == IntentType.DOC_SEARCH,
-                'needs_logs': intent in [IntentType.LOG_ANALYZE, IntentType.LOG_SEARCH],
-                'needs_configs': intent in [IntentType.CONFIG_QUERY, IntentType.CONFIG_COMPARE],
-                'keywords': entities,
-                'intent': str(intent),
-                'confidence': confidence
-            }
-            
-            return result
+            # v0.1: 如果意图引擎可用，使用语义解析
+            if self.intent_engine:
+                intent_result = self.intent_engine.parse(query)
+                
+                intent = intent_result['intent']
+                entities = intent_result['entities']
+                confidence = intent_result['confidence']
+                
+                # 根据意图类型映射到需要的上下文
+                result = {
+                    'needs_assets': intent in [IntentType.ASSET_QUERY, IntentType.ASSET_DETAIL],
+                    'needs_docs': intent == IntentType.DOC_SEARCH,
+                    'needs_logs': intent in [IntentType.LOG_ANALYZE, IntentType.LOG_SEARCH],
+                    'needs_configs': intent in [IntentType.CONFIG_QUERY, IntentType.CONFIG_COMPARE],
+                    'keywords': entities,
+                    'intent': str(intent),
+                    'confidence': confidence
+                }
+                
+                return result
+            else:
+                # v0.1 不可用，使用规则匹配
+                return self._fallback_analyze(query)
             
         except Exception as e:
             self.logger.error(f"意图解析失败: {e}", exc_info=True)
-            # 降级到空结果（触发 fallback）
-            return {
-                'needs_assets': False,
-                'needs_docs': False,
-                'needs_logs': False,
-                'needs_configs': False,
-                'keywords': [],
-                'intent': 'chitchat',
-                'confidence': 0.0
-            }
+            # 降级到规则匹配
+            return self._fallback_analyze(query)
+    
+    def _fallback_analyze(self, query: str) -> Dict[str, Any]:
+        """规则匹配分析（fallback）"""
+        return {
+            'needs_assets': False,
+            'needs_docs': False,
+            'needs_logs': False,
+            'needs_configs': False,
+            'keywords': [],
+            'intent': 'chitchat',
+            'confidence': 0.0
+        }
     
     def build_context(self, query: str, include_system_prompt: bool = True) -> str:
         """构建智能融合的上下文信息（基于 Mem0 设计）
@@ -162,10 +181,11 @@ class ContextManager:
         
         # ===== 第五层：运行时状态 =====
         # v0.1 更新：使用 RuntimeContextManager 获取完整快照
-        runtime_snapshot = self.runtime_context.get_formatted_snapshot()
-        if runtime_snapshot:
-            context_sections['runtime_status'] = runtime_snapshot
-            self.logger.info("已添加运行态快照")
+        if self.runtime_context:
+            runtime_snapshot = self.runtime_context.get_formatted_snapshot()
+            if runtime_snapshot:
+                context_sections['runtime_status'] = runtime_snapshot
+                self.logger.info("已添加运行态快照")
         
         # ===== 第五点五层：检索证据（本地优先，远程 fallback）=====
         retrieval_evidence = self._build_retrieval_evidence(query)
@@ -662,7 +682,10 @@ class ContextManager:
             
             # 1. 优先本地文档检索
             try:
-                local_results = self.local_index.search(query, top_k=3)
+                if self.local_index:
+                    local_results = self.local_index.search(query, top_k=3)
+                else:
+                    local_results = []
                 
                 if local_results:
                     evidence_parts.append("[本地文档检索结果]")
@@ -686,26 +709,28 @@ class ContextManager:
                 try:
                     # 只在特定意图下启用远程搜索（避免过度调用 API）
                     analysis = self.analyze_query(query)
-                    if analysis.get('intent') in ['doc.search', 'asset.query']:
+                    if self.remote_retriever and analysis.get('intent') in ['doc.search', 'asset.query']:
                         remote_results = self.remote_retriever.search(
                             query, 
                             source="github",
                             repo="EpicGames/UnrealEngine",  # 可配置
                             top_k=2
                         )
-                        
-                        if remote_results:
-                            evidence_parts.append("[远程代码检索结果]")
-                            for i, result in enumerate(remote_results, 1):
-                                snippet = result.get('content_snippet', '')[:200]
-                                url = result.get('url', '')
-                                path = result.get('path', '')
-                                
-                                evidence_parts.append(f"\n{i}. {snippet}...")
-                                evidence_parts.append(f"   [来源: GitHub - {path}]")
-                                evidence_parts.append(f"   [链接: {url}]")
+                    else:
+                        remote_results = []
+                    
+                    if remote_results:
+                        evidence_parts.append("[远程代码检索结果]")
+                        for i, result in enumerate(remote_results, 1):
+                            snippet = result.get('content_snippet', '')[:200]
+                            url = result.get('url', '')
+                            path = result.get('path', '')
                             
-                            self.logger.info(f"远程检索到 {len(remote_results)} 条结果")
+                            evidence_parts.append(f"\n{i}. {snippet}...")
+                            evidence_parts.append(f"   [来源: GitHub - {path}]")
+                            evidence_parts.append(f"   [链接: {url}]")
+                        
+                        self.logger.info(f"远程检索到 {len(remote_results)} 条结果")
                 
                 except Exception as e:
                     self.logger.warning(f"远程检索失败（可能未配置 token）: {e}")
