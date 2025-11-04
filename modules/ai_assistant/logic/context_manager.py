@@ -179,30 +179,37 @@ class ContextManager:
             context_sections['recent_context'] = recent_context
             self.logger.info("已添加最近对话上下文")
         
-        # ===== 第五层：运行时状态 =====
-        # v0.1 更新：使用 RuntimeContextManager 获取完整快照
-        if self.runtime_context:
-            runtime_snapshot = self.runtime_context.get_formatted_snapshot()
-            if runtime_snapshot:
-                context_sections['runtime_status'] = runtime_snapshot
-                self.logger.info("已添加运行态快照")
-        
-        # ===== 第五点五层：检索证据（本地优先，远程 fallback）=====
-        retrieval_evidence = self._build_retrieval_evidence(query)
-        if retrieval_evidence:
-            context_sections['retrieval_evidence'] = retrieval_evidence
-            self.logger.info("已添加检索证据")
-        
-        # ===== 第六层：领域特定上下文 =====
+        # ===== 第五层：查询意图分析 =====
         analysis = self.analyze_query(query)
         self.logger.info(f"查询意图分析: {analysis}")
         
+        # 判断是否为简单问候/闲聊
+        is_chitchat = analysis.get('intent') == 'chitchat' or analysis.get('intent') == str(IntentType.CHITCHAT) if V01_AVAILABLE and IntentType else False
+        
+        # ===== 第六层：运行时状态（非闲聊时添加）=====
+        # v0.1 更新：使用 RuntimeContextManager 获取完整快照
+        if not is_chitchat:
+            if self.runtime_context:
+                runtime_snapshot = self.runtime_context.get_formatted_snapshot()
+                if runtime_snapshot:
+                    context_sections['runtime_status'] = runtime_snapshot
+                    self.logger.info("已添加运行态快照")
+        
+        # ===== 第七层：检索证据（本地优先，远程 fallback）=====
+        # 仅在需要文档/资产查询时检索
+        if analysis.get('needs_docs') or analysis.get('needs_assets'):
+            retrieval_evidence = self._build_retrieval_evidence(query)
+            if retrieval_evidence:
+                context_sections['retrieval_evidence'] = retrieval_evidence
+                self.logger.info("已添加检索证据")
+        
+        # ===== 第八层：领域特定上下文 =====
         domain_contexts = self._build_domain_contexts(query, analysis)
         if domain_contexts:
             context_sections.update(domain_contexts)
         
-        # ===== 第七层：智能回退 =====
-        if not any([analysis['needs_assets'], analysis['needs_docs'], 
+        # ===== 第九层：智能回退（仅在非闲聊且无特定领域需求时）=====
+        if not is_chitchat and not any([analysis['needs_assets'], analysis['needs_docs'], 
                    analysis['needs_logs'], analysis['needs_configs']]):
             self.logger.info("触发智能回退策略")
             fallback = self._build_fallback_context(query)
@@ -576,7 +583,7 @@ class ContextManager:
             self.logger.error(f"从日志学习失败: {e}")
     
     def _build_runtime_status(self) -> str:
-        """构建运行时状态信息
+        """构建运行时状态信息（轻量级摘要，不包含详细列表）
         
         Returns:
             str: 运行时状态
@@ -589,21 +596,23 @@ class ContextManager:
             if recent_log and "[LOG]" in recent_log:
                 status_parts.append(f"**最近日志**: 可用")
             
-            # 检查资产库状态
-            assets_summary = self.asset_reader.get_all_assets_summary()
-            if "[ASSET]" in assets_summary:
-                # 提取资产数量
-                import re
-                match = re.search(r'共 (\d+) 个资产', assets_summary)
-                if match:
-                    status_parts.append(f"**资产库**: {match.group(1)} 个资产")
+            # 检查资产库状态（仅统计数量，不获取详细列表）
+            try:
+                if self.asset_reader.asset_manager_logic:
+                    assets = self.asset_reader.asset_manager_logic.get_all_assets()
+                    if assets:
+                        status_parts.append(f"**资产库**: {len(assets)} 个资产")
+            except Exception as e:
+                self.logger.debug(f"获取资产统计失败: {e}")
             
-            # 检查配置状态
-            config_summary = self.config_reader.get_all_configs_summary()
-            if "[CONFIG]" in config_summary:
-                match = re.search(r'共 (\d+) 个配置', config_summary)
-                if match:
-                    status_parts.append(f"**配置模板**: {match.group(1)} 个配置")
+            # 检查配置状态（仅统计数量）
+            try:
+                if self.config_reader.config_tool_logic:
+                    configs = self.config_reader.config_tool_logic.get_all_templates()
+                    if configs:
+                        status_parts.append(f"**配置模板**: {len(configs)} 个配置")
+            except Exception as e:
+                self.logger.debug(f"获取配置统计失败: {e}")
             
             if len(status_parts) > 1:
                 return "\n".join(status_parts)
