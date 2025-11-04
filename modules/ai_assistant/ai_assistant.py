@@ -6,9 +6,11 @@ AI 助手模块主类
 
 from PyQt6.QtWidgets import QWidget
 from typing import Optional
+import threading
 
 from core.logger import get_logger
 from modules.ai_assistant.ui.chat_window import ChatWindow
+from modules.ai_assistant.logic.runtime_context import RuntimeContextManager
 
 logger = get_logger(__name__)
 
@@ -26,7 +28,11 @@ class AIAssistantModule:
         self.chat_window: Optional[ChatWindow] = None
         self.asset_manager_logic = None  # 存储asset_manager逻辑层引用
         self.config_tool_logic = None  # 存储config_tool逻辑层引用
-        logger.info("AIAssistantModule 初始化")
+        
+        # v0.1 新增：运行态上下文管理器（全局单例）
+        self.runtime_context = RuntimeContextManager()
+        
+        logger.info("AIAssistantModule 初始化（包含运行态上下文）")
     
     def initialize(self, config_dir: str):
         """初始化模块
@@ -37,10 +43,41 @@ class AIAssistantModule:
         logger.info(f"初始化 AI 助手模块，配置目录: {config_dir}")
         try:
             # AI 助手不需要持久化配置，可以跳过
+            
+            # v0.1 新增：异步预加载 embedding 模型（避免首次调用卡顿）
+            self._preload_embedding_model_async()
+            
             logger.info("AI 助手模块初始化完成")
         except Exception as e:
             logger.error(f"AI 助手模块初始化失败: {e}", exc_info=True)
             raise
+    
+    def _preload_embedding_model_async(self):
+        """异步预加载 embedding 模型（后台线程）"""
+        def preload_task():
+            try:
+                logger.info("开始异步预加载 embedding 模型...")
+                from modules.ai_assistant.logic.intent_parser import IntentEngine
+                
+                # 创建临时引擎并触发模型加载
+                temp_engine = IntentEngine(model_type="bge-small")
+                temp_engine.parse("测试")  # 触发延迟加载
+                
+                logger.info("Embedding 模型预加载完成")
+            except Exception as e:
+                logger.warning(f"预加载模型失败（不影响功能）: {e}")
+        
+        # 在后台线程运行
+        thread = threading.Thread(target=preload_task, daemon=True, name="EmbeddingPreload")
+        thread.start()
+    
+    def get_runtime_context(self) -> RuntimeContextManager:
+        """获取运行态上下文管理器（供外部访问）
+        
+        Returns:
+            RuntimeContextManager: 运行态上下文管理器实例
+        """
+        return self.runtime_context
     
     def get_widget(self) -> QWidget:
         """获取模块的UI组件
@@ -54,6 +91,11 @@ class AIAssistantModule:
             logger.info("创建新的 AI 助手窗口实例")
             # 创建聊天窗口但不作为主窗口
             self.chat_window = ChatWindow(as_module=True)
+            
+            # v0.1 新增：传递运行态上下文管理器
+            if hasattr(self.chat_window, 'set_runtime_context'):
+                self.chat_window.set_runtime_context(self.runtime_context)
+            
             # 如果已经有asset_manager_logic，传递给chat_window
             if self.asset_manager_logic:
                 self.chat_window.set_asset_manager_logic(self.asset_manager_logic)
