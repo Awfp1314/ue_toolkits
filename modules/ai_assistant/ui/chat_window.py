@@ -56,6 +56,10 @@ class ChatWindow(QWidget):
         self.config_tool_logic = None
         self.runtime_context = None  # v0.1 新增：运行态上下文管理器
         
+        # v0.2 新增：工具系统
+        self.tools_registry = None
+        self.action_engine = None
+        
         self.init_ui()
         self.load_theme(self.current_theme)
     
@@ -103,6 +107,24 @@ class ChatWindow(QWidget):
         
         self.runtime_context = runtime_context
         self._init_context_manager(logger)
+    
+    def set_tools_system(self, tools_registry, action_engine):
+        """设置工具系统（v0.2 新增）
+        
+        Args:
+            tools_registry: ToolsRegistry 实例
+            action_engine: ActionEngine 实例
+        """
+        from core.logger import get_logger
+        logger = get_logger(__name__)
+        
+        print("[DEBUG] ===== set_tools_system 被调用 =====")
+        print(f"[DEBUG] tools_registry: {tools_registry}")
+        print(f"[DEBUG] action_engine: {action_engine}")
+        
+        self.tools_registry = tools_registry
+        self.action_engine = action_engine
+        logger.info("ChatWindow 工具系统已设置")
     
     def _init_context_manager(self, logger):
         """初始化上下文管理器（内部方法）
