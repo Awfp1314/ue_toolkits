@@ -25,6 +25,7 @@ class IntentType(str, Enum):
     LOG_ANALYZE = "log.analyze"           # 日志分析
     LOG_SEARCH = "log.search"             # 日志搜索
     DOC_SEARCH = "doc.search"             # 文档搜索
+    SITE_RECOMMENDATION = "site.recommendation"  # 站点推荐
     CHITCHAT = "chitchat"                 # 闲聊
 
 
@@ -171,6 +172,10 @@ class IntentEngine:
                     "查看文档", "搜索文档", "怎么使用", "如何操作",
                     "使用说明", "帮助文档"
                 ],
+                IntentType.SITE_RECOMMENDATION: [
+                    "推荐网站", "有什么网站", "站点推荐", "资源网站",
+                    "哪里下载", "学习网站", "论坛推荐", "资产商城"
+                ],
                 IntentType.CHITCHAT: [
                     "你好", "谢谢", "再见", "你是谁", "聊天"
                 ]
@@ -233,6 +238,7 @@ class IntentEngine:
             (IntentType.LOG_ANALYZE, ['错误', 'error', '警告', 'warning', '分析日志', '为什么', '出错', '失败', '崩溃'], 2),
             (IntentType.LOG_SEARCH, ['日志', 'log', '搜索日志', '查找日志'], 1),
             (IntentType.DOC_SEARCH, ['文档', 'document', '说明', 'readme', '教程', '如何', 'how', '怎么', '使用'], 1),
+            (IntentType.SITE_RECOMMENDATION, ['网站', '站点', '推荐', 'site', 'website', '资源网站', '论坛', '学习网站', '哪里下载', '哪里学', 'fab', 'marketplace', '商城', '资产商店'], 2),
         ]
         
         # 按优先级匹配

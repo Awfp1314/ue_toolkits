@@ -19,7 +19,7 @@ class APIClient(QThread):
     request_finished = pyqtSignal()       # 请求完成
     error_occurred = pyqtSignal(str)      # 发生错误
     
-    def __init__(self, messages, model="gpt-3.5-turbo", temperature=0.8, tools=None):
+    def __init__(self, messages, model="gemini-2.5-flash", temperature=0.8, tools=None):
         super().__init__()
         self.messages = messages
         self.model = model
@@ -114,23 +114,41 @@ class APIClient(QThread):
                 
                 # 检查结束标记
                 if data_str == '[DONE]':
+                    print("[API] 流式响应结束标记 [DONE]")
                     break
                 
                 try:
                     # 解析 JSON
                     data = json.loads(data_str)
                     
-                    # 提取内容
+                    # 提取内容（兼容多种格式）
                     if 'choices' in data and len(data['choices']) > 0:
-                        delta = data['choices'][0].get('delta', {})
+                        choice = data['choices'][0]
+                        
+                        # 尝试从 delta 获取（OpenAI/GPT 格式）
+                        delta = choice.get('delta', {})
                         content = delta.get('content', '')
+                        
+                        # 如果 delta 中没有，尝试从 message 获取（Gemini 可能的格式）
+                        if not content:
+                            message = choice.get('message', {})
+                            content = message.get('content', '')
+                        
+                        # 如果还是没有，尝试直接从 choice 获取 text
+                        if not content:
+                            content = choice.get('text', '')
                         
                         if content:
                             # 发送内容块
                             self.chunk_received.emit(content)
+                            try:
+                                print(f"[DEBUG] 收到数据块: {content[:20]}...")
+                            except UnicodeEncodeError:
+                                pass  # 忽略 print 的编码错误
                 
                 except json.JSONDecodeError as e:
                     # 忽略 JSON 解析错误
+                    print(f"[DEBUG] JSON 解析失败: {data_str[:100]}")
                     continue
                 except Exception as e:
                     # 其他错误
@@ -155,7 +173,7 @@ class APIClient(QThread):
     @staticmethod
     def send(
         messages: list,
-        model: str = "gpt-3.5-turbo",
+        model: str = "gemini-2.5-flash",
         temperature: float = 0.8,
         tools: list = None,
         stream: bool = True

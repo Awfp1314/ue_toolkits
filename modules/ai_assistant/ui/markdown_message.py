@@ -4,8 +4,8 @@ ChatGPT 风格的 Markdown 消息组件
 """
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QTextBrowser, QGraphicsOpacityEffect, QPushButton
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRectF, pyqtProperty, pyqtSignal, QSize
-from PyQt6.QtGui import QFont, QPainter, QColor, QIcon, QPixmap, QPen
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRectF, pyqtProperty, pyqtSignal, QSize, QUrl
+from PyQt6.QtGui import QFont, QPainter, QColor, QIcon, QPixmap, QPen, QDesktopServices
 
 try:
     import markdown
@@ -498,6 +498,9 @@ class MarkdownMessage(QFrame):
         if self.role == "user":
             # 用户消息：右对齐气泡样式
             self._init_user_message()
+        elif self.role == "system":
+            # 系统消息：居中显示，特殊样式
+            self._init_system_message()
         else:
             # 助手消息：全宽左对齐，无气泡
             self._init_assistant_message()
@@ -658,10 +661,14 @@ class MarkdownMessage(QFrame):
         # Markdown 内容渲染器（无头像和名称）
         self.markdown_browser = QTextBrowser()
         self.markdown_browser.setObjectName("assistant_message_content")
-        self.markdown_browser.setOpenExternalLinks(True)
+        self.markdown_browser.setOpenExternalLinks(True)  # 自动打开外部链接
+        self.markdown_browser.setOpenLinks(True)  # 允许打开链接
         self.markdown_browser.setReadOnly(True)
         self.markdown_browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.markdown_browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        # 连接链接点击信号，手动处理链接打开
+        self.markdown_browser.anchorClicked.connect(lambda url: QDesktopServices.openUrl(url))
         
         # 设置QTextBrowser占满整个容器宽度
         self.markdown_browser.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -682,6 +689,71 @@ class MarkdownMessage(QFrame):
         
         # 添加容器到外层布局（居中）
         outer_layout.addWidget(assistant_container)
+        
+        # 添加右侧弹性空间
+        outer_layout.addStretch(1)
+    
+    def _init_system_message(self):
+        """初始化系统消息（居中显示，半透明背景，特殊样式）"""
+        # 外层布局（水平布局，用于居中）
+        outer_layout = QHBoxLayout(self)
+        outer_layout.setContentsMargins(0, 12, 0, 12)  # 上下间距
+        outer_layout.setSpacing(0)
+        outer_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # 添加左侧弹性空间
+        outer_layout.addStretch(1)
+        
+        # 系统消息容器（固定宽度 650px，浅色背景）
+        system_container = QWidget()
+        system_container.setObjectName("system_message_container")
+        system_container.setFixedWidth(650)
+        
+        # 设置容器大小策略
+        from PyQt6.QtWidgets import QSizePolicy
+        system_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+        
+        # 设置背景样式（半透明、圆角）
+        if self.theme == "dark":
+            bg_color = "rgba(64, 65, 79, 0.5)"  # 深色主题
+            text_color = "#d1d5db"
+        else:
+            bg_color = "rgba(247, 247, 248, 0.8)"  # 浅色主题
+            text_color = "#374151"
+        
+        system_container.setStyleSheet(f"""
+            QWidget#system_message_container {{
+                background-color: {bg_color};
+                border-radius: 8px;
+                padding: 16px;
+            }}
+        """)
+        
+        # 容器的垂直布局
+        container_layout = QVBoxLayout(system_container)
+        container_layout.setContentsMargins(16, 12, 16, 12)
+        container_layout.setSpacing(0)
+        
+        # 系统消息文本标签
+        from PyQt6.QtWidgets import QLabel
+        message_label = QLabel(self.message)
+        message_label.setObjectName("system_message_content")
+        message_label.setWordWrap(True)
+        message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        message_label.setStyleSheet(f"""
+            QLabel#system_message_content {{
+                color: {text_color};
+                font-size: 14px;
+                line-height: 1.6;
+                background: transparent;
+                border: none;
+            }}
+        """)
+        
+        container_layout.addWidget(message_label)
+        
+        # 添加容器到外层布局（居中）
+        outer_layout.addWidget(system_container)
         
         # 添加右侧弹性空间
         outer_layout.addStretch(1)
@@ -861,10 +933,14 @@ class StreamingMarkdownMessage(QFrame):
         # Markdown 内容渲染器（初始隐藏）
         self.markdown_browser = QTextBrowser()
         self.markdown_browser.setObjectName("assistant_message_content")
-        self.markdown_browser.setOpenExternalLinks(True)
+        self.markdown_browser.setOpenExternalLinks(True)  # 自动打开外部链接
+        self.markdown_browser.setOpenLinks(True)  # 允许打开链接
         self.markdown_browser.setReadOnly(True)
         self.markdown_browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.markdown_browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        # 连接链接点击信号，手动处理链接打开
+        self.markdown_browser.anchorClicked.connect(lambda url: QDesktopServices.openUrl(url))
         
         # 设置QTextBrowser占满整个容器宽度
         self.markdown_browser.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)

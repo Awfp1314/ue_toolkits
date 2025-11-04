@@ -40,6 +40,7 @@ class AIAssistantModule:
         self.chat_window: Optional[ChatWindow] = None
         self.asset_manager_logic = None  # 存储asset_manager逻辑层引用
         self.config_tool_logic = None  # 存储config_tool逻辑层引用
+        self.site_recommendations_logic = None  # 存储site_recommendations逻辑层引用
         
         # v0.1 新增：运行态上下文管理器（全局单例）
         self.runtime_context = RuntimeContextManager() if V01_V02_AVAILABLE and RuntimeContextManager else None
@@ -234,7 +235,7 @@ class AIAssistantModule:
             # 创建动作引擎
             from modules.ai_assistant.logic.api_client import APIClient
             
-            def api_client_factory(messages, model="gpt-3.5-turbo"):
+            def api_client_factory(messages, model="gemini-2.5-flash"):
                 return APIClient(messages, model=model)
             
             self.action_engine = ActionEngine(
@@ -304,6 +305,9 @@ class AIAssistantModule:
             # 如果已经有config_tool_logic，传递给chat_window
             if self.config_tool_logic:
                 self.chat_window.set_config_tool_logic(self.config_tool_logic)
+            # 如果已经有site_recommendations_logic，传递给chat_window
+            if self.site_recommendations_logic:
+                self.chat_window.set_site_recommendations_logic(self.site_recommendations_logic)
             
             # v0.2 新增：初始化并传递工具系统
             self._init_tools_system()

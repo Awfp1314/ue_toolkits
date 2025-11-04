@@ -44,12 +44,13 @@ class EnhancedMemoryManager:
     - 持久化存储
     """
     
-    def __init__(self, user_id: str = "default", storage_dir: Optional[Path] = None):
+    def __init__(self, user_id: str = "default", storage_dir: Optional[Path] = None, memory_compressor=None):
         """初始化记忆管理器
         
         Args:
             user_id: 用户ID（用于用户级记忆）
             storage_dir: 存储目录（用于持久化）
+            memory_compressor: 记忆压缩器实例（可选）
         """
         self.user_id = user_id
         self.logger = logger
@@ -70,11 +71,15 @@ class EnhancedMemoryManager:
         self.user_memories: List[Memory] = []      # 用户级（持久化）
         self.session_memories: List[Memory] = []   # 会话级（临时）
         self.context_buffer = deque(maxlen=10)     # 上下文缓冲（最近10轮）
+        self.compressed_summary: Optional[str] = None  # 压缩后的历史摘要
+        
+        # 记忆压缩器
+        self.memory_compressor = memory_compressor
         
         # 加载持久化记忆
         self._load_user_memories()
         
-        self.logger.info(f"增强型记忆管理器初始化完成（用户: {user_id}）")
+        self.logger.info(f"增强型记忆管理器初始化完成（用户: {user_id}，压缩器: {'已启用' if memory_compressor else '未启用'}）")
     
     def add_memory(self, content: str, level: str = MemoryLevel.SESSION, 
                    metadata: Optional[Dict] = None, auto_evaluate: bool = True):
@@ -121,6 +126,7 @@ class EnhancedMemoryManager:
             if self._is_important_query(user_query):
                 level = MemoryLevel.USER
                 metadata_user['tags'] = ['重要查询']
+                self.logger.info(f"[重要查询] 保存到用户级记忆: {user_query[:50]}...")
         
         self.add_memory(f"用户: {user_query}", level, metadata_user)
         
@@ -128,6 +134,8 @@ class EnhancedMemoryManager:
         response_summary = assistant_response[:200] + "..." if len(assistant_response) > 200 else assistant_response
         metadata_assistant = {'type': 'assistant_response'}
         self.add_memory(f"助手: {response_summary}", MemoryLevel.CONTEXT, metadata_assistant)
+        
+        self.logger.info(f"[对话已保存] 用户级:{len(self.user_memories)}, 会话级:{len(self.session_memories)}, 上下文:{len(self.context_buffer)}")
     
     def get_relevant_memories(self, query: str, limit: int = 5, 
                              min_importance: float = 0.3) -> List[str]:
@@ -148,6 +156,10 @@ class EnhancedMemoryManager:
         all_memories.extend([(m, 2.0) for m in self.session_memories])   # 会话级次之
         all_memories.extend([(m, 1.0) for m in self.context_buffer])     # 上下文级权重较低
         
+        # 调试日志
+        self.logger.info(f"[记忆检索] 查询: '{query[:50]}...'")
+        self.logger.info(f"[记忆检索] 总记忆数: {len(all_memories)} (用户级:{len(self.user_memories)}, 会话级:{len(self.session_memories)}, 上下文:{len(self.context_buffer)})")
+        
         # 简单的关键词匹配评分（可替换为向量相似度）
         query_lower = query.lower()
         scored_memories = []
@@ -158,24 +170,35 @@ class EnhancedMemoryManager:
             
             # 简单评分：关键词匹配 + 重要性 + 级别权重
             relevance_score = 0
-            
-            # 关键词匹配
-            query_words = query_lower.split()
             content_lower = memory.content.lower()
+            
+            # 关键词匹配（主要评分依据）
+            query_words = [w for w in query_lower.split() if len(w) > 1]  # 过滤单字符
             matches = sum(1 for word in query_words if word in content_lower)
-            relevance_score += matches * 0.3
             
-            # 重要性
-            relevance_score += memory.importance * 0.4
+            # 如果完全没有关键词匹配，直接跳过（避免不相关记忆）
+            if matches == 0 and len(query_words) > 0:
+                continue
             
-            # 级别权重
-            relevance_score += level_weight * 0.3
+            relevance_score += matches * 1.0  # 关键词匹配是主要依据
+            
+            # 重要性加分
+            relevance_score += memory.importance * 0.3
+            
+            # 级别权重（用户级 > 会话级 > 上下文级）
+            relevance_score += level_weight * 0.2
             
             if relevance_score > 0:
                 scored_memories.append((memory, relevance_score))
         
         # 排序并返回
         scored_memories.sort(key=lambda x: x[1], reverse=True)
+        
+        # 调试：输出评分详情
+        self.logger.info(f"[记忆评分] 前{min(5, len(scored_memories))}条记忆评分:")
+        for i, (mem, score) in enumerate(scored_memories[:5], 1):
+            self.logger.info(f"  {i}. 评分:{score:.2f} | {mem.content[:60]}...")
+        
         return [m.content for m, _ in scored_memories[:limit]]
     
     def get_recent_context(self, limit: int = 5) -> str:
@@ -185,20 +208,51 @@ class EnhancedMemoryManager:
             limit: 获取数量
             
         Returns:
-            str: 格式化的上下文
+            str: 格式化的上下文（包含压缩摘要）
         """
+        formatted = []
+        
+        # 如果有压缩摘要，先添加
+        if self.compressed_summary:
+            formatted.append(self.compressed_summary)
+        
+        # 添加最近的原始对话
         recent = list(self.context_buffer)[-limit:]
-        if not recent:
+        if recent:
+            formatted.append("[最近对话上下文]")
+            for memory in recent:
+                formatted.append(memory.content)
+        
+        return "\n".join(formatted) if formatted else ""
+    
+    def get_user_identity(self) -> str:
+        """获取用户身份信息（应该融入AI角色设定的记忆）
+        
+        从用户级记忆中提取身份、角色、人设相关的信息
+        
+        Returns:
+            str: 用户身份信息（如果有）
+        """
+        if not self.user_memories:
             return ""
         
-        formatted = ["[最近对话上下文]"]
-        for memory in recent:
-            formatted.append(memory.content)
+        # 检索身份相关的记忆（关键词匹配）
+        identity_keywords = ['猫娘', '身份', '我是', '叫我', '角色', '人设', '喵']
+        identity_memories = []
         
-        return "\n".join(formatted)
+        for memory in self.user_memories:
+            content_lower = memory.content.lower()
+            if any(keyword in content_lower for keyword in identity_keywords):
+                identity_memories.append(memory)
+        
+        if not identity_memories:
+            return ""
+        
+        # 返回最相关的身份记忆
+        return " | ".join([m.content for m in identity_memories[-2:]])  # 最近2条身份记忆
     
     def get_user_profile(self) -> str:
-        """获取用户画像（从用户级记忆中提取）
+        """获取用户画像（从用户级记忆中提取，排除身份信息）
         
         Returns:
             str: 用户画像信息
@@ -206,8 +260,12 @@ class EnhancedMemoryManager:
         if not self.user_memories:
             return ""
         
-        # 提取高重要性记忆
-        important_memories = [m for m in self.user_memories if m.importance > 0.7]
+        # 提取高重要性记忆，但排除身份相关的（避免重复）
+        identity_keywords = ['猫娘', '身份', '我是', '叫我', '角色', '人设', '喵']
+        important_memories = [
+            m for m in self.user_memories 
+            if m.importance > 0.7 and not any(keyword in m.content.lower() for keyword in identity_keywords)
+        ]
         
         if not important_memories:
             return ""
@@ -218,10 +276,52 @@ class EnhancedMemoryManager:
         
         return "\n".join(profile)
     
+    def compress_old_context(self, conversation_history: List[Dict[str, str]]) -> bool:
+        """压缩旧对话历史为摘要
+        
+        当对话历史过长时，自动触发压缩，将旧消息压缩为摘要
+        
+        Args:
+            conversation_history: 完整的对话历史列表
+            
+        Returns:
+            bool: 是否成功压缩
+        """
+        if not self.memory_compressor:
+            self.logger.warning("记忆压缩器未设置，无法压缩")
+            return False
+        
+        # 检查是否需要压缩
+        if not self.memory_compressor.should_compress(len(conversation_history)):
+            return False
+        
+        try:
+            # 获取需要压缩的旧消息（保留最近的几条）
+            keep_recent = self.memory_compressor.keep_recent
+            old_messages = conversation_history[:-keep_recent] if len(conversation_history) > keep_recent else []
+            
+            if not old_messages:
+                return False
+            
+            # 生成压缩摘要
+            summary = self.memory_compressor.compress_history(old_messages)
+            
+            if summary:
+                self.compressed_summary = summary
+                self.logger.info(f"✅ 成功压缩 {len(old_messages)} 条历史消息")
+                return True
+            
+            return False
+        
+        except Exception as e:
+            self.logger.error(f"压缩历史时出错: {e}", exc_info=True)
+            return False
+    
     def clear_session(self):
         """清空会话级记忆"""
         self.session_memories.clear()
         self.context_buffer.clear()
+        self.compressed_summary = None  # 清空压缩摘要
         self.logger.info("会话记忆已清空")
     
     def _evaluate_importance(self, content: str, metadata: Optional[Dict] = None) -> float:

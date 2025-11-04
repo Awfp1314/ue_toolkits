@@ -13,6 +13,7 @@ from modules.ai_assistant.logic.asset_reader import AssetReader
 from modules.ai_assistant.logic.document_reader import DocumentReader
 from modules.ai_assistant.logic.log_analyzer import LogAnalyzer
 from modules.ai_assistant.logic.config_reader import ConfigReader
+from modules.ai_assistant.logic.site_reader import SiteReader
 from modules.ai_assistant.logic.enhanced_memory_manager import EnhancedMemoryManager, MemoryLevel
 
 logger = get_logger(__name__)
@@ -45,20 +46,23 @@ class ContextManager:
     - 从日志学习
     """
     
-    def __init__(self, asset_manager_logic=None, config_tool_logic=None, runtime_context=None, user_id: str = "default", debug: bool = False):
+    def __init__(self, asset_manager_logic=None, config_tool_logic=None, site_recommendations_logic=None, runtime_context=None, user_id: str = "default", debug: bool = False, max_context_tokens: int = 4000):
         """初始化上下文管理器
         
         Args:
             asset_manager_logic: asset_manager 模块的逻辑层实例
             config_tool_logic: config_tool 模块的逻辑层实例
+            site_recommendations_logic: site_recommendations 模块的逻辑层实例
             runtime_context: 运行态上下文管理器（可选，会自动创建）
             user_id: 用户ID（用于记忆持久化）
             debug: 是否开启 debug 模式（输出完整上下文快照到日志）
+            max_context_tokens: 上下文最大 token 数（默认 4000，约2万字符）
         """
         self.asset_reader = AssetReader(asset_manager_logic)
         self.document_reader = DocumentReader()
         self.log_analyzer = LogAnalyzer()
         self.config_reader = ConfigReader(config_tool_logic)
+        self.site_reader = SiteReader(site_recommendations_logic)
         
         # 增强型记忆管理器（基于 Mem0 设计）
         self.memory = EnhancedMemoryManager(user_id=user_id)
@@ -80,11 +84,14 @@ class ContextManager:
         self._context_cache = {}
         self._cache_ttl = 60  # 缓存有效期（秒）
         
+        # Token 控制
+        self.max_context_tokens = max_context_tokens
+        
         # Debug 模式
         self.debug = debug
         
         self.logger = logger
-        self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，debug: {debug}，支持记忆、理解、学习、检索）")
+        self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，debug: {debug}，max_tokens: {max_context_tokens}，支持记忆、理解、学习、检索）")
     
     @property
     def intent_engine(self):
@@ -120,6 +127,7 @@ class ContextManager:
                     'needs_docs': intent == IntentType.DOC_SEARCH,
                     'needs_logs': intent in [IntentType.LOG_ANALYZE, IntentType.LOG_SEARCH],
                     'needs_configs': intent in [IntentType.CONFIG_QUERY, IntentType.CONFIG_COMPARE],
+                    'needs_sites': intent == IntentType.SITE_RECOMMENDATION,
                     'keywords': entities,
                     'intent': str(intent),
                     'confidence': confidence
@@ -137,21 +145,31 @@ class ContextManager:
     
     def _fallback_analyze(self, query: str) -> Dict[str, Any]:
         """规则匹配分析（fallback）"""
+        query_lower = query.lower()
+        
+        # 站点推荐关键词
+        site_keywords = ['网站', '站点', '推荐', '资源网站', '论坛', '学习网站', 
+                         'site', 'website', 'resource', 'forum', '哪里下载', 
+                         '哪里学', 'fab', 'marketplace', '商城', '资产商店']
+        
+        needs_sites = any(keyword in query_lower for keyword in site_keywords)
+        
         return {
             'needs_assets': False,
             'needs_docs': False,
             'needs_logs': False,
             'needs_configs': False,
+            'needs_sites': needs_sites,
             'keywords': [],
-            'intent': 'chitchat',
-            'confidence': 0.0
+            'intent': 'site_recommendation' if needs_sites else 'chitchat',
+            'confidence': 0.5 if needs_sites else 0.0
         }
     
-    def build_context(self, query: str, include_system_prompt: bool = True) -> str:
+    def build_context(self, query: str, include_system_prompt: bool = False) -> str:
         """构建智能融合的上下文信息（基于 Mem0 设计）
         
         自动融合：
-        1. 系统提示词
+        1. 系统提示词（默认不包含，由外部单独发送）
         2. 用户画像（从记忆提取）
         3. 相关历史记忆（智能检索）
         4. 运行时状态（UE 工具箱状态）
@@ -159,12 +177,16 @@ class ContextManager:
         
         Args:
             query: 用户查询
-            include_system_prompt: 是否包含系统提示词
+            include_system_prompt: 是否包含系统提示词（默认False，由外部管理）
             
         Returns:
             str: 优化后的上下文信息
         """
         context_sections = {}  # 使用字典避免重复
+        
+        # 调试：显示当前记忆系统状态
+        if hasattr(self.memory, 'user_memories') and hasattr(self.memory, 'session_memories') and hasattr(self.memory, 'context_buffer'):
+            self.logger.info(f"[记忆系统状态] 用户级:{len(self.memory.user_memories)}, 会话级:{len(self.memory.session_memories)}, 上下文缓冲:{len(self.memory.context_buffer)}")
         
         # ===== 第一层：查询意图分析（提前分析，优化加载策略）=====
         analysis = self.analyze_query(query)
@@ -173,54 +195,100 @@ class ContextManager:
         # 判断是否为简单问候/闲聊
         is_chitchat = analysis.get('intent') == 'chitchat' or analysis.get('intent') == str(IntentType.CHITCHAT) if V01_AVAILABLE and IntentType else False
         
-        # ===== 第二层：系统级上下文 =====
+        # 闲聊模式：返回基本角色说明+相关记忆（仅在需要时）
+        if is_chitchat:
+            self.logger.info("检测到闲聊模式，使用精简上下文")
+            
+            chitchat_context = "[角色提示]\n你是虚幻引擎资产管理工具箱的AI助手。这是一个帮助用户管理UE资产、配置、文档的工具软件（不是UE项目本身）。你友好、专业、乐于帮助，拥有记忆功能。"
+            
+            # 检查用户身份设定（应该始终展现）
+            user_identity = self.memory.get_user_identity()
+            if user_identity:
+                chitchat_context += f"\n\n[你的角色设定]\n{user_identity}\n⚠️ 请始终保持这个角色身份！"
+                self.logger.info(f"闲聊模式下添加身份设定: {user_identity[:50]}...")
+            
+            # 只在用户明确询问记忆时才检索（如"还记得吗"、"你记得我吗"）
+            is_asking_memory = any(keyword in query.lower() for keyword in ['记得', '还记得', '记不记得', '忘了'])
+            
+            if is_asking_memory:
+                # 用户在询问记忆，检索相关记忆
+                relevant_memories = self.memory.get_relevant_memories(query, limit=3, min_importance=0.1)
+                
+                if relevant_memories:
+                    chitchat_context += "\n\n[相关记忆]（以下是系统为你检索到的历史对话信息）\n" + "\n".join(f"- {m}" for m in relevant_memories[:3])
+                    self.logger.info(f"用户询问记忆，找到 {len(relevant_memories)} 条相关记忆")
+                else:
+                    chitchat_context += "\n\n⚠️ 系统未找到相关记忆。"
+                    self.logger.warning("用户询问记忆，但未找到相关记忆！")
+            else:
+                # 普通闲聊，不检索记忆
+                self.logger.info("普通闲聊，不检索历史记忆")
+            
+            return chitchat_context
+        
+        # ===== 第二层：系统级上下文（仅在显式要求时添加）=====
         if include_system_prompt:
-            context_sections['system_prompt'] = self._build_system_prompt(is_chitchat=is_chitchat)
+            context_sections['system_prompt'] = self._build_system_prompt(is_chitchat=False)
         
-        # ===== 第三层：用户画像（闲聊时跳过）=====
-        if not is_chitchat:
-            user_profile = self.memory.get_user_profile()
-            if user_profile:
-                context_sections['user_profile'] = user_profile
-                self.logger.info("已添加用户画像")
+        # ===== 第三层：用户身份设定（始终包含，确保AI记住角色）=====
+        user_identity = self.memory.get_user_identity()
+        if user_identity:
+            context_sections['user_identity'] = f"[你的角色身份]\n{user_identity}\n⚠️ 请始终保持这个角色身份！"
+            self.logger.info(f"已添加用户身份设定: {user_identity[:50]}...")
         
-        # ===== 第四层：智能记忆检索（闲聊时限制为1条）=====
-        memory_limit = 1 if is_chitchat else 3
-        relevant_memories = self.memory.get_relevant_memories(query, limit=memory_limit, min_importance=0.4)
+        # ===== 第四层：用户画像（习惯和偏好，排除身份）=====
+        user_profile = self.memory.get_user_profile()
+        if user_profile:
+            # 适度限制长度，但不要过于激进
+            context_sections['user_profile'] = user_profile[:500] if len(user_profile) > 500 else user_profile
+            self.logger.info("已添加用户画像")
+        
+        # ===== 第五层：智能记忆检索（优化：降低阈值，增加数量）=====
+        relevant_memories = self.memory.get_relevant_memories(query, limit=5, min_importance=0.2)
+        
+        # 调试：输出记忆检索详情
+        self.logger.info(f"记忆检索结果: 找到 {len(relevant_memories)} 条记忆")
         if relevant_memories:
-            context_sections['relevant_memories'] = "[相关历史记忆]\n" + "\n".join(f"- {m}" for m in relevant_memories)
-            self.logger.info(f"已检索到 {len(relevant_memories)} 条相关记忆")
+            for i, mem in enumerate(relevant_memories[:5], 1):
+                self.logger.info(f"  记忆 {i}: {mem[:100]}...")
+        else:
+            self.logger.warning("未找到相关记忆！")
         
-        # ===== 第五层：最近上下文（闲聊时跳过）=====
-        if not is_chitchat:
-            recent_context = self.memory.get_recent_context(limit=3)
-            if recent_context:
-                context_sections['recent_context'] = recent_context
-                self.logger.info("已添加最近对话上下文")
+        if relevant_memories:
+            # 保留完整信息（不截断），让AI看到更多细节
+            context_sections['relevant_memories'] = "[相关历史记忆]（以下是系统为你检索到的历史对话信息，请优先参考）\n" + "\n".join(f"- {m}" for m in relevant_memories[:5])
+            self.logger.info(f"已添加 {len(relevant_memories)} 条相关记忆到上下文")
         
-        # ===== 第六层：运行时状态（非闲聊时添加）=====
-        # v0.1 更新：使用 RuntimeContextManager 获取完整快照
-        if not is_chitchat:
+        # ===== 第六层：最近对话摘要（如果有压缩摘要就包含）=====
+        if hasattr(self.memory, 'compressed_summary') and self.memory.compressed_summary:
+            context_sections['recent_context'] = self.memory.compressed_summary
+            self.logger.info("已添加对话历史摘要")
+        
+        # ===== 第七层：运行时状态（仅在需要资产/配置/日志时添加）=====
+        # Token优化：只在需要时才添加运行时状态
+        if analysis.get('needs_assets') or analysis.get('needs_configs') or analysis.get('needs_logs'):
             if self.runtime_context:
                 runtime_snapshot = self.runtime_context.get_formatted_snapshot()
                 if runtime_snapshot:
-                    context_sections['runtime_status'] = runtime_snapshot
+                    # 适度限制，但保留足够信息
+                    context_sections['runtime_status'] = runtime_snapshot[:800] if len(runtime_snapshot) > 800 else runtime_snapshot
                     self.logger.info("已添加运行态快照")
         
-        # ===== 第七层：检索证据（本地优先，远程 fallback）=====
+        # ===== 第八层：检索证据（本地优先，远程 fallback）=====
         # 仅在需要文档/资产查询时检索
         if analysis.get('needs_docs') or analysis.get('needs_assets'):
             retrieval_evidence = self._build_retrieval_evidence(query)
             if retrieval_evidence:
-                context_sections['retrieval_evidence'] = retrieval_evidence
+                # 适度限制，保留足够细节
+                context_sections['retrieval_evidence'] = retrieval_evidence[:1500] if len(retrieval_evidence) > 1500 else retrieval_evidence
                 self.logger.info("已添加检索证据")
         
-        # ===== 第八层：领域特定上下文 =====
+        # ===== 第九层：领域特定上下文 =====
         domain_contexts = self._build_domain_contexts(query, analysis)
         if domain_contexts:
             context_sections.update(domain_contexts)
         
-        # ===== 第九层：智能回退（仅在非闲聊且无特定领域需求时）=====
+        # ===== 第十层：智能回退（仅在非闲聊且无特定领域需求时）=====
         # 闲聊时完全跳过 fallback，避免加载系统概览
         if not is_chitchat and not any([analysis['needs_assets'], analysis['needs_docs'], 
                    analysis['needs_logs'], analysis['needs_configs']]):
@@ -425,6 +493,57 @@ class ContextManager:
             self.logger.error(f"构建配置上下文失败: {e}")
             return ""
     
+    def _build_site_context(self, query: str) -> str:
+        """构建站点推荐相关上下文
+        
+        Args:
+            query: 用户查询
+            
+        Returns:
+            str: 站点推荐上下文
+        """
+        try:
+            query_lower = query.lower()
+            
+            # 检测用户的意图
+            # 1. 询问特定分类的站点
+            category_keywords = {
+                '资源': '资源网站',
+                '论坛': '论坛',
+                '学习': '学习',
+                '工具': '工具',
+                'resource': '资源网站',
+                'forum': '论坛',
+                'learn': '学习',
+                'tool': '工具'
+            }
+            
+            for keyword, category in category_keywords.items():
+                if keyword in query_lower:
+                    result = self.site_reader.get_sites_by_category(category)
+                    if result and "未找到" not in result:
+                        return f"[站点推荐]\n{result}"
+            
+            # 2. 搜索特定站点
+            search_keywords = ['网站', '站点', '推荐', '哪里', '哪个', 'site', 'website', 'where']
+            if any(keyword in query_lower for keyword in search_keywords):
+                # 提取搜索关键词（排除常见词）
+                excluded_words = ['推荐', '网站', '站点', '哪里', '哪个', '有', '没有', '吗', '的', '在']
+                words = [w for w in query.split() if w not in excluded_words and len(w) > 1]
+                
+                if words:
+                    # 使用第一个关键词搜索
+                    search_result = self.site_reader.search_sites(words[0])
+                    if search_result and "未找到" not in search_result:
+                        return f"[站点搜索结果]\n{search_result}"
+            
+            # 3. 默认返回全部站点摘要
+            return f"[站点推荐]\n{self.site_reader.get_all_sites_summary(max_count=50)}"
+        
+        except Exception as e:
+            self.logger.error(f"构建站点上下文失败: {e}", exc_info=True)
+            return ""
+    
     def _build_system_prompt(self, is_chitchat: bool = False) -> str:
         """构建系统提示词
         
@@ -476,6 +595,11 @@ class ContextManager:
             if config_context:
                 contexts['domain_configs'] = config_context
         
+        if analysis.get('needs_sites', False):
+            site_context = self._build_site_context(query)
+            if site_context:
+                contexts['domain_sites'] = site_context
+        
         return contexts
     
     def _build_fallback_context(self, query: str) -> str:
@@ -515,6 +639,7 @@ class ContextManager:
         # 按优先级排序
         priority_order = [
             'system_prompt',
+            'user_identity',      # 用户身份设定（最高优先级，确保AI始终记住角色）
             'user_profile',
             'relevant_memories',
             'recent_context',
@@ -523,44 +648,71 @@ class ContextManager:
             'domain_configs',
             'domain_logs',
             'domain_docs',
+            'domain_sites',       # 站点推荐
+            'retrieval_evidence',
             'fallback'
         ]
         
         # 构建最终上下文
         final_parts = []
-        total_length = 0
-        max_length = 8000  # 最大上下文长度（避免超出 token 限制）
+        total_tokens = 0
+        max_tokens = self.max_context_tokens  # 使用配置的最大 token 数
         
         for key in priority_order:
             if key in context_sections and context_sections[key]:
                 content = context_sections[key]
-                content_length = len(content)
+                content_tokens = self._estimate_tokens(content)
                 
-                # 检查是否会超出长度限制
-                if total_length + content_length > max_length:
-                    # 截断内容
-                    remaining = max_length - total_length
-                    if remaining > 100:  # 至少保留100字符
-                        content = content[:remaining] + "\n...(内容被截断)"
+                # 检查是否会超出 token 限制
+                if total_tokens + content_tokens > max_tokens:
+                    # 截断内容（粗略估算，按字符比例截取）
+                    remaining_tokens = max_tokens - total_tokens
+                    if remaining_tokens > 50:  # 至少保留50 tokens
+                        ratio = remaining_tokens / content_tokens
+                        truncate_length = int(len(content) * ratio)
+                        content = content[:truncate_length] + "\n...(内容被截断)"
                         final_parts.append(content)
+                        total_tokens += remaining_tokens
                     break
                 
                 final_parts.append(content)
-                total_length += content_length
+                total_tokens += content_tokens
         
-        # 格式化输出
+        # 格式化输出（Token优化：简化header/footer）
         if final_parts:
-            header = "\n" + "="*60 + "\n"
-            header += "[智能上下文系统] Powered by Mem0\n"
-            header += "="*60 + "\n\n"
+            # 简化header，减少token消耗
+            header = "[上下文]\n"
             
-            footer = "\n" + "="*60 + "\n"
-            footer += f"上下文长度: {total_length} 字符\n"
-            footer += "="*60
+            # 记录token统计到日志，不添加到输出
+            self.logger.info(f"上下文 Token 统计: {total_tokens}/{max_tokens}")
             
-            return header + "\n\n---\n\n".join(final_parts) + footer
+            return header + "\n\n".join(final_parts)
         
         return ""
+    
+    def _estimate_tokens(self, text: str) -> int:
+        """估算文本的 token 数（粗略估算）
+        
+        使用规则：中文约 1.5字符/token，英文约 4字符/token
+        
+        Args:
+            text: 文本内容
+            
+        Returns:
+            int: 估算的 token 数
+        """
+        if not text:
+            return 0
+        
+        # 统计中文和英文字符
+        chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+        other_chars = len(text) - chinese_chars
+        
+        # 估算 tokens
+        chinese_tokens = chinese_chars / 1.5  # 中文约1.5字符/token
+        other_tokens = other_chars / 4  # 英文约4字符/token
+        
+        return int(chinese_tokens + other_tokens)
     
     def sync_from_log(self, auto_learn: bool = True):
         """从日志自动学习上下文（实现"学习"能力）

@@ -222,6 +222,7 @@ class ChatInputArea(QWidget):
         input_container.setObjectName("ChatInputBar")
         input_container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         input_container.setMaximumWidth(900)  # 与AI消息容器宽度一致
+        # 样式由全局主题CSS管理，不再硬编码
         
         # 设置 SizePolicy，使其能够根据内容自动调整高度
         from PyQt6.QtWidgets import QSizePolicy as SizePolicy
@@ -288,37 +289,12 @@ class ChatInputArea(QWidget):
         self.image_preview_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.image_preview_scroll.setMaximumWidth(900)  # 与输入容器宽度一致
         self.image_preview_scroll.setFixedHeight(140)  # 固定高度，适合 120px 的图片
-        self.image_preview_scroll.setStyleSheet("""
-            QScrollArea#image_preview_scroll {
-                background-color: transparent;
-                border: none;
-                margin: 0px;
-            }
-            QScrollBar:horizontal {
-                height: 6px;
-                background-color: #2a2b32;
-                border-radius: 3px;
-                margin: 0px 80px 0px 80px;
-            }
-            QScrollBar::handle:horizontal {
-                background-color: #444654;
-                border-radius: 3px;
-                min-width: 40px;
-            }
-            QScrollBar::handle:horizontal:hover {
-                background-color: #565869;
-            }
-        """)
+        # 样式由全局主题CSS管理
         
         # 图片预览容器的内容区域
         self.image_preview_container = QWidget()
         self.image_preview_container.setObjectName("image_preview_container")
-        self.image_preview_container.setStyleSheet("""
-            QWidget#image_preview_container {
-                background-color: transparent;
-                border: none;
-            }
-        """)
+        # 样式由全局主题CSS管理
         self.image_preview_layout = QHBoxLayout(self.image_preview_container)
         self.image_preview_layout.setContentsMargins(0, 10, 0, 10)  # 上下边距
         self.image_preview_layout.setSpacing(8)
@@ -416,37 +392,23 @@ class ChatInputArea(QWidget):
         """设置生成状态"""
         self.is_generating = is_generating
         if is_generating:
-            # 切换为暂停按钮（红色，正方形图标）
+            # 切换为暂停按钮（红色圆形按钮，方形图标）
             self.send_button.setText("■")  # 停止符号
             self.send_button.setEnabled(True)  # 确保按钮可点击
             self.send_button.setToolTip("停止生成")
-            # 修改样式为红色，增大字体
-            self.send_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #ef4444;
-                    color: white;
-                    border: none;
-                    border-radius: 18px;
-                    font-size: 20px;
-                    font-weight: bold;
-                }
-                QPushButton:enabled {
-                    background-color: #ef4444;
-                }
-                QPushButton:hover:enabled {
-                    background-color: #dc2626;
-                }
-                QPushButton:pressed:enabled {
-                    background-color: #b91c1c;
-                }
-            """)
+            # 使用动态属性来标识停止状态，让QSS属性选择器识别
+            self.send_button.setProperty("buttonState", "stop")
+            # 强制刷新样式，让QSS属性选择器生效
+            self.send_button.style().unpolish(self.send_button)
+            self.send_button.style().polish(self.send_button)
+            self.send_button.update()
         else:
             # 切换回发送按钮（原始样式）
             self.send_button.setText("↑")
             self.send_button.setToolTip("发送消息 (Enter)")
-            # 清除自定义样式，恢复全局 QSS
-            self.send_button.setStyleSheet("")
-            # 强制刷新样式（重新应用全局 QSS）
+            # 清除动态属性，恢复普通状态
+            self.send_button.setProperty("buttonState", "normal")
+            # 强制刷新样式，让QSS生效
             self.send_button.style().unpolish(self.send_button)
             self.send_button.style().polish(self.send_button)
             self.send_button.update()
@@ -582,23 +544,14 @@ class ChatInputArea(QWidget):
         # 创建外层容器（用于放置删除按钮）
         outer_container = QWidget()
         outer_container.setFixedSize(120, 120)
-        outer_container.setStyleSheet("background-color: transparent;")
+        outer_container.setObjectName("image_outer_container")
+        # 样式由全局主题CSS管理
         
         # 创建卡片容器
         card = QFrame(outer_container)
         card.setObjectName("image_card")
         card.setFixedSize(120, 120)
-        card.setStyleSheet("""
-            QFrame#image_card {
-                background-color: #2a2b32;
-                border-radius: 8px;
-                border: 1px solid #565869;
-            }
-            QFrame#image_card:hover {
-                border-color: #6b7280;
-                background-color: #2f2f2f;
-            }
-        """)
+        # 样式由全局主题CSS管理
         
         # 添加轻微阴影效果
         shadow = QGraphicsDropShadowEffect()
@@ -621,32 +574,17 @@ class ChatInputArea(QWidget):
         )
         image_label.setPixmap(pixmap)
         image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        image_label.setStyleSheet("""
-            QLabel {
-                background-color: transparent;
-                border-radius: 6px;
-            }
-        """)
+        image_label.setObjectName("image_preview_label")
+        # 样式由全局主题CSS管理
         
         card_layout.addWidget(image_label)
         
         # 删除按钮（右上角，放在 outer_container 上）
         close_btn = QPushButton("✕", outer_container)
+        close_btn.setObjectName("image_close_btn")
         close_btn.setFixedSize(20, 20)
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(0, 0, 0, 0.75);
-                color: white;
-                border: none;
-                border-radius: 10px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: rgba(220, 38, 38, 0.9);
-            }
-        """)
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        # 样式由全局主题CSS管理
         close_btn.move(96, 4)
         close_btn.raise_()
         
@@ -755,5 +693,5 @@ class ChatInputArea(QWidget):
     
     def get_selected_model(self):
         """获取选中的模型（默认）"""
-        return "gpt-3.5-turbo"
+        return "gemini-2.5-flash"
 

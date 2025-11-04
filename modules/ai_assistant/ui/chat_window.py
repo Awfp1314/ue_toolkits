@@ -54,6 +54,7 @@ class ChatWindow(QWidget):
         self.context_manager: Optional[ContextManager] = None
         self.asset_manager_logic = None
         self.config_tool_logic = None
+        self.site_recommendations_logic = None
         self.runtime_context = None  # v0.1 新增：运行态上下文管理器
         
         # v0.2 新增：工具系统
@@ -99,6 +100,21 @@ class ChatWindow(QWidget):
         print(f"[DEBUG] config_tool_logic 类型: {type(config_tool_logic)}")
         
         self.config_tool_logic = config_tool_logic
+        self._init_context_manager(logger)
+    
+    def set_site_recommendations_logic(self, site_recommendations_logic):
+        """设置site_recommendations逻辑层引用
+        
+        Args:
+            site_recommendations_logic: site_recommendations模块的逻辑层实例
+        """
+        from core.logger import get_logger
+        logger = get_logger(__name__)
+        
+        print("[DEBUG] ===== set_site_recommendations_logic 被调用 =====")
+        print(f"[DEBUG] site_recommendations_logic 类型: {type(site_recommendations_logic)}")
+        
+        self.site_recommendations_logic = site_recommendations_logic
         self._init_context_manager(logger)
     
     def set_runtime_context(self, runtime_context):
@@ -235,16 +251,18 @@ class ChatWindow(QWidget):
         
         # 完整的询问消息
         intent_message = (
-            "👋 你好！我是虚幻引擎工具箱的 AI 助手。\n\n"
+            "👋 你好！我是**虚幻引擎资产管理工具箱**的 AI 助手。\n\n"
+            "📦 **这个工具箱是做什么的？**\n"
+            "帮你整理和管理虚幻引擎的资产、配置模板、文档和日志（不是UE项目本身哦）\n\n"
             "我可以帮你：\n"
-            "1. 🔍 **查找和管理工具箱中的资产**\n"
-            "   - 查询、筛选、导出资产\n"
-            "   - 了解资产详细信息\n\n"
-            "2. 💡 **解答虚幻引擎相关问题**\n"
+            "1. 🔍 **使用工具箱管理资产**\n"
+            "   - 查询、筛选、导出工具箱中的资产\n"
+            "   - 了解资产详细信息和使用方法\n\n"
+            "2. 💡 **解答虚幻引擎开发问题**\n"
             "   - UE 开发技巧和最佳实践\n"
-            "   - 蓝图、C++、材质等相关问题\n"
+            "   - 蓝图、C++、材质等技术问题\n"
             "   - 项目配置和优化建议\n\n"
-            "请告诉我你需要什么帮助？"
+            "请告诉我你需要什么帮助？ 💬"
         )
         
         # 创建流式输出气泡
@@ -272,7 +290,7 @@ class ChatWindow(QWidget):
             else:
                 # 流式输出完成，标记气泡为完成状态
                 if self.current_streaming_bubble:
-                    self.current_streaming_bubble.finalize()
+                    self.current_streaming_bubble.finish()
                 self.current_streaming_bubble = None
                 logger.info("询问意图消息流式输出完成")
         
@@ -286,15 +304,38 @@ class ChatWindow(QWidget):
         """初始化上下文管理器（内部方法）
         
         v0.1 更新：传递 runtime_context
+        Token优化：集成 MemoryCompressor
         """
         try:
+            # 初始化记忆压缩器
+            from modules.ai_assistant.logic.memory_compressor import MemoryCompressor
+            from modules.ai_assistant.logic.api_client import APIClient
+            
+            def api_client_factory(messages, model="gemini-2.5-flash"):
+                return APIClient(messages, model=model)
+            
+            memory_compressor = MemoryCompressor(
+                api_client_factory=api_client_factory,
+                max_history=10,  # 超过10条消息时触发压缩
+                keep_recent=5,   # 压缩后保留最近5条原始消息
+                compression_model="gemini-2.5-flash"
+            )
+            
             self.context_manager = ContextManager(
                 asset_manager_logic=self.asset_manager_logic,
                 config_tool_logic=self.config_tool_logic,
-                runtime_context=self.runtime_context  # v0.1 新增
+                site_recommendations_logic=self.site_recommendations_logic,  # 站点推荐逻辑
+                runtime_context=self.runtime_context,  # v0.1 新增
+                max_context_tokens=6000  # Token优化：平衡版，保留足够上下文
             )
-            print("[DEBUG] [OK] ChatWindow 上下文管理器已成功初始化（包含运行态上下文）")
-            logger.info("ChatWindow上下文管理器已初始化（包含运行态上下文）")
+            
+            # 将压缩器注入到 EnhancedMemoryManager
+            if hasattr(self.context_manager, 'memory'):
+                self.context_manager.memory.memory_compressor = memory_compressor
+                print("[DEBUG] [OK] 记忆压缩器已注入到 EnhancedMemoryManager")
+            
+            print("[DEBUG] [OK] ChatWindow 上下文管理器已成功初始化（包含运行态上下文 + Token优化）")
+            logger.info("ChatWindow上下文管理器已初始化（包含运行态上下文 + Token优化）")
         except Exception as e:
             print(f"[DEBUG] [ERROR] 初始化上下文管理器失败: {e}")
             logger.error(f"初始化上下文管理器失败: {e}", exc_info=True)
@@ -539,19 +580,43 @@ class ChatWindow(QWidget):
             # 添加用户消息
             self.add_message(message, is_user=True)
             
+            # Token优化：检查并压缩历史对话
+            if self.context_manager and hasattr(self.context_manager, 'memory'):
+                try:
+                    compressed = self.context_manager.memory.compress_old_context(self.conversation_history)
+                    if compressed:
+                        print(f"[DEBUG] [Token优化] 对话历史已压缩，当前历史长度: {len(self.conversation_history)}")
+                except Exception as e:
+                    print(f"[WARNING] 压缩历史失败: {e}")
+            
+            # 添加用户消息到历史（不拼接上下文）
+            self.conversation_history.append({
+                "role": "user",
+                "content": message  # 只包含用户原始消息
+            })
+            
             # 构建上下文（如果上下文管理器已初始化）
-            full_message = message
+            context_message = None
             if self.context_manager:
                 try:
                     print("[DEBUG] 正在构建上下文...")
-                    context = self.context_manager.build_context(message)
+                    # 只构建领域上下文，不包含系统提示词（系统提示词只在第一次发送）
+                    context = self.context_manager.build_context(message, include_system_prompt=False)
                     if context:
-                        # 将上下文添加到用户消息前（作为附加信息）
-                        full_message = message + "\n\n" + context
-                        print(f"[DEBUG] [OK] 已添加上下文信息，上下文长度: {len(context)} 字符")
-                        print(f"[DEBUG] 上下文预览: {context[:200]}...")
+                        # 将上下文作为单独的system消息发送（不累积到历史）
+                        context_message = {
+                            "role": "system",
+                            "content": f"[当前查询的上下文信息]\n{context}"
+                        }
+                        print(f"[DEBUG] [OK] 已构建上下文信息，上下文长度: {len(context)} 字符")
+                        try:
+                            print(f"[DEBUG] 上下文预览:\n{context[:500]}...")
+                        except UnicodeEncodeError:
+                            # Windows终端编码问题
+                            safe_preview = context[:500].encode('gbk', errors='ignore').decode('gbk')
+                            print(f"[DEBUG] 上下文预览:\n{safe_preview}...")
                     else:
-                        print("[DEBUG] [WARN] 上下文管理器返回空内容")
+                        print("[DEBUG] [WARN] 上下文管理器返回空内容（可能是简单问候）")
                 except Exception as e:
                     print(f"[WARNING] [ERROR] 构建上下文失败: {e}")
                     import traceback
@@ -559,20 +624,67 @@ class ChatWindow(QWidget):
             else:
                 print("[DEBUG] [WARN] 上下文管理器未初始化！AI 无法访问资产/文档/日志数据")
             
-            # 添加到对话历史
-            self.conversation_history.append({
-                "role": "user",
-                "content": full_message
-            })
-            
             # 添加流式输出气泡
             self.add_streaming_bubble()
+            
+            # 构建本次请求的消息列表（不影响历史记录）
+            request_messages = []
+            
+            # 1. 添加系统提示词（包含身份信息）
+            if len(self.conversation_history) <= 1:  # 只有刚添加的用户消息
+                from modules.ai_assistant.logic.config import SYSTEM_PROMPT
+                
+                # 检查是否有用户身份设定
+                system_prompt = SYSTEM_PROMPT
+                if self.context_manager and hasattr(self.context_manager, 'memory'):
+                    user_identity = self.context_manager.memory.get_user_identity()
+                    if user_identity:
+                        # 将身份融入系统提示词
+                        system_prompt = f"""{SYSTEM_PROMPT}
+
+## 🎭 特殊角色设定
+{user_identity}
+
+⚠️ 重要：请始终保持这个身份设定，在每次回答中都要展现这个角色特征。"""
+                        print(f"[DEBUG] [身份设定] 已融入系统提示词: {user_identity[:50]}...")
+                
+                request_messages.append({
+                    "role": "system",
+                    "content": system_prompt
+                })
+                print(f"[DEBUG] [第一次对话] 已添加系统提示词")
+            
+            # 2. 添加历史对话（已压缩）
+            request_messages.extend(self.conversation_history.copy())
+            
+            # 3. 如果有上下文信息，插入到最后一条用户消息之前
+            if context_message:
+                request_messages.insert(-1, context_message)  # 插入到用户消息之前
+                print(f"[DEBUG] [Token优化] 上下文作为临时system消息发送，不保存到历史")
+            
+            print(f"[DEBUG] [Token统计] 本次请求消息数: {len(request_messages)}")
+            
+            # 调试：显示完整的消息结构（用于诊断记忆问题）
+            try:
+                print("[DEBUG] [消息结构] 发送给API的完整消息:")
+                for i, msg in enumerate(request_messages):
+                    role = msg.get('role', 'unknown')
+                    content = msg.get('content', '')
+                    content_preview = content[:150].replace('\n', ' ') if len(content) > 150 else content.replace('\n', ' ')
+                    try:
+                        print(f"  [{i}] {role}: {content_preview}...")
+                    except UnicodeEncodeError:
+                        # Windows终端GBK编码问题，移除emoji后重试
+                        safe_content = content_preview.encode('gbk', errors='ignore').decode('gbk')
+                        print(f"  [{i}] {role}: {safe_content}...")
+            except Exception as e:
+                print(f"[DEBUG] 无法显示消息结构（编码问题）: {e}")
             
             # 启动 API 请求
             model = self.input_area.get_selected_model()
             print(f"[DEBUG] 使用模型: {model}")
             self.current_api_client = APIClient(
-                self.conversation_history.copy(),
+                request_messages,  # 使用临时构建的消息列表
                 model=model
             )
             self.current_api_client.chunk_received.connect(self.on_chunk_received)
@@ -628,7 +740,7 @@ class ChatWindow(QWidget):
             self.add_streaming_bubble()
             
             # 启动 API 请求（使用支持视觉的模型）
-            model = "gpt-4o"  # 使用 gpt-4o 支持图片
+            model = "gemini-2.5-flash"  # Gemini 2.5 Flash 支持图片
             print(f"[DEBUG] 使用模型: {model}")
             self.current_api_client = APIClient(
                 self.conversation_history.copy(),
@@ -693,32 +805,45 @@ class ChatWindow(QWidget):
                     
                     # 保存对话到记忆（如果上下文管理器可用）
                     if self.context_manager and hasattr(self.context_manager, 'memory'):
-                        # 获取最后一条用户消息
+                        # 获取最后一条用户消息（确保是纯净的用户消息，不包含上下文）
                         user_message = ""
                         for msg in reversed(self.conversation_history):
                             if msg.get("role") == "user":
                                 user_message = msg.get("content", "")
+                                # 确保不包含上下文信息（只保存用户原始输入）
+                                if "[当前查询的上下文信息]" in user_message:
+                                    # 如果包含上下文，提取用户原始消息
+                                    user_message = user_message.split("[当前查询的上下文信息]")[0].strip()
                                 break
                         
                         if user_message:
                             # 保存到增强型记忆管理器
-                            # 使用对话格式，保存到 SESSION 级别（会话结束后清除）
                             from modules.ai_assistant.logic.enhanced_memory_manager import MemoryLevel
                             
-                            # 保存用户查询和 AI 回复为一轮对话
-                            self.context_manager.memory.add_dialogue(user_message, assistant_message)
-                            
-                            # 同时提取关键信息保存到持久化记忆（如果重要）
-                            # 例如：用户提到的偏好、常见问题等
-                            if any(keyword in user_message for keyword in ['喜欢', '常用', '偏好', '习惯']):
-                                self.context_manager.memory.add_memory(
-                                    content=f"用户偏好: {user_message}",
-                                    level=MemoryLevel.USER,
-                                    metadata={'type': 'preference', 'source': 'conversation'},
-                                    auto_evaluate=True
-                                )
-                            
-                            print(f"[DEBUG] [OK] 已保存对话到增强型记忆管理器")
+                            try:
+                                # 保存用户查询和 AI 回复为一轮对话
+                                self.context_manager.memory.add_dialogue(user_message, assistant_message)
+                                try:
+                                    print(f"[DEBUG] [记忆保存] 用户: {user_message[:50]}... | 助手: {assistant_message[:50]}...")
+                                except UnicodeEncodeError:
+                                    print(f"[DEBUG] [记忆保存] 用户消息和助手回复已保存（包含特殊字符）")
+                                
+                                # 同时提取关键信息保存到持久化记忆（如果重要）
+                                # 扩展关键词列表，包含"猫娘"等身份相关词汇
+                                if any(keyword in user_message for keyword in ['喜欢', '常用', '偏好', '习惯', '猫娘', '我是', '叫我']):
+                                    self.context_manager.memory.add_memory(
+                                        content=f"用户相关信息: {user_message}",
+                                        level=MemoryLevel.USER,
+                                        metadata={'type': 'user_info', 'source': 'conversation'},
+                                        auto_evaluate=True
+                                    )
+                                    print(f"[DEBUG] [持久化记忆] 保存重要信息到用户级记忆")
+                                
+                                print(f"[DEBUG] [OK] 已保存对话到记忆系统")
+                            except Exception as e:
+                                print(f"[ERROR] 保存记忆失败: {e}")
+                                import traceback
+                                traceback.print_exc()
             
             # 解锁输入框
             self.input_field.unlock()
@@ -904,6 +1029,26 @@ class ChatWindow(QWidget):
             self.current_theme = "dark"
         
         self.load_theme(self.current_theme)
+    
+    def refresh_theme(self):
+        """刷新主题（响应主题切换）"""
+        try:
+            from core.utils.theme_manager import get_theme_manager, Theme
+            theme_manager = get_theme_manager()
+            current_theme = theme_manager.get_theme()
+            
+            # 根据主题管理器的主题切换
+            if current_theme == Theme.LIGHT:
+                self.current_theme = "light"
+            else:
+                self.current_theme = "dark"
+            
+            self.load_theme(self.current_theme)
+            print(f"[DEBUG] AI助手主题已刷新: {self.current_theme}")
+        except Exception as e:
+            print(f"[ERROR] 刷新AI助手主题失败: {e}")
+            import traceback
+            traceback.print_exc()
     
     def load_theme(self, theme_name):
         """加载主题样式"""
@@ -1102,10 +1247,15 @@ class ChatWindow(QWidget):
                 border: 1px solid #565869;
             }
             
+            /* 输入区域外层容器 */
+            QWidget#BottomBar {
+                background-color: #343541;
+            }
+            
             /* ChatGPT 风格输入容器 */
             QFrame#ChatInputBar {
-                background-color: #343541;
-                border: none;
+                background-color: #40414f;
+                border: 1px solid #565869;
                 border-radius: 24px;
             }
             
@@ -1117,7 +1267,7 @@ class ChatWindow(QWidget):
             
             /* 输入框 - ChatGPT 风格 */
             #input_field, #input_field_chatgpt {
-                background-color: transparent;
+                background-color: #40414f;
                 color: #ffffff;
                 border: none;
                 font-size: 15px;
@@ -1127,7 +1277,7 @@ class ChatWindow(QWidget):
             }
             
             #input_field:focus, #input_field_chatgpt:focus {
-                background-color: rgba(255, 255, 255, 0.03);
+                background-color: #4a4b5f;
             }
             
             /* 发送按钮 - ChatGPT 风格白色圆形 */
@@ -1155,6 +1305,26 @@ class ChatWindow(QWidget):
                 color: #8e8ea0;
             }
             
+            /* 停止按钮 - 使用属性选择器，红色警告样式 */
+            QPushButton#send_button_chatgpt[buttonState="stop"] {
+                background-color: #ef4444;
+                color: white;
+                border: none;
+                border-radius: 18px;  /* 圆形，和发送按钮一致 */
+                font-size: 20px;
+                font-weight: bold;
+                padding: 0px;
+                text-align: center;
+            }
+            
+            QPushButton#send_button_chatgpt[buttonState="stop"]:hover {
+                background-color: #dc2626;
+            }
+            
+            QPushButton#send_button_chatgpt[buttonState="stop"]:pressed {
+                background-color: #b91c1c;
+            }
+            
             /* + 按钮 */
             QPushButton#add_button {
                 background-color: transparent;
@@ -1172,6 +1342,40 @@ class ChatWindow(QWidget):
             QLabel#hint_label {
                 color: rgba(255, 255, 255, 0.4);
                 font-size: 13px;
+            }
+            
+            /* 图片预览区域 - 深色主题 */
+            QScrollArea#image_preview_scroll {
+                background-color: transparent;
+                border: none;
+            }
+            
+            QWidget#image_preview_container {
+                background-color: transparent;
+            }
+            
+            QFrame#image_card {
+                background-color: #40414f;
+                border: 1px solid #565869;
+                border-radius: 8px;
+            }
+            
+            QLabel#image_preview_label {
+                background-color: transparent;
+                border: none;
+            }
+            
+            QPushButton#image_close_btn {
+                background-color: rgba(239, 68, 68, 0.9);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            
+            QPushButton#image_close_btn:hover {
+                background-color: rgba(220, 38, 38, 1);
             }
             
             /* 滚动条 */
@@ -1380,16 +1584,21 @@ class ChatWindow(QWidget):
                 border-radius: 12px;
             }
             
+            /* 输入区域外层容器 - 浅色主题 */
+            QWidget#BottomBar {
+                background-color: #f7f7f8;
+            }
+            
             /* ChatGPT 风格输入容器 - 浅色主题 */
             QFrame#ChatInputBar {
-                background-color: #f7f7f8;
-                border: none;
+                background-color: #ffffff;
+                border: 1px solid #d1d5da;
                 border-radius: 24px;
             }
             
             /* 输入框 - ChatGPT 风格 */
             #input_field, #input_field_chatgpt {
-                background-color: transparent;
+                background-color: #ffffff;
                 color: #2d333a;
                 border: none;
                 font-size: 15px;
@@ -1399,7 +1608,7 @@ class ChatWindow(QWidget):
             }
             
             #input_field:focus, #input_field_chatgpt:focus {
-                background-color: rgba(0, 0, 0, 0.02);
+                background-color: #f5f5f5;
             }
             
             /* 发送按钮 - ChatGPT 风格 */
@@ -1427,6 +1636,26 @@ class ChatWindow(QWidget):
                 color: #8e8ea0;
             }
             
+            /* 停止按钮 - 使用属性选择器，红色警告样式（浅色主题） */
+            QPushButton#send_button_chatgpt[buttonState="stop"] {
+                background-color: #ef4444;
+                color: white;
+                border: none;
+                border-radius: 18px;  /* 圆形，和发送按钮一致 */
+                font-size: 20px;
+                font-weight: bold;
+                padding: 0px;
+                text-align: center;
+            }
+            
+            QPushButton#send_button_chatgpt[buttonState="stop"]:hover {
+                background-color: #dc2626;
+            }
+            
+            QPushButton#send_button_chatgpt[buttonState="stop"]:pressed {
+                background-color: #b91c1c;
+            }
+            
             /* + 按钮 - 浅色主题 */
             QPushButton#add_button {
                 background-color: transparent;
@@ -1444,6 +1673,40 @@ class ChatWindow(QWidget):
             QLabel#hint_label {
                 color: rgba(0, 0, 0, 0.4);
                 font-size: 13px;
+            }
+            
+            /* 图片预览区域 - 浅色主题 */
+            QScrollArea#image_preview_scroll {
+                background-color: transparent;
+                border: none;
+            }
+            
+            QWidget#image_preview_container {
+                background-color: transparent;
+            }
+            
+            QFrame#image_card {
+                background-color: #ffffff;
+                border: 1px solid #d1d5da;
+                border-radius: 8px;
+            }
+            
+            QLabel#image_preview_label {
+                background-color: transparent;
+                border: none;
+            }
+            
+            QPushButton#image_close_btn {
+                background-color: rgba(239, 68, 68, 0.9);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            
+            QPushButton#image_close_btn:hover {
+                background-color: rgba(220, 38, 38, 1);
             }
             
             /* 滚动条 */

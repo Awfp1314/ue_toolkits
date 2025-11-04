@@ -25,6 +25,15 @@ class RuntimeContextManager:
     - 独立运行：无外部依赖，可独立加载
     """
     
+    # 模块名称映射（技术名称 -> 中文名称）
+    MODULE_NAME_MAP = {
+        'asset_manager': '资产管理器',
+        'config_tool': '配置工具',
+        'ai_assistant': 'AI助手',
+        'document_viewer': '文档查看器',
+        'log_analyzer': '日志分析器'
+    }
+    
     def __init__(self, user_data_dir: Optional[Path] = None):
         """
         初始化运行态上下文管理器
@@ -245,9 +254,11 @@ class RuntimeContextManager:
             
             parts = ["[运行态上下文]"]
             
-            # 当前模块
+            # 当前模块（使用中文名称）
             if snapshot.get('current_module'):
-                parts.append(f"**当前模块**: {snapshot['current_module']}")
+                module_name = snapshot['current_module']
+                display_name = self.MODULE_NAME_MAP.get(module_name, module_name)
+                parts.append(f"**当前模块**: {display_name}")
             
             # 选中资产
             if snapshot.get('selected_asset'):
@@ -262,10 +273,27 @@ class RuntimeContextManager:
                 config_name = config.get('name', 'unknown')
                 parts.append(f"**选中配置**: {config_name}")
             
-            # 最近操作
+            # 最近操作（包含详细信息，使用中文名称）
             if snapshot.get('recent_ops'):
                 recent = snapshot['recent_ops'][-3:]  # 最近3条
-                ops_text = ", ".join([op.get('action', 'unknown') for op in recent])
+                ops_list = []
+                for op in recent:
+                    action = op.get('action', 'unknown')
+                    details = op.get('details', {})
+                    
+                    # 根据操作类型格式化详细信息
+                    if action == 'switch_module' and 'module' in details:
+                        module_name = details['module']
+                        display_name = self.MODULE_NAME_MAP.get(module_name, module_name)
+                        ops_list.append(f"切换到{display_name}")
+                    elif action == 'select_asset' and 'name' in details:
+                        ops_list.append(f"选中资产「{details['name']}」")
+                    elif action == 'select_config' and 'config' in details:
+                        ops_list.append(f"选中配置「{details['config']}」")
+                    else:
+                        ops_list.append(action)
+                
+                ops_text = " → ".join(ops_list)
                 parts.append(f"**最近操作**: {ops_text}")
             
             # 最后错误

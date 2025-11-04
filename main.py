@@ -220,6 +220,41 @@ def main():
                         else:
                             print("[DEBUG] [WARN] config_tool 模块未加载")
                             logger.info("config_tool 模块未加载，跳过连接")
+                        
+                        # 连接 site_recommendations
+                        site_recommendations_module = module_provider.get_module("site_recommendations")
+                        if site_recommendations_module:
+                            print(f"[DEBUG] site_recommendations 实例: {site_recommendations_module.instance}")
+                            
+                            # 获取 site_recommendations 的逻辑层实例
+                            if hasattr(site_recommendations_module.instance, 'logic'):
+                                site_logic = site_recommendations_module.instance.logic
+                                print(f"[DEBUG] [OK] 通过 .logic 属性获取到 site_recommendations 逻辑层: {site_logic}")
+                                logger.info("获取到 site_recommendations 逻辑层")
+                            elif hasattr(site_recommendations_module.instance, 'get_logic'):
+                                site_logic = site_recommendations_module.instance.get_logic()
+                                print(f"[DEBUG] [OK] 通过 get_logic() 获取到 site_recommendations 逻辑层: {site_logic}")
+                                logger.info("通过 get_logic 获取到 site_recommendations 逻辑层")
+                            else:
+                                site_logic = None
+                                print("[DEBUG] [ERROR] 无法获取 site_recommendations 逻辑层")
+                                logger.warning("无法获取 site_recommendations 逻辑层")
+                            
+                            # 将 site_recommendations 逻辑层传递给 AI助手
+                            if site_logic and hasattr(ai_assistant_module.instance, 'site_recommendations_logic'):
+                                print(f"[DEBUG] 正在设置 ai_assistant.site_recommendations_logic = {site_logic}")
+                                ai_assistant_module.instance.site_recommendations_logic = site_logic
+                                print("[DEBUG] [OK] 已将 site_recommendations 逻辑层连接到 AI助手")
+                                logger.info("已将 site_recommendations 逻辑层连接到 AI助手")
+                            else:
+                                if not site_logic:
+                                    print("[DEBUG] [ERROR] site_logic 为 None，无法连接")
+                                if not hasattr(ai_assistant_module.instance, 'site_recommendations_logic'):
+                                    print("[DEBUG] [ERROR] AI助手模块缺少 site_recommendations_logic 属性")
+                                    logger.warning("AI助手模块缺少 site_recommendations_logic 属性")
+                        else:
+                            print("[DEBUG] [WARN] site_recommendations 模块未加载")
+                            logger.info("site_recommendations 模块未加载，跳过连接")
                     else:
                         print("[DEBUG] [WARN] ai_assistant 模块未加载")
                         logger.info("ai_assistant 模块未加载，跳过连接")
