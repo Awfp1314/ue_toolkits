@@ -11,6 +11,9 @@ import threading
 from core.logger import get_logger
 from modules.ai_assistant.ui.chat_window import ChatWindow
 from modules.ai_assistant.logic.runtime_context import RuntimeContextManager
+# v0.2 新增：工具系统
+from modules.ai_assistant.logic.tools_registry import ToolsRegistry
+from modules.ai_assistant.logic.action_engine import ActionEngine
 
 logger = get_logger(__name__)
 
@@ -32,7 +35,11 @@ class AIAssistantModule:
         # v0.1 新增：运行态上下文管理器（全局单例）
         self.runtime_context = RuntimeContextManager()
         
-        logger.info("AIAssistantModule 初始化（包含运行态上下文）")
+        # v0.2 新增：工具注册表和动作引擎（延迟初始化）
+        self.tools_registry: Optional[ToolsRegistry] = None
+        self.action_engine: Optional[ActionEngine] = None
+        
+        logger.info("AIAssistantModule 初始化（包含运行态上下文 + 工具系统）")
     
     def initialize(self, config_dir: str):
         """初始化模块
@@ -71,6 +78,56 @@ class AIAssistantModule:
         thread = threading.Thread(target=preload_task, daemon=True, name="EmbeddingPreload")
         thread.start()
     
+    def _init_tools_system(self):
+        """
+        v0.2 新增：初始化工具系统
+        
+        在创建 ChatWindow 时调用，确保有完整的数据读取器可用
+        """
+        try:
+            # 只在有数据读取器时才初始化工具系统
+            if not self.asset_manager_logic and not self.config_tool_logic:
+                logger.warning("数据读取器未初始化，工具系统延迟创建")
+                return
+            
+            # 需要从 ChatWindow 的 context_manager 获取 readers
+            # 或者直接在这里创建（更简单）
+            from modules.ai_assistant.logic.asset_reader import AssetReader
+            from modules.ai_assistant.logic.config_reader import ConfigReader
+            from modules.ai_assistant.logic.log_analyzer import LogAnalyzer
+            from modules.ai_assistant.logic.document_reader import DocumentReader
+            
+            asset_reader = AssetReader(self.asset_manager_logic)
+            config_reader = ConfigReader(self.config_tool_logic)
+            log_analyzer = LogAnalyzer()
+            document_reader = DocumentReader()
+            
+            # 创建工具注册表
+            self.tools_registry = ToolsRegistry(
+                asset_reader=asset_reader,
+                config_reader=config_reader,
+                log_analyzer=log_analyzer,
+                document_reader=document_reader
+            )
+            
+            # 创建动作引擎
+            from modules.ai_assistant.logic.api_client import APIClient
+            
+            def api_client_factory(messages, model="gpt-3.5-turbo"):
+                return APIClient(messages, model=model)
+            
+            self.action_engine = ActionEngine(
+                tools_registry=self.tools_registry,
+                api_client_factory=api_client_factory
+            )
+            
+            logger.info("工具系统初始化完成")
+            
+        except Exception as e:
+            logger.error(f"初始化工具系统失败: {e}", exc_info=True)
+            self.tools_registry = None
+            self.action_engine = None
+    
     def get_runtime_context(self) -> RuntimeContextManager:
         """获取运行态上下文管理器（供外部访问）
         
@@ -102,6 +159,13 @@ class AIAssistantModule:
             # 如果已经有config_tool_logic，传递给chat_window
             if self.config_tool_logic:
                 self.chat_window.set_config_tool_logic(self.config_tool_logic)
+            
+            # v0.2 新增：初始化并传递工具系统
+            self._init_tools_system()
+            if self.tools_registry and self.action_engine:
+                if hasattr(self.chat_window, 'set_tools_system'):
+                    self.chat_window.set_tools_system(self.tools_registry, self.action_engine)
+                    logger.info("工具系统已传递给 ChatWindow")
         else:
             logger.info("返回已存在的 AI 助手窗口实例")
         
