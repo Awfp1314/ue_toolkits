@@ -19,11 +19,12 @@ class APIClient(QThread):
     request_finished = pyqtSignal()       # 请求完成
     error_occurred = pyqtSignal(str)      # 发生错误
     
-    def __init__(self, messages, model="gpt-3.5-turbo", temperature=0.8):
+    def __init__(self, messages, model="gpt-3.5-turbo", temperature=0.8, tools=None):
         super().__init__()
         self.messages = messages
         self.model = model
         self.temperature = temperature
+        self.tools = tools  # v0.2 新增：OpenAI tools 参数
         self.is_running = True
         
         # API 配置
@@ -54,6 +55,12 @@ class APIClient(QThread):
                     "temperature": self.temperature,
                     "stream": True  # 启用流式输出
                 }
+                
+                # v0.2 新增：添加 tools 参数（如果提供）
+                # 兼容 ChatGPT-style: tools=[{type:'function', function:{name,parameters}}]
+                if self.tools:
+                    payload["tools"] = self.tools
+                    print(f"[API] 启用工具调用模式，工具数量: {len(self.tools)}")
                 
                 print(f"[API] 发送请求到: {self.api_url}")
                 print(f"[API] 已禁用代理设置")
@@ -144,4 +151,35 @@ class APIClient(QThread):
         """停止请求"""
         self.is_running = False
         self.quit()
+    
+    @staticmethod
+    def send(
+        messages: list,
+        model: str = "gpt-3.5-turbo",
+        temperature: float = 0.8,
+        tools: list = None,
+        stream: bool = True
+    ):
+        """
+        v0.2 新增：发送请求的便捷工厂方法
+        
+        封装 OpenAI tools 参数格式，确保兼容性
+        
+        Args:
+            messages: 对话历史
+            model: 模型名称
+            temperature: 温度参数
+            tools: 工具列表（ChatGPT-style格式）
+                  格式：[{type:'function', function:{name, description, parameters}}]
+            stream: 是否启用流式输出
+            
+        Returns:
+            APIClient: API 客户端实例
+        """
+        return APIClient(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            tools=tools
+        )
 
