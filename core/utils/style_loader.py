@@ -21,9 +21,11 @@
 """
 
 import logging
+import re
 from pathlib import Path
-from typing import Dict, Optional, Set
-from PyQt6.QtWidgets import QWidget
+from typing import Dict, Optional, Set, Callable
+from PyQt6.QtWidgets import QWidget, QApplication
+from PyQt6.QtCore import QFileSystemWatcher
 
 # 使用标准logging避免循环导入
 logger = logging.getLogger(__name__)
@@ -60,6 +62,14 @@ class StyleLoader:
         
         # QSS文件根目录
         self._qss_root = Path(__file__).parent.parent.parent / "resources" / "qss"
+        
+        # 文件监听器（用于热重载）
+        self._file_watcher: Optional[QFileSystemWatcher] = None
+        self._reload_callbacks: list[Callable] = []
+        
+        # variables.qss 变量缓存
+        self._variables_cache: Dict[str, str] = {}
+        self._variables_loaded = False
         
         # 默认内联样式（用于回退）
         self._default_styles: Dict[str, str] = {
@@ -308,6 +318,232 @@ class StyleLoader:
     def get_qss_root(self) -> Path:
         """获取QSS文件根目录"""
         return self._qss_root
+    
+    def _load_variables(self) -> None:
+        """
+        加载 variables.qss 中的变量定义
+        
+        解析格式: /* --var-name: value */
+        """
+        if self._variables_loaded:
+            return
+        
+        try:
+            variables_file = self._qss_root / "variables.qss"
+            
+            if not variables_file.exists():
+                logger.warning(f"variables.qss 文件不存在: {variables_file}")
+                self._variables_loaded = True
+                return
+            
+            content = variables_file.read_text(encoding='utf-8')
+            
+            # 正则匹配: /* --var-name: value */
+            pattern = r'/\*\s*--([\w-]+):\s*([^*]+?)\s*\*/'
+            matches = re.findall(pattern, content)
+            
+            for var_name, var_value in matches:
+                self._variables_cache[var_name] = var_value.strip()
+                logger.debug(f"[Variables] 加载变量: --{var_name} = {var_value.strip()}")
+            
+            logger.info(f"[OK] 成功加载 {len(self._variables_cache)} 个变量定义")
+            self._variables_loaded = True
+            
+        except Exception as e:
+            logger.error(f"[ERROR] 加载 variables.qss 失败: {e}", exc_info=True)
+            self._variables_loaded = True
+    
+    def _replace_variables(self, qss_content: str) -> str:
+        """
+        替换QSS内容中的变量占位符
+        
+        格式: /* --var-name */ value  →  替换为变量定义的值（若存在）
+        
+        Args:
+            qss_content: 原始QSS内容
+            
+        Returns:
+            str: 替换变量后的QSS内容
+        """
+        if not self._variables_loaded:
+            self._load_variables()
+        
+        # 正则匹配: /* --var-name */ fallback_value
+        pattern = r'/\*\s*--([\w-]+)\s*\*/\s*([^;}\n]+)'
+        
+        missing_vars = set()
+        
+        def replace_var(match):
+            var_name = match.group(1)
+            fallback_value = match.group(2).strip()
+            
+            if var_name in self._variables_cache:
+                return self._variables_cache[var_name]
+            else:
+                missing_vars.add(var_name)
+                logger.debug(f"[Variables] 变量 --{var_name} 未定义，使用回退值: {fallback_value}")
+                return fallback_value
+        
+        result = re.sub(pattern, replace_var, qss_content)
+        
+        if missing_vars:
+            logger.warning(f"⚠️ 发现 {len(missing_vars)} 个未定义变量: {', '.join(sorted(missing_vars))}")
+        
+        return result
+    
+    def load_stylesheet_with_variables(
+        self,
+        style_file: str,
+        use_cache: bool = True,
+        replace_vars: bool = True
+    ) -> str:
+        """
+        加载QSS文件并替换变量（增强版 load_stylesheet）
+        
+        Args:
+            style_file: QSS文件路径
+            use_cache: 是否使用缓存
+            replace_vars: 是否替换变量占位符
+            
+        Returns:
+            str: 处理后的QSS内容
+        """
+        qss = self.load_stylesheet(style_file, use_cache)
+        
+        if qss and replace_vars:
+            qss = self._replace_variables(qss)
+        
+        return qss
+    
+    def load_all_components(self, replace_vars: bool = True) -> str:
+        """
+        加载 components/ 目录下的所有QSS文件
+        
+        Args:
+            replace_vars: 是否替换变量
+            
+        Returns:
+            str: 合并后的QSS内容
+        """
+        components_dir = self._qss_root / "components"
+        
+        if not components_dir.exists():
+            logger.warning(f"components 目录不存在: {components_dir}")
+            return ""
+        
+        all_qss = []
+        qss_files = sorted(components_dir.glob("*.qss"))
+        
+        logger.info(f"[StyleLoader] 开始加载 {len(qss_files)} 个组件QSS文件...")
+        
+        for qss_file in qss_files:
+            rel_path = qss_file.relative_to(self._qss_root)
+            qss = self.load_stylesheet(str(rel_path), use_cache=True)
+            
+            if qss:
+                if replace_vars:
+                    qss = self._replace_variables(qss)
+                all_qss.append(qss)
+                logger.info(f"  [OK] {qss_file.name}")
+            else:
+                logger.error(f"  [ERROR] {qss_file.name} - 加载失败")
+        
+        merged_qss = "\n\n".join(all_qss)
+        logger.info(f"[OK] 组件QSS加载完成，总字符数: {len(merged_qss)}")
+        
+        return merged_qss
+    
+    def enable_hot_reload(self, callback: Optional[Callable] = None) -> None:
+        """
+        启用QSS文件热重载（开发模式）
+        
+        Args:
+            callback: 文件变化时的回调函数
+        """
+        try:
+            if self._file_watcher is None:
+                self._file_watcher = QFileSystemWatcher()
+                self._file_watcher.directoryChanged.connect(self._on_directory_changed)
+                self._file_watcher.fileChanged.connect(self._on_file_changed)
+            
+            # 监听QSS根目录和components目录
+            paths_to_watch = [
+                str(self._qss_root),
+                str(self._qss_root / "components"),
+                str(self._qss_root / "themes"),
+            ]
+            
+            for path in paths_to_watch:
+                if Path(path).exists():
+                    self._file_watcher.addPath(path)
+                    logger.info(f"[HotReload] 启用热重载监听: {path}")
+            
+            if callback:
+                self._reload_callbacks.append(callback)
+            
+            logger.info("[OK] QSS热重载已启用")
+            
+        except Exception as e:
+            logger.error(f"[ERROR] 启用热重载失败: {e}", exc_info=True)
+    
+    def _on_directory_changed(self, path: str) -> None:
+        """目录变化回调"""
+        logger.info(f"[HotReload] 检测到目录变化: {path}")
+        self._trigger_reload()
+    
+    def _on_file_changed(self, path: str) -> None:
+        """文件变化回调"""
+        logger.info(f"[HotReload] 检测到文件变化: {path}")
+        self._trigger_reload()
+    
+    def _trigger_reload(self) -> None:
+        """触发重新加载"""
+        # 清空缓存
+        self._styles_cache.clear()
+        self._variables_cache.clear()
+        self._variables_loaded = False
+        
+        logger.info("[HotReload] 正在重新加载所有样式...")
+        
+        # 执行回调
+        for callback in self._reload_callbacks:
+            try:
+                callback()
+            except Exception as e:
+                logger.error(f"[ERROR] 热重载回调执行失败: {e}", exc_info=True)
+        
+        logger.info("[OK] 样式热重载完成")
+    
+    def reload_styles(self, app: Optional[QApplication] = None) -> None:
+        """
+        重新加载并应用样式到应用程序
+        
+        Args:
+            app: QApplication实例，如果为None则自动获取
+        """
+        try:
+            if app is None:
+                app = QApplication.instance()
+            
+            if app is None:
+                logger.warning("[WARN] 无法获取QApplication实例，跳过样式重载")
+                return
+            
+            logger.info("[StyleLoader] 开始重新加载全局样式...")
+            
+            # 清空缓存
+            self.clear_cache()
+            
+            # 重新加载所有组件
+            merged_qss = self.load_all_components(replace_vars=True)
+            
+            # 应用到应用程序
+            app.setStyleSheet(merged_qss)
+            
+            logger.info("[OK] 全局样式重载完成")
+            
+        except Exception as e:
+            logger.error(f"[ERROR] 样式重载失败: {e}", exc_info=True)
     
     @staticmethod
     def safe_load_style(component_name: str, default_style: str = "") -> str:

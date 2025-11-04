@@ -249,8 +249,7 @@ class ChatInputArea(QWidget):
         # 左侧加号按钮（可选功能）
         self.add_button = QPushButton("+")
         self.add_button.setObjectName("add_button")
-        self.add_button.setFixedSize(32, 32)
-        self.add_button.setFont(QFont("Microsoft YaHei UI", 14, QFont.Weight.Bold))
+        # 样式由 QSS 管理（大小、字体、光标）
         self.add_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.add_button.setToolTip("附加功能（未来扩展）")
         
@@ -262,7 +261,7 @@ class ChatInputArea(QWidget):
         )
         self.input_field.setObjectName("input_field_chatgpt")
         self.input_field.setPlaceholderText("输入消息...")
-        self.input_field.setFont(QFont("Microsoft YaHei UI", 11))  # 稍大字体
+        # 样式由 QSS 管理（字体）
         
         # 设置文档边距，让提示文本与+按钮垂直对齐
         self.input_field.document().setDocumentMargin(4)
@@ -310,14 +309,11 @@ class ChatInputArea(QWidget):
         # 右侧发送按钮（ChatGPT 风格：白色圆形，向上箭头）
         self.send_button = QPushButton("↑")
         self.send_button.setObjectName("send_button_chatgpt")
-        self.send_button.setFixedSize(36, 36)
-        # 使用 Arial 字体，16px 大小，确保箭头完美居中
-        font = QFont("Arial", 16, QFont.Weight.Bold)
-        font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0)
-        self.send_button.setFont(font)
-        # 样式由全局 QSS 控制
+        # 样式由 QSS 管理（大小、字体、光标）
         self.send_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.send_button.setToolTip("发送消息 (Enter)")
+        # 设置初始状态属性（用于 QSS 属性选择器）
+        self.send_button.setProperty("buttonState", "normal")
         self.send_button.clicked.connect(self.on_send_button_clicked)
         # 初始状态为禁用（因为输入框为空）
         self.send_button.setEnabled(False)
@@ -335,8 +331,8 @@ class ChatInputArea(QWidget):
         
         # 底部提示文本
         hint_label = QLabel("Enter 发送 · Shift+Enter 换行")
-        hint_label.setFont(QFont("Microsoft YaHei UI", 9))  # 使用合适的字体大小
         hint_label.setObjectName("hint_label")
+        # 样式由 QSS 管理（字体）
         hint_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         main_layout.addWidget(hint_label)

@@ -23,7 +23,7 @@ except ImportError:
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.logger import get_logger
-from core.config_manager import ConfigManager
+from core.config.config_manager import ConfigManager
 from .asset_model import Asset, AssetType
 
 logger = get_logger(__name__)

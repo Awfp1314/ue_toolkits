@@ -10,7 +10,6 @@ from PyQt6.QtWidgets import (
     QPushButton, QTextEdit, QGroupBox
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 
 
 class ToolConfirmationDialog(QDialog):
@@ -50,10 +49,8 @@ class ToolConfirmationDialog(QDialog):
         
         # 标题
         title_label = QLabel(f"⚠️ 确认工具执行")
-        title_font = QFont()
-        title_font.setPointSize(14)
-        title_font.setBold(True)
-        title_label.setFont(title_font)
+        title_label.setObjectName("dialog_title")
+        # 样式由QSS管理
         layout.addWidget(title_label)
         
         # 工具信息组
@@ -85,7 +82,8 @@ class ToolConfirmationDialog(QDialog):
         # 确认提示
         confirm_prompt = self.preview_data.get('confirm_prompt', '确认执行此操作吗？')
         prompt_label = QLabel(confirm_prompt)
-        prompt_label.setStyleSheet("color: #FFA500; font-weight: bold;")
+        prompt_label.setObjectName("warning_prompt")
+        # 样式由QSS管理
         prompt_label.setWordWrap(True)
         layout.addWidget(prompt_label)
         
@@ -94,25 +92,16 @@ class ToolConfirmationDialog(QDialog):
         button_layout.addStretch()
         
         cancel_button = QPushButton("取消")
+        cancel_button.setObjectName("cancel_button")
         cancel_button.setMinimumWidth(100)
+        # 样式由QSS管理
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
         
         confirm_button = QPushButton("确认执行")
+        confirm_button.setObjectName("confirm_button")
         confirm_button.setMinimumWidth(100)
-        confirm_button.setStyleSheet("""
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 8px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-            }
-        """)
+        # 样式由QSS管理
         confirm_button.clicked.connect(self.accept)
         button_layout.addWidget(confirm_button)
         

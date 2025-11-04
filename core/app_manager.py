@@ -9,7 +9,7 @@ import threading
 
 from core.utils.path_utils import PathUtils
 from core.logger import Logger, get_logger
-from core.config_manager import ConfigManager
+from core.config.config_manager import ConfigManager
 from core.module_manager import ModuleManager, ModuleState
 from core.utils.thread_utils import get_thread_manager
 

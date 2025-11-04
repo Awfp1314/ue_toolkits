@@ -84,3 +84,60 @@
 /* --titlebar-height: 30px */
 /* --titlebar-button-size: 30px */
 
+/* ========================================
+ * AI助手主题色
+ * ======================================== */
+
+/* 表面/背景色 - Surface Colors */
+/* --surface-chat-bg: #343541 */        /* 聊天区域背景色(深色) */
+/* --surface-chat-bg-light: #ffffff */  /* 聊天区域背景色(浅色) */
+/* --surface-input-bg: #40414f */       /* 输入框背景色(深色) */
+/* --surface-input-bg-light: #f7f7f8 */ /* 输入框背景色(浅色) */
+/* --surface-elevated: #444654 */       /* 抬升表面背景(深色) */
+/* --surface-elevated-light: #f7f7f8 */ /* 抬升表面背景(浅色) */
+/* --surface-sidebar: #202123 */        /* 侧边栏背景色(深色) */
+/* --surface-sidebar-light: #f7f7f8 */  /* 侧边栏背景色(浅色) */
+/* --surface-hover: #2a2b32 */          /* 悬停背景色(深色) */
+/* --surface-hover-light: #ececed */    /* 悬停背景色(浅色) */
+
+/* 边框色 - Border Colors */
+/* --border-input: #565869 */           /* 输入框边框色(深色) */
+/* --border-input-light: #d1d5da */     /* 输入框边框色(浅色) */
+/* --border-focus: #4a4a5f */           /* 聚焦边框色(深色) */
+/* --border-focus-light: #e5e5e7 */     /* 聚焦边框色(浅色) */
+/* --border-sidebar: #2f2f2f */         /* 侧边栏边框色(深色) */
+/* --border-sidebar-light: #e5e5e7 */   /* 侧边栏边框色(浅色) */
+
+/* 文本色 - Text Colors */
+/* --text-bright: #ececf1 */            /* 高亮文本色(深色) */
+/* --text-bright-light: #2d333a */      /* 高亮文本色(浅色) */
+/* --text-muted: #8e8ea0 */             /* 弱化文本色(深色) */
+/* --text-muted-light: #6e7681 */       /* 弱化文本色(浅色) */
+
+/* 状态色 - State Colors */
+/* --state-error: #ef4444 */            /* 错误/危险状态 */
+/* --state-error-bg: #5c1a1a */         /* 错误背景(深色) */
+/* --state-error-bg-light: #ffebee */   /* 错误背景(浅色) */
+/* --state-success: #10a37f */          /* 成功/打字指示器 */
+/* --state-hover-btn: #f0f0f0 */        /* 按钮hover(浅色) */
+/* --state-pressed-btn: #e0e0e0 */      /* 按钮pressed(浅色) */
+
+/* ========================================
+ * Phase 5 补充变量（通用/全局）
+ * ======================================== */
+
+/* 次级文本颜色 */
+/* --text-secondary: #cccccc */
+
+/* 弱化文本颜色 */
+/* --text-muted: #999999 */
+
+/* 警告色（橙） */
+/* --color-warning: #ff9800 */
+
+/* 边框悬停色 */
+/* --border-hover: #505050 */
+
+/* 按下背景 */
+/* --bg-pressed: #262626 */
+

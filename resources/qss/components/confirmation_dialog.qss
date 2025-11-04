@@ -1,0 +1,102 @@
+/* ========================================
+   确认对话框组件样式
+   modules/ai_assistant/ui/confirmation_dialog.py
+   ======================================== */
+
+/* 对话框标题 */
+QLabel#dialog_title {
+    font-size: /* --font-lg */ 16px;
+    font-weight: bold;
+    color: /* --text-primary */ #ffffff;
+    padding: /* --spacing-sm */ 5px 0;
+}
+
+/* 警告提示文本 */
+QLabel#warning_prompt {
+    color: /* --color-warning */ #ff8c00;
+    font-weight: bold;
+    font-size: /* --font-md */ 14px;
+    padding: /* --spacing-md */ 10px 0;
+}
+
+/* 取消按钮 */
+QPushButton#cancel_button {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: /* --radius-md */ 4px;
+    padding: /* --spacing-sm */ 5px /* --spacing-md */ 10px;
+    font-size: /* --font-md */ 14px;
+}
+
+QPushButton#cancel_button:hover {
+    background-color: /* --bg-hover-light */ #333333;
+    border-color: /* --border-hover */ rgba(80, 80, 80, 0.9);
+}
+
+QPushButton#cancel_button:pressed {
+    background-color: /* --bg-pressed-light */ #2c2c2c;
+}
+
+/* 确认按钮 */
+QPushButton#confirm_button {
+    background-color: /* --color-primary */ rgba(0, 122, 204, 0.8);
+    color: /* --text-primary */ #ffffff;
+    border: none;
+    border-radius: /* --radius-md */ 4px;
+    padding: /* --spacing-sm */ 5px /* --spacing-md */ 10px;
+    font-size: /* --font-md */ 14px;
+    font-weight: bold;
+}
+
+QPushButton#confirm_button:hover {
+    background-color: /* --color-primary-hover */ rgba(0, 144, 224, 0.9);
+}
+
+QPushButton#confirm_button:pressed {
+    background-color: rgba(0, 100, 184, 0.95);
+}
+
+QPushButton#confirm_button:disabled {
+    background-color: /* --bg-tertiary */ #3c3c3c;
+    color: /* --text-disabled */ #666666;
+}
+
+/* 对话框分组框 */
+QGroupBox {
+    font-size: /* --font-md */ 14px;
+    font-weight: bold;
+    color: /* --text-secondary */ #cccccc;
+    border: 1px solid /* --border-secondary */ rgba(60, 60, 60, 0.8);
+    border-radius: /* --radius-md */ 4px;
+    margin-top: /* --spacing-md */ 10px;
+    padding-top: /* --spacing-lg */ 15px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 /* --spacing-sm */ 5px;
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+/* 预览文本框 */
+QTextEdit {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: /* --radius-sm */ 2px;
+    padding: /* --spacing-sm */ 5px;
+    font-family: "Consolas", "Microsoft YaHei UI", monospace;
+    font-size: /* --font-sm */ 12px;
+}
+
+QTextEdit:focus {
+    border-color: /* --color-primary */ rgba(0, 122, 204, 0.8);
+}
+
+/* 对话框整体 */
+QDialog {
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+

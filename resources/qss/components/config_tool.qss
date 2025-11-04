@@ -1,0 +1,195 @@
+/* ========================================
+   配置工具模块通用样式
+   modules/config_tool/ui/
+   ======================================== */
+
+/* ========================================
+   对话框样式
+   ======================================== */
+
+/* 配置应用确认对话框 */
+QDialog#ConfigApplyConfirmDialog {
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+QLabel#dialog_title {
+    color: /* --text-primary */ #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QLabel#dialog_message {
+    color: /* --text-primary */ #ffffff;
+    font-size: 13px;
+}
+
+QTextEdit#changes_preview {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 4px;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 11px;
+}
+
+/* 名称输入对话框 */
+QDialog#NameInputDialog {
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+QLineEdit#name_input {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 4px;
+    padding: 6px;
+    font-size: 13px;
+}
+
+QLineEdit#name_input:focus {
+    border-color: /* --color-primary */ rgba(0, 122, 204, 0.8);
+}
+
+/* 工程运行警告对话框 */
+QDialog#ProjectRunningWarningDialog {
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+QLabel#warning_icon {
+    color: /* --color-warning */ #ff9800;
+    font-size: 32px;
+}
+
+QLabel#warning_title {
+    color: /* --text-primary */ #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QLabel#warning_message {
+    color: /* --text-secondary */ #cccccc;
+    font-size: 13px;
+}
+
+QListWidget#running_processes {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 4px;
+}
+
+/* UE工程选择对话框 */
+QDialog#UEProjectSelectorDialog {
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+QListWidget#project_list {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 4px;
+}
+
+QListWidget#project_list::item {
+    padding: 8px;
+    border-radius: 4px;
+}
+
+QListWidget#project_list::item:selected {
+    background-color: /* --color-primary */ rgba(0, 122, 204, 0.8);
+    color: white;
+}
+
+QListWidget#project_list::item:hover {
+    background-color: /* --bg-hover */ rgba(51, 51, 51, 0.9);
+}
+
+/* ========================================
+   组件样式
+   ======================================== */
+
+/* UE工程卡片 */
+QFrame#UEProjectCard {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 8px;
+}
+
+QFrame#UEProjectCard:hover {
+    border-color: /* --border-hover */ rgba(80, 80, 80, 0.9);
+    background-color: /* --bg-tertiary */ #3c3c3c;
+}
+
+QLabel#project_name {
+    color: /* --text-primary */ #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QLabel#project_path {
+    color: /* --text-secondary */ #cccccc;
+    font-size: 11px;
+}
+
+QLabel#project_version {
+    color: /* --text-muted */ #999999;
+    font-size: 10px;
+}
+
+/* 配置模板按钮 */
+QPushButton#ConfigTemplateButton {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+QPushButton#ConfigTemplateButton:hover {
+    background-color: /* --bg-hover-light */ #333333;
+    border-color: /* --border-hover */ rgba(80, 80, 80, 0.9);
+}
+
+QPushButton#ConfigTemplateButton:pressed {
+    background-color: /* --bg-pressed-light */ #2c2c2c;
+}
+
+/* ========================================
+   布局组件
+   ======================================== */
+
+QGroupBox {
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 6px;
+    margin-top: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 4px 8px;
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+/* ========================================
+   处理器样式
+   ======================================== */
+
+QProgressBar {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 4px;
+    text-align: center;
+    color: /* --text-primary */ #ffffff;
+    font-size: 12px;
+}
+
+QProgressBar::chunk {
+    background-color: /* --color-primary */ rgba(0, 122, 204, 0.8);
+    border-radius: 3px;
+}
+

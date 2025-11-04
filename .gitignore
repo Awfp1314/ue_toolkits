@@ -13,7 +13,8 @@ dist/
 
 # PyInstaller
 *.manifest
-*.spec
+# *.spec  # 注释掉，以保留 ue_toolkit.spec
+!ue_toolkit.spec  # 例外规则
 
 # IDE 和编辑器
 .vscode/
@@ -52,9 +53,8 @@ tmp/
 Thumbs.db
 desktop.ini
 
-# Release 构建产物（保留启动脚本）
-release/ue_toolkit/
-release/version_info.txt
+# Release 构建产物
+release/
 
 # 测试数据
 test_memory_data/

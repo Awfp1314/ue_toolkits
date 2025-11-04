@@ -1,0 +1,234 @@
+/* ========================================
+   主界面组件样式
+   ui/
+   ======================================== */
+
+/* ========================================
+   关闭确认对话框
+   ======================================== */
+
+QDialog#CloseConfirmationDialog {
+    background-color: /* --bg-primary */ #2b2b2b;
+    min-width: 400px;
+    min-height: 150px;
+}
+
+QLabel#dialog_icon {
+    color: /* --color-warning */ #ff9800;
+    font-size: 32px;
+}
+
+QLabel#dialog_message {
+    color: /* --text-primary */ #ffffff;
+    font-size: 14px;
+}
+
+/* ========================================
+   标题栏
+   ======================================== */
+
+QFrame#TitleBar {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    min-height: 40px;
+    max-height: 40px;
+}
+
+QLabel#window_title {
+    color: /* --text-primary */ #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QPushButton#title_button {
+    background-color: transparent;
+    color: /* --text-primary */ #ffffff;
+    border: none;
+    min-width: 40px;
+    max-width: 40px;
+    min-height: 40px;
+    max-height: 40px;
+    font-size: 16px;
+}
+
+QPushButton#title_button:hover {
+    background-color: /* --bg-hover-light */ #333333;
+}
+
+QPushButton#close_button:hover {
+    background-color: #e81123;
+}
+
+/* ========================================
+   设置面板
+   ======================================== */
+
+QWidget#SettingsWidget {
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+QLabel#settings_title {
+    color: /* --text-primary */ #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+QLabel#section_title {
+    color: /* --text-primary */ #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+QLabel#setting_label {
+    color: /* --text-primary */ #ffffff;
+    font-size: 13px;
+}
+
+QLabel#setting_description {
+    color: /* --text-secondary */ #cccccc;
+    font-size: 11px;
+}
+
+/* 主题选择器 */
+QComboBox#theme_selector {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 4px;
+    padding: 6px;
+    min-width: 200px;
+    min-height: 32px;
+}
+
+QComboBox#theme_selector:hover {
+    border-color: /* --border-hover */ rgba(80, 80, 80, 0.9);
+}
+
+QComboBox#theme_selector::drop-down {
+    border: none;
+    width: 24px;
+}
+
+QComboBox#theme_selector::down-arrow {
+    image: none;
+    border-style: solid;
+    border-width: 5px 4px 0 4px;
+    border-color: /* --text-primary */ #ffffff transparent transparent transparent;
+}
+
+/* 设置项容器 */
+QFrame#setting_item {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 6px;
+    padding: 12px;
+    min-height: 60px;
+}
+
+QFrame#setting_item:hover {
+    border-color: /* --border-hover */ rgba(80, 80, 80, 0.9);
+}
+
+/* 切换开关 */
+QCheckBox#setting_toggle {
+    color: /* --text-primary */ #ffffff;
+    spacing: 8px;
+}
+
+QCheckBox#setting_toggle::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid /* --border-primary */ #555555;
+    background-color: /* --bg-tertiary */ #3c3c3c;
+}
+
+QCheckBox#setting_toggle::indicator:checked {
+    background-color: /* --color-primary */ rgba(0, 122, 204, 0.8);
+    border-color: /* --color-primary */ rgba(0, 122, 204, 0.8);
+}
+
+/* 设置按钮 */
+QPushButton#setting_button {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    color: /* --text-primary */ #ffffff;
+    border: 1px solid /* --border-primary */ #555555;
+    border-radius: 6px;
+    padding: 8px 16px;
+    min-width: 100px;
+    min-height: 32px;
+    font-size: 13px;
+}
+
+QPushButton#setting_button:hover {
+    background-color: /* --bg-hover-light */ #333333;
+    border-color: /* --border-hover */ rgba(80, 80, 80, 0.9);
+}
+
+QPushButton#setting_button:pressed {
+    background-color: /* --bg-pressed-light */ #2c2c2c;
+}
+
+/* 主按钮（保存/应用） */
+QPushButton#primary_button {
+    background-color: /* --color-primary */ rgba(0, 122, 204, 0.8);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    min-width: 100px;
+    min-height: 36px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+QPushButton#primary_button:hover {
+    background-color: rgba(0, 144, 224, 0.9);
+}
+
+QPushButton#primary_button:pressed {
+    background-color: rgba(0, 100, 184, 0.95);
+}
+
+/* ========================================
+   主窗口核心
+   ======================================== */
+
+QMainWindow#UEMainWindow {
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+QFrame#central_widget {
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+QFrame#sidebar {
+    background-color: /* --bg-secondary */ #1e1e1e;
+    min-width: 60px;
+    max-width: 60px;
+}
+
+QFrame#content_area {
+    background-color: /* --bg-primary */ #2b2b2b;
+}
+
+/* 侧边栏按钮 */
+QPushButton#sidebar_button {
+    background-color: transparent;
+    color: /* --text-primary */ #ffffff;
+    border: none;
+    padding: 12px;
+    min-width: 60px;
+    max-width: 60px;
+    min-height: 60px;
+    font-size: 24px;
+}
+
+QPushButton#sidebar_button:hover {
+    background-color: /* --bg-hover-light */ #333333;
+}
+
+QPushButton#sidebar_button:checked {
+    background-color: /* --color-primary */ rgba(0, 122, 204, 0.8);
+    color: white;
+}
+

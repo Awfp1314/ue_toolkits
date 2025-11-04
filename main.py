@@ -133,6 +133,34 @@ def main():
                 except Exception as e:
                     logger.warning(f"加载主题设置失败，使用默认主题: {e}")
                 
+                # ========== 加载 StyleLoader 组件样式 ==========
+                try:
+                    from core.utils.style_loader import StyleLoader
+                    
+                    logger.info("正在加载全局 QSS 组件样式...")
+                    style_loader = StyleLoader()
+                    
+                    # 加载所有组件 QSS（自动替换变量）
+                    component_qss = style_loader.load_all_components(replace_vars=True)
+                    
+                    if component_qss:
+                        # 获取当前应用样式（ThemeManager 设置的）
+                        current_qss = app.styleSheet()
+                        
+                        # 叠加组件样式
+                        merged_qss = current_qss + "\n\n/* ===== StyleLoader 组件样式 ===== */\n" + component_qss
+                        app.setStyleSheet(merged_qss)
+                        
+                        logger.info(f"[OK] 全局 QSS 组件样式已加载，字符数: {len(component_qss)}")
+                        print(f"[StyleLoader] [OK] Loaded {len(component_qss)} characters of component styles")
+                    else:
+                        logger.warning("[WARN] 未加载到任何组件样式")
+                        print("[StyleLoader] [WARN] No component styles loaded")
+                    
+                except Exception as e:
+                    logger.error(f"[ERROR] 加载全局 QSS 组件样式失败: {e}", exc_info=True)
+                    print(f"[StyleLoader] [ERROR] Failed to load: {e}")
+                
                 # 创建模块提供者
                 from core.module_interface import ModuleProviderAdapter
                 module_provider = ModuleProviderAdapter(app_manager.module_manager)

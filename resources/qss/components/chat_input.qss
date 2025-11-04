@@ -1,0 +1,166 @@
+/* ========================================
+   AI 助手 - 输入区域组件样式
+   modules/ai_assistant/ui/chat_input.py
+   ======================================== */
+
+/* ========================================
+   加号按钮 (add_button)
+   ======================================== */
+QPushButton#add_button {
+    min-width: 32px;
+    max-width: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    font-family: "Microsoft YaHei UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-size: 14pt;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    background-color: transparent;
+    color: #8e8ea0;
+}
+
+QPushButton#add_button:hover {
+    background-color: rgba(142, 142, 160, 0.1);
+    color: #ececf1;
+}
+
+QPushButton#add_button:pressed {
+    background-color: rgba(142, 142, 160, 0.2);
+}
+
+/* ========================================
+   输入框 (input_field_chatgpt)
+   ======================================== */
+QTextEdit#input_field_chatgpt {
+    font-family: "Microsoft YaHei UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-size: 11pt;
+    border: none;
+    background-color: transparent;
+    padding: 0px;
+}
+
+/* ========================================
+   发送按钮 (send_button_chatgpt)
+   ======================================== */
+QPushButton#send_button_chatgpt {
+    min-width: 36px;
+    max-width: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    font-family: "Arial", "Helvetica Neue", sans-serif;
+    font-size: 16pt;
+    font-weight: bold;
+    letter-spacing: 0px;
+    border: none;
+    border-radius: 18px;
+}
+
+/* 发送按钮 - 正常状态（深色主题） */
+QPushButton#send_button_chatgpt[buttonState="normal"] {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+QPushButton#send_button_chatgpt[buttonState="normal"]:hover {
+    background-color: #f0f0f0;
+}
+
+QPushButton#send_button_chatgpt[buttonState="normal"]:pressed {
+    background-color: #e0e0e0;
+}
+
+QPushButton#send_button_chatgpt[buttonState="normal"]:disabled {
+    background-color: #565869;
+    color: #acacbe;
+}
+
+/* 发送按钮 - 停止状态（红色圆形） */
+QPushButton#send_button_chatgpt[buttonState="stop"] {
+    background-color: #ef4444;
+    color: #ffffff;
+    border-radius: 18px;
+}
+
+QPushButton#send_button_chatgpt[buttonState="stop"]:hover {
+    background-color: #dc2626;
+}
+
+QPushButton#send_button_chatgpt[buttonState="stop"]:pressed {
+    background-color: #b91c1c;
+}
+
+/* ========================================
+   提示文本 (hint_label)
+   ======================================== */
+QLabel#hint_label {
+    font-family: "Microsoft YaHei UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-size: 9pt;
+    color: #8e8ea0;
+    background-color: transparent;
+}
+
+/* ========================================
+   图片预览组件
+   ======================================== */
+
+/* 图片预览滚动区域 */
+QScrollArea#image_preview_scroll {
+    border: none;
+    background-color: transparent;
+}
+
+QScrollArea#image_preview_scroll QScrollBar:horizontal {
+    height: 6px;
+    background-color: transparent;
+}
+
+QScrollArea#image_preview_scroll QScrollBar::handle:horizontal {
+    background-color: rgba(142, 142, 160, 0.3);
+    border-radius: 3px;
+}
+
+QScrollArea#image_preview_scroll QScrollBar::handle:horizontal:hover {
+    background-color: rgba(142, 142, 160, 0.5);
+}
+
+/* 图片预览容器 */
+QWidget#image_preview_container {
+    background-color: transparent;
+}
+
+/* 图片卡片 */
+QFrame#image_card {
+    border: 1px solid rgba(142, 142, 160, 0.2);
+    border-radius: 8px;
+    background-color: #2d2d2d;
+}
+
+QFrame#image_card:hover {
+    border-color: rgba(142, 142, 160, 0.4);
+}
+
+/* 图片标签 */
+QLabel#image_preview_label {
+    border: none;
+    background-color: transparent;
+}
+
+/* 删除按钮 */
+QPushButton#image_close_btn {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 10pt;
+    font-weight: bold;
+}
+
+QPushButton#image_close_btn:hover {
+    background-color: rgba(239, 68, 68, 0.9);
+}
+
+QPushButton#image_close_btn:pressed {
+    background-color: rgba(220, 38, 38, 0.9);
+}
+

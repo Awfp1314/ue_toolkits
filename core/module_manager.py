@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from core.logger import get_logger
-from core.config_manager import ConfigManager
+from core.config.config_manager import ConfigManager
 from core.utils.path_utils import PathUtils
 from core.utils.thread_utils import get_thread_manager
 
