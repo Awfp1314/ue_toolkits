@@ -1,0 +1,65 @@
+# 模型下载状态检查报告
+检查时间: 2025-11-04 14:30
+
+## 检查结果
+
+### ❌ 语义模型 (BAAI/bge-small-zh-v1.5)
+位置: C:\Users\wang\.cache\huggingface\hub\models--BAAI--bge-small-zh-v1.5\
+状态: **下载失败**
+
+文件列表:
+- config.json (0 字节) ❌
+- config_sentence_transformers.json (0 字节) ❌
+- model.safetensors (0 字节) ❌
+- modules.json (0 字节) ❌
+- tokenizer.json (0 字节) ❌
+- vocab.txt (0 字节) ❌
+
+问题: 所有文件大小为 0，说明下载失败
+原因: 无法连接到 huggingface.co (国外网站)
+
+### ✅ ChromaDB ONNX 模型 (all-MiniLM-L6-v2)
+位置: C:\Users\wang\.cache\chroma\onnx_models\all-MiniLM-L6-v2\
+状态: **下载成功**
+
+文件:
+- onnx.tar.gz (79.3 MB) ✅
+- onnx/ (已解压) ✅
+
+## 影响
+
+当前状态:
+- ✅ 程序可以正常启动
+- ✅ ChromaDB 文档检索可用
+- ❌ 语义意图识别不可用（会降级到规则匹配）
+- 🔹 AI 对话功能可用（功能略简化）
+
+## 解决方案
+
+### 推荐: 重启程序使用优化代码
+最新代码已自动配置国内镜像，可正常下载：
+
+1. 关闭当前程序
+2. 重新启动:
+   cd "C:\Users\wang\Desktop\ue_toolkits - ai"
+   python main.py
+
+3. 查看日志，等待:
+   "🚀 开始后台预加载 AI 模型..."
+   "✅ 语义模型加载完成"
+   "🎉 所有 AI 模型预加载完成！"
+
+预期: 30秒-2分钟内完成下载
+
+### 备选: 手动删除失败文件并重试
+rm -r "C:\Users\wang\.cache\huggingface\hub\models--BAAI--bge-small-zh-v1.5"
+然后重启程序
+
+## 总结
+
+核心问题: 语义模型下载失败（网络连接问题）
+已实施优化: 自动使用国内镜像 (commit f7ef302)
+建议操作: 重启程序，等待后台下载完成
+
+首次下载约 100MB，完成后永久缓存，后续秒开。
+
