@@ -60,6 +60,12 @@ class ChatWindow(QWidget):
         self.tools_registry = None
         self.action_engine = None
         
+        # 模型加载状态检查器
+        self.model_status_checker = None
+        self._model_check_timer = None
+        self._model_loading_displayed = False
+        self._intent_question_sent = False  # 是否已发送询问意图的消息
+        
         self.init_ui()
         self.load_theme(self.current_theme)
     
@@ -126,6 +132,122 @@ class ChatWindow(QWidget):
         self.action_engine = action_engine
         logger.info("ChatWindow 工具系统已设置")
     
+    def set_model_status_checker(self, ai_module):
+        """设置模型加载状态检查器
+        
+        Args:
+            ai_module: AIAssistantModule 实例，用于查询模型加载状态
+        """
+        from core.logger import get_logger
+        from PyQt6.QtCore import QTimer
+        logger = get_logger(__name__)
+        
+        self.model_status_checker = ai_module
+        logger.info("模型状态检查器已设置")
+        
+        # 立即检查模型状态
+        self._check_model_status()
+        
+        # 如果模型正在加载，启动定时器定期检查
+        if ai_module.is_model_loading():
+            if not self._model_check_timer:
+                self._model_check_timer = QTimer(self)
+                self._model_check_timer.timeout.connect(self._check_model_status)
+                self._model_check_timer.start(500)  # 每500ms检查一次
+                logger.info("已启动模型加载状态检查定时器")
+        elif ai_module.is_model_loaded() and not self._intent_question_sent:
+            # 如果模型已加载完成且未发送询问消息，延迟500ms后发送
+            QTimer.singleShot(500, self._send_intent_question)
+            logger.info("模型已加载，将自动发送询问意图消息")
+    
+    def _check_model_status(self):
+        """检查模型加载状态并更新UI"""
+        from core.logger import get_logger
+        logger = get_logger(__name__)
+        
+        if not self.model_status_checker:
+            return
+        
+        is_loading = self.model_status_checker.is_model_loading()
+        is_loaded = self.model_status_checker.is_model_loaded()
+        progress = self.model_status_checker.get_model_load_progress()
+        
+        if is_loading and not self._model_loading_displayed:
+            # 首次检测到正在加载，显示提示
+            self._show_model_loading_message(progress)
+            self._model_loading_displayed = True
+            # 禁用输入框
+            if hasattr(self, 'input_area') and hasattr(self.input_area, 'input_field'):
+                self.input_area.input_field.setPlaceholderText("模型加载中，请稍候...")
+                self.input_area.input_field.lock()  # 锁定输入框
+                self.input_area.send_button.setEnabled(False)  # 禁用发送按钮
+            logger.info(f"模型正在加载: {progress}")
+        
+        elif not is_loading and is_loaded and self._model_loading_displayed:
+            # 加载完成
+            self._show_model_loaded_message(progress)
+            # 启用输入框
+            if hasattr(self, 'input_area') and hasattr(self.input_area, 'input_field'):
+                self.input_area.input_field.setPlaceholderText("输入消息...")
+                self.input_area.input_field.unlock()  # 解锁输入框
+                self.input_area.send_button.setEnabled(True)  # 启用发送按钮
+            # 停止定时器
+            if self._model_check_timer:
+                self._model_check_timer.stop()
+                self._model_check_timer = None
+            logger.info(f"模型加载完成: {progress}")
+        
+        elif is_loading:
+            # 更新加载进度
+            self._update_loading_progress(progress)
+    
+    def _show_model_loading_message(self, progress: str):
+        """显示模型加载中的提示消息"""
+        message = f"⏳ AI 模型正在后台加载中...\n\n{progress}\n\n请稍等片刻，加载完成后即可开始对话"
+        self.add_message(message, is_user=False, is_system=True)
+    
+    def _show_model_loaded_message(self, progress: str):
+        """显示模型加载完成的提示消息"""
+        message = f"✅ {progress}\n\n现在可以开始对话了！"
+        self.add_message(message, is_user=False, is_system=True)
+        
+        # 延迟1秒后发送询问意图的消息
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(1000, self._send_intent_question)
+    
+    def _update_loading_progress(self, progress: str):
+        """更新加载进度（可选：更新最后一条消息）"""
+        # 暂时不实现动态更新，避免刷屏
+        pass
+    
+    def _send_intent_question(self):
+        """自动发送询问用户意图的消息"""
+        from core.logger import get_logger
+        logger = get_logger(__name__)
+        
+        # 检查是否已发送过询问消息
+        if self._intent_question_sent:
+            logger.info("询问意图消息已发送过，跳过")
+            return
+        
+        # 发送询问消息
+        intent_message = (
+            "👋 你好！我是虚幻引擎工具箱的 AI 助手。\n\n"
+            "我可以帮你：\n"
+            "1. 🔍 **查找和管理工具箱中的资产**\n"
+            "   - 查询、筛选、导出资产\n"
+            "   - 了解资产详细信息\n\n"
+            "2. 💡 **解答虚幻引擎相关问题**\n"
+            "   - UE 开发技巧和最佳实践\n"
+            "   - 蓝图、C++、材质等相关问题\n"
+            "   - 项目配置和优化建议\n\n"
+            "请告诉我你需要什么帮助？"
+        )
+        
+        self.add_message(intent_message, is_user=False, is_system=False)
+        self._intent_question_sent = True
+        logger.info("已自动发送询问意图消息")
+    
     def _init_context_manager(self, logger):
         """初始化上下文管理器（内部方法）
         
@@ -164,9 +286,9 @@ class ChatWindow(QWidget):
         # 添加到主布局
         main_layout.addWidget(self.chat_widget, 1)
         
-        # 延迟500ms后自动发送欢迎消息
-        from PyQt6.QtCore import QTimer
-        QTimer.singleShot(500, self.send_auto_greeting)
+        # 移除自动发送欢迎消息（用户反馈不需要）
+        # from PyQt6.QtCore import QTimer
+        # QTimer.singleShot(500, self.send_auto_greeting)
     
     def create_chat_area(self):
         """创建聊天区域"""
@@ -281,9 +403,18 @@ class ChatWindow(QWidget):
                     return True
         return super().eventFilter(obj, event)
     
-    def add_message(self, message, is_user=False):
-        """添加 Markdown 消息"""
-        role = "user" if is_user else "assistant"
+    def add_message(self, message, is_user=False, is_system=False):
+        """添加 Markdown 消息
+        
+        Args:
+            message: 消息内容
+            is_user: 是否为用户消息
+            is_system: 是否为系统消息（加载提示等）
+        """
+        if is_system:
+            role = "system"
+        else:
+            role = "user" if is_user else "assistant"
         markdown_msg = MarkdownMessage(role, message, theme=self.current_theme)
         self.messages_layout.insertWidget(
             self.messages_layout.count() - 1,

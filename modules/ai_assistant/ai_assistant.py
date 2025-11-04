@@ -48,6 +48,11 @@ class AIAssistantModule:
         self.tools_registry: Optional[ToolsRegistry] = None
         self.action_engine: Optional[ActionEngine] = None
         
+        # 模型加载状态标志（供UI查询）
+        self._model_loading = False
+        self._model_loaded = False
+        self._model_load_progress = ""  # 加载进度描述
+        
         status = "（包含运行态上下文 + 工具系统）" if V01_V02_AVAILABLE else "（v0.1/v0.2 功能不可用）"
         logger.info(f"AIAssistantModule 初始化{status}")
     
@@ -75,11 +80,16 @@ class AIAssistantModule:
         优化策略：
         1. 立即加载最关键的语义模型（IntentEngine）
         2. 记录加载耗时
-        3. 失败时优雅降级
+        3. 更新加载状态供UI查询
+        4. 失败时优雅降级
         """
         if not V01_V02_AVAILABLE:
             logger.info("v0.1/v0.2 功能不可用，跳过模型预加载")
+            self._model_loaded = True  # 标记为已完成（降级模式）
             return
+        
+        self._model_loading = True
+        self._model_load_progress = "准备加载模型..."
         
         def preload_task():
             try:
@@ -87,12 +97,26 @@ class AIAssistantModule:
                 import time
                 start_time = time.time()
                 
-                # 设置 HuggingFace 镜像（如果未设置）
+                # 清除代理设置，直接连接（避免代理问题）
+                proxy_backup = {}
+                for key in ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'ALL_PROXY', 'all_proxy']:
+                    if key in os.environ:
+                        proxy_backup[key] = os.environ[key]
+                        del os.environ[key]
+                        logger.info(f"已临时清除代理设置: {key}")
+                
+                # 设置 HuggingFace 离线模式（优先使用本地缓存，不联网）
+                os.environ["HF_HUB_OFFLINE"] = "1"
+                os.environ["TRANSFORMERS_OFFLINE"] = "1"
+                logger.info("已启用 HuggingFace 离线模式（使用本地缓存）")
+                
+                # 设置 HuggingFace 镜像（如果未设置，作为备用）
                 if "HF_ENDPOINT" not in os.environ:
                     os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
                     logger.info("已设置 HuggingFace 镜像: https://hf-mirror.com")
                 
                 logger.info("🚀 开始后台预加载 AI 模型...")
+                self._model_load_progress = "正在加载语义模型..."
                 
                 # 1. 预加载语义模型（这是最耗时的，约 2-5 秒）
                 model_start = time.time()
@@ -101,6 +125,7 @@ class AIAssistantModule:
                 temp_engine.parse("预热测试")  # 触发延迟加载
                 model_elapsed = time.time() - model_start
                 logger.info(f"✅ 语义模型加载完成（耗时 {model_elapsed:.1f} 秒）")
+                self._model_load_progress = "语义模型加载完成，正在预热向量数据库..."
                 
                 # 2. 预热 ChromaDB（触发 ONNX 模型下载，约 1-2 秒）
                 try:
@@ -114,11 +139,61 @@ class AIAssistantModule:
                 except Exception as e:
                     logger.warning(f"ChromaDB 预热失败（首次查询时会自动初始化）: {e}")
                 
+                # 所有模型加载完成后，恢复代理设置和在线模式
+                for key, value in proxy_backup.items():
+                    os.environ[key] = value
+                    logger.info(f"已恢复代理设置: {key}")
+                
+                # 恢复在线模式（但保留本地缓存优先）
+                if "HF_HUB_OFFLINE" in os.environ:
+                    del os.environ["HF_HUB_OFFLINE"]
+                if "TRANSFORMERS_OFFLINE" in os.environ:
+                    del os.environ["TRANSFORMERS_OFFLINE"]
+                
                 total_elapsed = time.time() - start_time
                 logger.info(f"🎉 所有 AI 模型预加载完成！总耗时: {total_elapsed:.1f} 秒")
                 
+                # 标记加载完成
+                self._model_loading = False
+                self._model_loaded = True
+                self._model_load_progress = f"模型加载完成（耗时 {total_elapsed:.1f} 秒）"
+                
             except Exception as e:
-                logger.warning(f"⚠️ 预加载模型失败（首次提问时会自动加载）: {e}", exc_info=True)
+                logger.warning(f"⚠️ 预加载模型失败: {e}", exc_info=True)
+                self._model_loading = False
+                self._model_loaded = False
+                
+                # 检查是否为网络/代理问题
+                error_str = str(e)
+                if "proxy" in error_str.lower() or "connection" in error_str.lower() or "timeout" in error_str.lower():
+                    self._model_load_progress = "⚠️ 模型下载失败（网络问题），已跳过语义分析功能"
+                    # 在主线程显示提示对话框
+                    try:
+                        from PyQt6.QtCore import QTimer
+                        from PyQt6.QtWidgets import QMessageBox
+                        
+                        def show_warning():
+                            try:
+                                msg = QMessageBox()
+                                msg.setIcon(QMessageBox.Icon.Warning)
+                                msg.setWindowTitle("模型加载提示")
+                                msg.setText("语义模型下载失败")
+                                msg.setInformativeText(
+                                    "由于网络问题，AI语义分析模型无法下载。\n\n"
+                                    "程序将使用基础规则匹配模式运行，功能不受影响。\n\n"
+                                    "如需完整功能，请检查网络连接后重启程序。"
+                                )
+                                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                                msg.exec()
+                            except Exception as msg_error:
+                                logger.warning(f"显示消息框失败: {msg_error}")
+                        
+                        # 使用QTimer在主线程中执行（延迟200ms确保主窗口已加载）
+                        QTimer.singleShot(200, show_warning)
+                    except Exception as dialog_error:
+                        logger.warning(f"创建提示对话框失败: {dialog_error}")
+                else:
+                    self._model_load_progress = "模型预加载失败，首次提问时会自动加载"
         
         # 在后台线程运行
         thread = threading.Thread(target=preload_task, daemon=True, name="EmbeddingPreload")
@@ -182,6 +257,30 @@ class AIAssistantModule:
         """
         return self.runtime_context
     
+    def is_model_loading(self) -> bool:
+        """检查模型是否正在加载
+        
+        Returns:
+            bool: True表示正在加载中
+        """
+        return self._model_loading
+    
+    def is_model_loaded(self) -> bool:
+        """检查模型是否已加载完成
+        
+        Returns:
+            bool: True表示已加载完成
+        """
+        return self._model_loaded
+    
+    def get_model_load_progress(self) -> str:
+        """获取模型加载进度描述
+        
+        Returns:
+            str: 进度描述文本
+        """
+        return self._model_load_progress
+    
     def get_widget(self) -> QWidget:
         """获取模块的UI组件
         
@@ -212,6 +311,11 @@ class AIAssistantModule:
                 if hasattr(self.chat_window, 'set_tools_system'):
                     self.chat_window.set_tools_system(self.tools_registry, self.action_engine)
                     logger.info("工具系统已传递给 ChatWindow")
+            
+            # 传递模型加载状态查询接口
+            if hasattr(self.chat_window, 'set_model_status_checker'):
+                self.chat_window.set_model_status_checker(self)
+                logger.info("模型状态查询接口已传递给 ChatWindow")
         else:
             logger.info("返回已存在的 AI 助手窗口实例")
         
