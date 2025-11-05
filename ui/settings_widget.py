@@ -1287,7 +1287,13 @@ class SettingsWidget(QWidget):
         """从配置加载 AI 助手设置"""
         try:
             from core.config.config_manager import ConfigManager
-            config_manager = ConfigManager("ai_assistant")
+            from pathlib import Path
+            
+            # 获取模板文件路径
+            template_path = Path(__file__).parent.parent / "modules" / "ai_assistant" / "config_template.json"
+            
+            # 创建 ConfigManager 并传入模板路径
+            config_manager = ConfigManager("ai_assistant", template_path=template_path)
             config = config_manager.get_module_config()
             
             # 加载 LLM 供应商
@@ -1323,7 +1329,13 @@ class SettingsWidget(QWidget):
         """保存 AI 助手设置"""
         try:
             from core.config.config_manager import ConfigManager
-            config_manager = ConfigManager("ai_assistant")
+            from pathlib import Path
+            
+            # 获取模板文件路径
+            template_path = Path(__file__).parent.parent / "modules" / "ai_assistant" / "config_template.json"
+            
+            # 创建 ConfigManager 并传入模板路径
+            config_manager = ConfigManager("ai_assistant", template_path=template_path)
             
             # 获取当前配置
             config = config_manager.get_module_config()

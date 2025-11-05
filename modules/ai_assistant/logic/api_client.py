@@ -52,7 +52,12 @@ class APIClient(QThread):
         """从配置文件加载 AI 助手配置"""
         try:
             from core.config.config_manager import ConfigManager
-            config_manager = ConfigManager("ai_assistant")
+            
+            # 获取模板文件路径
+            template_path = Path(__file__).parent.parent / "config_template.json"
+            
+            # 创建 ConfigManager 并传入模板路径
+            config_manager = ConfigManager("ai_assistant", template_path=template_path)
             config = config_manager.get_module_config()
             print(f"[CONFIG] AI 助手配置加载成功，供应商: {config.get('llm_provider', 'unknown')}")
             return config
