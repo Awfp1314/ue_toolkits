@@ -16,6 +16,28 @@ from core.ai_services import EmbeddingService
 logger = get_logger(__name__)
 
 
+class BGEEmbeddingFunctionForMemory:
+    """
+    适配 ChromaDB 的嵌入函数包装器（记忆专用）
+    避免循环导入 local_retriever
+    """
+    
+    def __init__(self, embedding_service):
+        self.embedding_service = embedding_service
+    
+    def __call__(self, input: List[str]) -> List[List[float]]:
+        """ChromaDB 要求的接口"""
+        embeddings = self.embedding_service.encode_text(input, convert_to_numpy=False)
+        
+        if embeddings is None:
+            dimension = self.embedding_service.get_embedding_dimension() or 384
+            return [[0.0] * dimension for _ in input]
+        
+        if hasattr(embeddings, 'tolist'):
+            return embeddings.tolist()
+        return list(embeddings)
+
+
 class MemoryLevel:
     """记忆级别枚举"""
     USER = "user"           # 用户级（跨会话持久化）
@@ -96,11 +118,12 @@ class EnhancedMemoryManager:
     
     def _init_memory_collection(self):
         """初始化 ChromaDB 记忆集合"""
+        if self.db_client is None:
+            return
+        
         try:
-            from modules.ai_assistant.logic.local_retriever import BGEEmbeddingFunction
-            
-            # 创建嵌入函数包装器
-            embedding_func = BGEEmbeddingFunction(self.embedding_service)
+            # 创建嵌入函数包装器（使用本地定义的类，避免循环依赖）
+            embedding_func = BGEEmbeddingFunctionForMemory(self.embedding_service)
             
             # 获取或创建记忆集合
             self._memory_collection = self.db_client.get_or_create_collection(

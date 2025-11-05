@@ -7,9 +7,6 @@
 
 from typing import Optional, Union, List
 import numpy as np
-from core.logger import get_logger
-
-logger = get_logger(__name__)
 
 
 class EmbeddingService:
@@ -91,7 +88,7 @@ class EmbeddingService:
         embedder = self.get_embedder()
         
         if embedder is None:
-            logger.error("嵌入模型未加载，无法编码文本")
+            # logger.error("嵌入模型未加载，无法编码文本")
             return None
         
         try:
@@ -103,7 +100,7 @@ class EmbeddingService:
             return embeddings
         
         except Exception as e:
-            logger.error(f"文本编码失败: {e}", exc_info=True)
+            # logger.error(f"文本编码失败: {e}", exc_info=True)
             return None
     
     def encode_batch(
@@ -126,7 +123,7 @@ class EmbeddingService:
         embedder = self.get_embedder()
         
         if embedder is None:
-            logger.error("嵌入模型未加载，无法批量编码")
+            # logger.error("嵌入模型未加载，无法批量编码")
             return None
         
         try:
@@ -139,7 +136,7 @@ class EmbeddingService:
             return embeddings
         
         except Exception as e:
-            logger.error(f"批量编码失败: {e}", exc_info=True)
+            # logger.error(f"批量编码失败: {e}", exc_info=True)
             return None
     
     def _load_model(self):
@@ -156,16 +153,16 @@ class EmbeddingService:
             EmbeddingService._model_loaded = True
             
             try:
-                logger.info(f"开始加载语义模型: {self._model_name}...")
+                print(f"[EmbeddingService] Loading model: {self._model_name}...", flush=True)
                 from sentence_transformers import SentenceTransformer
                 
                 EmbeddingService._embedder = SentenceTransformer(self._model_name)
                 
-                logger.info(f"✅ 语义模型加载成功: {self._model_name}")
-                logger.info(f"   向量维度: {EmbeddingService._embedder.get_sentence_embedding_dimension()}")
+                print(f"[EmbeddingService] Model loaded: {self._model_name}", flush=True)
+                print(f"[EmbeddingService] Vector dimension: {EmbeddingService._embedder.get_sentence_embedding_dimension()}", flush=True)
                 
             except Exception as e:
-                logger.error(f"❌ 语义模型加载失败: {e}", exc_info=True)
+                print(f"[EmbeddingService] Model loading failed: {e}", flush=True)
                 EmbeddingService._embedder = None
     
     def is_loaded(self) -> bool:
@@ -192,7 +189,7 @@ class EmbeddingService:
         try:
             return embedder.get_sentence_embedding_dimension()
         except Exception as e:
-            logger.error(f"获取向量维度失败: {e}")
+            # logger.error(f"获取向量维度失败: {e}")
             return None
     
     @classmethod
@@ -203,5 +200,5 @@ class EmbeddingService:
         cls._instance = None
         cls._embedder = None
         cls._model_loaded = False
-        logger.info("嵌入服务已重置")
+        # logger.info("嵌入服务已重置")
 
