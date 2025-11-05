@@ -327,9 +327,32 @@ class ChatWindow(QWidget):
                 logger.info("输入框已启用，用户可以开始对话")
         
         self.current_api_client.request_finished.connect(on_welcome_finished)
-        self.current_api_client.error_occurred.connect(
-            lambda err: logger.error(f"欢迎消息生成失败: {err}")
-        )
+        
+        # 错误处理（完整版：清理UI并解锁输入框）
+        def on_welcome_error(err):
+            logger.error(f"欢迎消息生成失败: {err}")
+            
+            # 移除思考动画气泡
+            if self.current_streaming_bubble:
+                self.messages_layout.removeWidget(self.current_streaming_bubble)
+                self.current_streaming_bubble.setParent(None)
+                self.current_streaming_bubble.deleteLater()
+                self.current_streaming_bubble = None
+            
+            # 显示错误提示
+            self.add_error_bubble(f"欢迎消息生成失败：{err}\n\n请检查网络连接或 AI 配置。")
+            
+            # 解锁输入框，允许用户手动开始对话
+            if hasattr(self, 'input_area') and hasattr(self.input_area, 'edit'):
+                self.input_area.edit.setPlaceholderText("输入消息...")
+                self.input_area.edit.unlock()
+                self.input_area._update_send_enabled()
+                self.input_field.setFocus()
+                logger.info("输入框已解锁（欢迎消息失败后）")
+            
+            self.current_api_client = None
+        
+        self.current_api_client.error_occurred.connect(on_welcome_error)
         
         # 启动API调用
         self.current_api_client.start()

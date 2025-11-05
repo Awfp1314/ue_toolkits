@@ -125,11 +125,18 @@ class LocalDocIndex:
             )
             
             # 获取或创建集合（使用自定义的 bge-small-zh-v1.5 嵌入函数）
-            self._collection = self._client.get_or_create_collection(
-                name="ue_toolkit_docs",
-                metadata={"description": "UE Toolkit local documentation index (bge-small-zh-v1.5)"},
-                embedding_function=self._embedding_function
-            )
+            try:
+                # 尝试获取现有集合
+                self._collection = self._client.get_collection(name="ue_toolkit_docs")
+                self.logger.info(f"使用现有 Chroma 集合: ue_toolkit_docs")
+            except:
+                # 如果不存在，创建新集合
+                self._collection = self._client.create_collection(
+                    name="ue_toolkit_docs",
+                    metadata={"description": "UE Toolkit local documentation index (bge-small-zh-v1.5)"},
+                    embedding_function=self._embedding_function
+                )
+                self.logger.info(f"创建新 Chroma 集合: ue_toolkit_docs")
             
             self.logger.info(f"Chroma 客户端初始化成功（使用 bge-small-zh-v1.5），文档数量: {self._collection.count()}")
             

@@ -134,11 +134,18 @@ class EnhancedMemoryManager:
             embedding_func = BGEEmbeddingFunctionForMemory(self.embedding_service)
             
             # 获取或创建记忆集合
-            self._memory_collection = self.db_client.get_or_create_collection(
-                name=f"user_memory_{self.user_id}",
-                metadata={"description": f"User memory for {self.user_id} (bge-small-zh-v1.5)"},
-                embedding_function=embedding_func
-            )
+            try:
+                # 尝试获取现有集合
+                self._memory_collection = self.db_client.get_collection(name=f"user_memory_{self.user_id}")
+                self.logger.info(f"使用现有记忆集合: user_memory_{self.user_id}")
+            except:
+                # 如果不存在，创建新集合
+                self._memory_collection = self.db_client.create_collection(
+                    name=f"user_memory_{self.user_id}",
+                    metadata={"description": f"User memory for {self.user_id} (bge-small-zh-v1.5)"},
+                    embedding_function=embedding_func
+                )
+                self.logger.info(f"创建新记忆集合: user_memory_{self.user_id}")
             
             self.logger.info(f"ChromaDB 记忆集合初始化成功，记忆数量: {self._memory_collection.count()}")
             
