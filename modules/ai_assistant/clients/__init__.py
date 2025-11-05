@@ -8,12 +8,14 @@ LLM 客户端模块
 from .base_llm_client import BaseLLMClient
 from .api_llm_client import ApiLLMClient
 from .ollama_llm_client import OllamaLLMClient
-from .llm_client_factory import create_llm_client
+from .llm_client_factory import create_llm_client, create_llm_client_from_config_manager
 
 __all__ = [
     'BaseLLMClient',
     'ApiLLMClient',
     'OllamaLLMClient',
-    'create_llm_client'
+    'create_llm_client',
+    'create_llm_client_from_config_manager'
 ]
+
 
