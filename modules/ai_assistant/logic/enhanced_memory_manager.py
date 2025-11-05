@@ -11,6 +11,7 @@ from pathlib import Path
 from datetime import datetime
 from collections import deque
 from core.logger import get_logger
+from core.ai_services import EmbeddingService
 
 logger = get_logger(__name__)
 
@@ -44,13 +45,16 @@ class EnhancedMemoryManager:
     - 持久化存储
     """
     
-    def __init__(self, user_id: str = "default", storage_dir: Optional[Path] = None, memory_compressor=None):
+    def __init__(self, user_id: str = "default", storage_dir: Optional[Path] = None, memory_compressor=None,
+                 embedding_service: Optional[EmbeddingService] = None, db_client=None):
         """初始化记忆管理器
         
         Args:
             user_id: 用户ID（用于用户级记忆）
             storage_dir: 存储目录（用于持久化）
             memory_compressor: 记忆压缩器实例（可选）
+            embedding_service: 嵌入服务实例（用于向量化）
+            db_client: ChromaDB 客户端实例（用于向量存储）
         """
         self.user_id = user_id
         self.logger = logger
@@ -76,10 +80,40 @@ class EnhancedMemoryManager:
         # 记忆压缩器
         self.memory_compressor = memory_compressor
         
+        # 向量检索支持
+        self.embedding_service = embedding_service or EmbeddingService()
+        self.db_client = db_client
+        self._memory_collection = None
+        
+        # 初始化 ChromaDB 集合（如果提供了 db_client）
+        if self.db_client is not None:
+            self._init_memory_collection()
+        
         # 加载持久化记忆
         self._load_user_memories()
         
-        self.logger.info(f"增强型记忆管理器初始化完成（用户: {user_id}，压缩器: {'已启用' if memory_compressor else '未启用'}）")
+        self.logger.info(f"增强型记忆管理器初始化完成（用户: {user_id}，向量检索: {'已启用' if self.db_client else '未启用'}）")
+    
+    def _init_memory_collection(self):
+        """初始化 ChromaDB 记忆集合"""
+        try:
+            from modules.ai_assistant.logic.local_retriever import BGEEmbeddingFunction
+            
+            # 创建嵌入函数包装器
+            embedding_func = BGEEmbeddingFunction(self.embedding_service)
+            
+            # 获取或创建记忆集合
+            self._memory_collection = self.db_client.get_or_create_collection(
+                name=f"user_memory_{self.user_id}",
+                metadata={"description": f"User memory for {self.user_id} (bge-small-zh-v1.5)"},
+                embedding_function=embedding_func
+            )
+            
+            self.logger.info(f"ChromaDB 记忆集合初始化成功，记忆数量: {self._memory_collection.count()}")
+            
+        except Exception as e:
+            self.logger.error(f"初始化 ChromaDB 记忆集合失败: {e}", exc_info=True)
+            self._memory_collection = None
     
     def add_memory(self, content: str, level: str = MemoryLevel.SESSION, 
                    metadata: Optional[Dict] = None, auto_evaluate: bool = True):
@@ -100,7 +134,37 @@ class EnhancedMemoryManager:
         # 根据级别添加到对应存储
         if level == MemoryLevel.USER:
             self.user_memories.append(memory)
-            self._save_user_memories()  # 持久化
+            self._save_user_memories()  # 持久化到 JSON（冷备份）
+            
+            # 同时存储到 ChromaDB 向量数据库
+            if self._memory_collection is not None:
+                try:
+                    # 生成唯一 ID
+                    memory_id = f"{self.user_id}_{memory.timestamp}_{hash(content) % 100000}"
+                    
+                    # 准备元数据
+                    chroma_metadata = {
+                        'timestamp': memory.timestamp,
+                        'importance': memory.importance,
+                        'level': level,
+                        'user_id': self.user_id
+                    }
+                    # 合并用户提供的元数据
+                    if metadata:
+                        chroma_metadata.update({k: str(v) for k, v in metadata.items()})
+                    
+                    # 存入 ChromaDB（会自动向量化）
+                    self._memory_collection.upsert(
+                        ids=[memory_id],
+                        documents=[content],
+                        metadatas=[chroma_metadata]
+                    )
+                    
+                    self.logger.debug(f"记忆已向量化并存入 ChromaDB: {memory_id}")
+                    
+                except Exception as e:
+                    self.logger.error(f"存储记忆到 ChromaDB 失败: {e}", exc_info=True)
+        
         elif level == MemoryLevel.SESSION:
             self.session_memories.append(memory)
         elif level == MemoryLevel.CONTEXT:
@@ -146,7 +210,7 @@ class EnhancedMemoryManager:
     
     def get_relevant_memories(self, query: str, limit: int = 5, 
                              min_importance: float = 0.3) -> List[str]:
-        """获取相关记忆（基于关键词匹配，可扩展为向量检索）
+        """获取相关记忆（基于向量语义检索）
         
         Args:
             query: 查询内容
@@ -156,57 +220,76 @@ class EnhancedMemoryManager:
         Returns:
             List[str]: 相关记忆列表
         """
-        all_memories = []
-        
-        # 合并所有级别的记忆
-        all_memories.extend([(m, 3.0) for m in self.user_memories])      # 用户级权重最高
-        all_memories.extend([(m, 2.0) for m in self.session_memories])   # 会话级次之
-        all_memories.extend([(m, 1.0) for m in self.context_buffer])     # 上下文级权重较低
-        
-        # 调试日志
         self.logger.info(f"[记忆检索] 查询: '{query[:50]}...'")
-        self.logger.info(f"[记忆检索] 总记忆数: {len(all_memories)} (用户级:{len(self.user_memories)}, 会话级:{len(self.session_memories)}, 上下文:{len(self.context_buffer)})")
         
-        # 简单的关键词匹配评分（可替换为向量相似度）
+        results = []
+        
+        # 1. 从 ChromaDB 向量检索用户级记忆（语义相似度）
+        if self._memory_collection is not None:
+            try:
+                # 使用向量相似度搜索
+                search_results = self._memory_collection.query(
+                    query_texts=[query],
+                    n_results=min(limit, 10),  # 多取一些备选
+                    where={"user_id": self.user_id}  # 过滤当前用户
+                )
+                
+                if search_results['documents'] and len(search_results['documents']) > 0:
+                    for i, content in enumerate(search_results['documents'][0]):
+                        metadata = search_results['metadatas'][0][i] if search_results['metadatas'] else {}
+                        distance = search_results['distances'][0][i] if search_results['distances'] else 1.0
+                        importance = float(metadata.get('importance', 0.5))
+                        
+                        # 过滤低重要性记忆
+                        if importance < min_importance:
+                            continue
+                        
+                        # 向量相似度得分（距离越小越相似）
+                        similarity_score = 1.0 - distance
+                        
+                        results.append((content, similarity_score, 'vector_user'))
+                        
+                    self.logger.info(f"从 ChromaDB 检索到 {len(results)} 条用户级记忆")
+            
+            except Exception as e:
+                self.logger.error(f"ChromaDB 向量检索失败: {e}", exc_info=True)
+        
+        # 2. 从会话级和上下文级记忆中检索（关键词匹配作为补充）
         query_lower = query.lower()
-        scored_memories = []
+        query_words = [w for w in query_lower.split() if len(w) > 1]
         
-        for memory, level_weight in all_memories:
+        # 会话级记忆
+        for memory in self.session_memories:
             if memory.importance < min_importance:
                 continue
             
-            # 简单评分：关键词匹配 + 重要性 + 级别权重
-            relevance_score = 0
             content_lower = memory.content.lower()
-            
-            # 关键词匹配（主要评分依据）
-            query_words = [w for w in query_lower.split() if len(w) > 1]  # 过滤单字符
             matches = sum(1 for word in query_words if word in content_lower)
             
-            # 如果完全没有关键词匹配，直接跳过（避免不相关记忆）
-            if matches == 0 and len(query_words) > 0:
-                continue
-            
-            relevance_score += matches * 1.0  # 关键词匹配是主要依据
-            
-            # 重要性加分
-            relevance_score += memory.importance * 0.3
-            
-            # 级别权重（用户级 > 会话级 > 上下文级）
-            relevance_score += level_weight * 0.2
-            
-            if relevance_score > 0:
-                scored_memories.append((memory, relevance_score))
+            if matches > 0:
+                score = matches * 0.5 + memory.importance * 0.3
+                results.append((memory.content, score, 'keyword_session'))
         
-        # 排序并返回
-        scored_memories.sort(key=lambda x: x[1], reverse=True)
+        # 上下文级记忆（最近对话）
+        for memory in list(self.context_buffer):
+            content_lower = memory.content.lower()
+            matches = sum(1 for word in query_words if word in content_lower)
+            
+            if matches > 0:
+                score = matches * 0.3 + memory.importance * 0.2
+                results.append((memory.content, score, 'keyword_context'))
         
-        # 调试：输出评分详情
-        self.logger.info(f"[记忆评分] 前{min(5, len(scored_memories))}条记忆评分:")
-        for i, (mem, score) in enumerate(scored_memories[:5], 1):
-            self.logger.info(f"  {i}. 评分:{score:.2f} | {mem.content[:60]}...")
+        # 3. 合并并排序结果
+        results.sort(key=lambda x: x[1], reverse=True)
         
-        return [m.content for m, _ in scored_memories[:limit]]
+        # 调试日志
+        self.logger.info(f"[记忆检索] 共找到 {len(results)} 条相关记忆")
+        self.logger.info(f"[记忆评分] 前 {min(5, len(results))} 条记忆:")
+        for i, (content, score, source) in enumerate(results[:5], 1):
+            self.logger.info(f"  {i}. [{source}] 评分:{score:.2f} | {content[:60]}...")
+        
+        # 返回前 N 条
+        return [content for content, score, source in results[:limit]]
     
     def get_recent_context(self, limit: int = 5) -> str:
         """获取最近的上下文（格式化为字符串）
