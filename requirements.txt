@@ -35,6 +35,9 @@ chromadb>=0.4.0
 # GitHub 代码搜索（GitHubConnector）
 PyGithub>=1.59.0
 
+# Ollama 本地模型支持（OllamaLLMClient）
+httpx>=0.24.0
+
 # ========== 开发依赖 ==========
 
 # 测试框架
