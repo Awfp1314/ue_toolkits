@@ -1228,20 +1228,22 @@ class SettingsWidget(QWidget):
         
         ollama_settings_layout.addLayout(ollama_url_layout)
         
-        # Ollama 模型名称
-        ollama_model_label = QLabel("模型名称：")
+        # Ollama 模型选择
+        ollama_model_label = QLabel("选择模型：")
         ollama_settings_layout.addWidget(ollama_model_label)
         
         ollama_model_layout = QHBoxLayout()
         ollama_model_layout.setSpacing(10)
         
-        self.ollama_model_input = NoContextMenuLineEdit()
-        self.ollama_model_input.setPlaceholderText("llama3")
-        self.ollama_model_input.setMaximumWidth(200)
-        ollama_model_layout.addWidget(self.ollama_model_input)
+        self.ollama_model_combo = QComboBox()
+        self.ollama_model_combo.setEditable(True)  # 允许手动输入
+        self.ollama_model_combo.setPlaceholderText("选择或输入模型名称...")
+        self.ollama_model_combo.setMaximumWidth(250)
+        ollama_model_layout.addWidget(self.ollama_model_combo)
         
-        refresh_models_btn = QPushButton("刷新模型列表")
-        refresh_models_btn.setFixedWidth(120)
+        refresh_models_btn = QPushButton("🔄 刷新")
+        refresh_models_btn.setFixedWidth(80)
+        refresh_models_btn.setToolTip("扫描 Ollama 中的可用模型")
         refresh_models_btn.clicked.connect(self._refresh_ollama_models)
         ollama_model_layout.addWidget(refresh_models_btn)
         ollama_model_layout.addStretch()
@@ -1319,7 +1321,18 @@ class SettingsWidget(QWidget):
             ollama_model = ollama_settings.get("model_name", "")
             
             self.ollama_url_input.setText(ollama_url if ollama_url else "http://localhost:11434")
-            self.ollama_model_input.setText(ollama_model if ollama_model else "llama3")
+            
+            # 设置模型选择（如果有保存的值，设置到下拉框）
+            if ollama_model:
+                # 检查下拉框中是否已有此模型
+                index = self.ollama_model_combo.findText(ollama_model)
+                if index >= 0:
+                    self.ollama_model_combo.setCurrentIndex(index)
+                else:
+                    # 如果没有，手动设置文本（因为是可编辑的）
+                    self.ollama_model_combo.setCurrentText(ollama_model)
+            else:
+                self.ollama_model_combo.setCurrentText("llama3")
             
             # 触发显示/隐藏逻辑
             self._on_llm_provider_changed(index)
@@ -1374,7 +1387,7 @@ class SettingsWidget(QWidget):
                 # 如果从未设置过，使用默认值
                 config["ollama_settings"]["base_url"] = "http://localhost:11434"
             
-            ollama_model = self.ollama_model_input.text().strip()
+            ollama_model = self.ollama_model_combo.currentText().strip()
             if ollama_model:  # 只有非空时才更新
                 config["ollama_settings"]["model_name"] = ollama_model
             elif "model_name" not in config["ollama_settings"]:
@@ -1408,7 +1421,7 @@ class SettingsWidget(QWidget):
             
             ollama_config = {
                 "base_url": self.ollama_url_input.text() or "http://localhost:11434",
-                "model_name": self.ollama_model_input.text() or "llama3"
+                "model_name": self.ollama_model_combo.currentText() or "llama3"
             }
             
             client = OllamaLLMClient(config=ollama_config)
@@ -1439,7 +1452,7 @@ class SettingsWidget(QWidget):
             logger.error(f"测试 Ollama 连接失败: {e}", exc_info=True)
     
     def _refresh_ollama_models(self):
-        """刷新 Ollama 可用模型列表"""
+        """刷新 Ollama 可用模型列表并更新下拉框"""
         try:
             from modules.ai_assistant.clients import OllamaLLMClient
             
@@ -1452,23 +1465,42 @@ class SettingsWidget(QWidget):
             models = client.list_available_models()
             
             if models:
+                # 保存当前选择
+                current_model = self.ollama_model_combo.currentText()
+                
+                # 清空并重新填充下拉框
+                self.ollama_model_combo.clear()
+                for model in models:
+                    self.ollama_model_combo.addItem(model)
+                
+                # 尝试恢复之前的选择
+                if current_model:
+                    index = self.ollama_model_combo.findText(current_model)
+                    if index >= 0:
+                        self.ollama_model_combo.setCurrentIndex(index)
+                    else:
+                        # 如果之前选择的模型不在列表中，设置为第一个
+                        self.ollama_model_combo.setCurrentIndex(0)
+                
                 model_list = "\n".join(f"  - {m}" for m in models)
-                self.ollama_status_label.setText(f"✅ 找到 {len(models)} 个模型：\n{model_list}")
+                self.ollama_status_label.setText(f"✅ 找到 {len(models)} 个模型")
                 self.ollama_status_label.setStyleSheet("color: green; font-size: 12px;")
                 
                 QMessageBox.information(
                     self,
-                    "可用模型",
-                    f"Ollama 中可用的模型：\n\n{model_list}\n\n请在【模型名称】中输入其中一个模型名。"
+                    "刷新成功",
+                    f"找到 {len(models)} 个可用模型：\n\n{model_list}\n\n已更新到下拉列表中，请选择一个。"
                 )
+                
+                logger.info(f"成功刷新 Ollama 模型列表：{len(models)} 个模型")
             else:
-                self.ollama_status_label.setText("⚠️ 未找到可用模型。请先下载模型：ollama pull llama3")
+                self.ollama_status_label.setText("⚠️ 未找到可用模型。请先下载：ollama pull llama3")
                 self.ollama_status_label.setStyleSheet("color: orange; font-size: 12px;")
                 
                 QMessageBox.warning(
                     self,
                     "无可用模型",
-                    "Ollama 中没有可用的模型。\n\n请先下载模型，例如：\n  ollama pull llama3\n  ollama pull mistral"
+                    "Ollama 中没有可用的模型。\n\n请先下载模型，例如：\n  ollama pull llama3\n  ollama pull mistral\n  ollama pull qwen:0.5b"
                 )
         
         except Exception as e:
