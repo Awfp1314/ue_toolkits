@@ -206,6 +206,10 @@ class SettingsWidget(QWidget):
         close_behavior_group.setLayout(close_behavior_layout)
         content_layout.addWidget(close_behavior_group)
         
+        # AI 助手设置组
+        ai_assistant_group = self._create_ai_assistant_settings()
+        content_layout.addWidget(ai_assistant_group)
+        
         content_layout.addStretch()
         
         # 设置内容容器的布局
@@ -1126,4 +1130,306 @@ class SettingsWidget(QWidget):
             
         except Exception as e:
             logger.error(f"加载关闭方式设置失败: {e}", exc_info=True)
+    
+    def _create_ai_assistant_settings(self) -> QGroupBox:
+        """创建 AI 助手设置组"""
+        ai_group = QGroupBox("AI 助手设置")
+        ai_layout = QVBoxLayout()
+        ai_layout.setSpacing(15)
+        
+        # LLM 供应商选择
+        provider_label = QLabel("LLM 供应商：")
+        ai_layout.addWidget(provider_label)
+        
+        provider_layout = QHBoxLayout()
+        provider_layout.setSpacing(10)
+        
+        self.llm_provider_combo = QComboBox()
+        self.llm_provider_combo.addItem("API（OpenAI 兼容）", "api")
+        self.llm_provider_combo.addItem("Ollama（本地模型）", "ollama")
+        self.llm_provider_combo.setMaximumWidth(250)
+        self.llm_provider_combo.currentIndexChanged.connect(self._on_llm_provider_changed)
+        provider_layout.addWidget(self.llm_provider_combo)
+        provider_layout.addStretch()
+        
+        ai_layout.addLayout(provider_layout)
+        
+        # API 设置区域（仅 API 模式可见）
+        self.api_settings_widget = QWidget()
+        api_settings_layout = QVBoxLayout()
+        api_settings_layout.setContentsMargins(20, 10, 0, 10)
+        api_settings_layout.setSpacing(10)
+        
+        # API Key
+        api_key_label = QLabel("API Key：")
+        api_settings_layout.addWidget(api_key_label)
+        
+        api_key_layout = QHBoxLayout()
+        api_key_layout.setSpacing(10)
+        
+        self.api_key_input = NoContextMenuLineEdit()
+        self.api_key_input.setPlaceholderText("输入你的 API Key...")
+        self.api_key_input.setEchoMode(NoContextMenuLineEdit.EchoMode.Password)
+        self.api_key_input.setMaximumWidth(400)
+        api_key_layout.addWidget(self.api_key_input)
+        
+        show_key_btn = QPushButton("👁")
+        show_key_btn.setFixedWidth(40)
+        show_key_btn.setCheckable(True)
+        show_key_btn.clicked.connect(lambda checked: 
+            self.api_key_input.setEchoMode(NoContextMenuLineEdit.EchoMode.Normal if checked 
+                                           else NoContextMenuLineEdit.EchoMode.Password))
+        api_key_layout.addWidget(show_key_btn)
+        api_key_layout.addStretch()
+        
+        api_settings_layout.addLayout(api_key_layout)
+        
+        # API URL
+        api_url_label = QLabel("API URL：")
+        api_settings_layout.addWidget(api_url_label)
+        
+        api_url_layout = QHBoxLayout()
+        api_url_layout.setSpacing(10)
+        
+        self.api_url_input = NoContextMenuLineEdit()
+        self.api_url_input.setPlaceholderText("https://api.openai-hk.com/v1/chat/completions")
+        self.api_url_input.setMaximumWidth(500)
+        api_url_layout.addWidget(self.api_url_input)
+        api_url_layout.addStretch()
+        
+        api_settings_layout.addLayout(api_url_layout)
+        
+        self.api_settings_widget.setLayout(api_settings_layout)
+        ai_layout.addWidget(self.api_settings_widget)
+        
+        # Ollama 设置区域（仅 Ollama 模式可见）
+        self.ollama_settings_widget = QWidget()
+        ollama_settings_layout = QVBoxLayout()
+        ollama_settings_layout.setContentsMargins(20, 10, 0, 10)
+        ollama_settings_layout.setSpacing(10)
+        
+        # Ollama URL
+        ollama_url_label = QLabel("Ollama 服务地址：")
+        ollama_settings_layout.addWidget(ollama_url_label)
+        
+        ollama_url_layout = QHBoxLayout()
+        ollama_url_layout.setSpacing(10)
+        
+        self.ollama_url_input = NoContextMenuLineEdit()
+        self.ollama_url_input.setPlaceholderText("http://localhost:11434")
+        self.ollama_url_input.setMaximumWidth(300)
+        ollama_url_layout.addWidget(self.ollama_url_input)
+        
+        test_ollama_btn = QPushButton("测试连接")
+        test_ollama_btn.setFixedWidth(100)
+        test_ollama_btn.clicked.connect(self._test_ollama_connection)
+        ollama_url_layout.addWidget(test_ollama_btn)
+        ollama_url_layout.addStretch()
+        
+        ollama_settings_layout.addLayout(ollama_url_layout)
+        
+        # Ollama 模型名称
+        ollama_model_label = QLabel("模型名称：")
+        ollama_settings_layout.addWidget(ollama_model_label)
+        
+        ollama_model_layout = QHBoxLayout()
+        ollama_model_layout.setSpacing(10)
+        
+        self.ollama_model_input = NoContextMenuLineEdit()
+        self.ollama_model_input.setPlaceholderText("llama3")
+        self.ollama_model_input.setMaximumWidth(200)
+        ollama_model_layout.addWidget(self.ollama_model_input)
+        
+        refresh_models_btn = QPushButton("刷新模型列表")
+        refresh_models_btn.setFixedWidth(120)
+        refresh_models_btn.clicked.connect(self._refresh_ollama_models)
+        ollama_model_layout.addWidget(refresh_models_btn)
+        ollama_model_layout.addStretch()
+        
+        ollama_settings_layout.addLayout(ollama_model_layout)
+        
+        # Ollama 状态提示
+        self.ollama_status_label = QLabel("")
+        self.ollama_status_label.setStyleSheet("font-size: 12px; padding-top: 5px;")
+        self.ollama_status_label.setWordWrap(True)
+        ollama_settings_layout.addWidget(self.ollama_status_label)
+        
+        self.ollama_settings_widget.setLayout(ollama_settings_layout)
+        ai_layout.addWidget(self.ollama_settings_widget)
+        
+        # 保存按钮
+        save_layout = QHBoxLayout()
+        save_layout.setSpacing(10)
+        
+        save_ai_btn = QPushButton("保存 AI 设置")
+        save_ai_btn.setFixedWidth(150)
+        save_ai_btn.clicked.connect(self._save_ai_assistant_settings)
+        save_layout.addWidget(save_ai_btn)
+        save_layout.addStretch()
+        
+        ai_layout.addLayout(save_layout)
+        
+        ai_group.setLayout(ai_layout)
+        
+        return ai_group
+    
+    def _on_llm_provider_changed(self, index):
+        """LLM 供应商切换时的处理"""
+        provider = self.llm_provider_combo.currentData()
+        
+        # 显示/隐藏对应的设置区域
+        self.api_settings_widget.setVisible(provider == "api")
+        self.ollama_settings_widget.setVisible(provider == "ollama")
+        
+        logger.info(f"LLM 供应商切换到: {provider}")
+    
+    def _load_ai_assistant_settings(self):
+        """从配置加载 AI 助手设置"""
+        try:
+            from core.config.config_manager import ConfigManager
+            config_manager = ConfigManager()
+            config = config_manager.get_module_config("ai_assistant")
+            
+            # 加载 LLM 供应商
+            provider = config.get("llm_provider", "api")
+            index = 0 if provider == "api" else 1
+            self.llm_provider_combo.setCurrentIndex(index)
+            
+            # 加载 API 设置
+            api_settings = config.get("api_settings", {})
+            self.api_key_input.setText(api_settings.get("api_key", ""))
+            self.api_url_input.setText(api_settings.get("api_url", "https://api.openai-hk.com/v1/chat/completions"))
+            
+            # 加载 Ollama 设置
+            ollama_settings = config.get("ollama_settings", {})
+            self.ollama_url_input.setText(ollama_settings.get("base_url", "http://localhost:11434"))
+            self.ollama_model_input.setText(ollama_settings.get("model_name", "llama3"))
+            
+            # 触发显示/隐藏逻辑
+            self._on_llm_provider_changed(index)
+            
+            logger.info(f"已加载 AI 助手设置（供应商: {provider}）")
+        
+        except Exception as e:
+            logger.error(f"加载 AI 助手设置失败: {e}", exc_info=True)
+    
+    def _save_ai_assistant_settings(self):
+        """保存 AI 助手设置"""
+        try:
+            from core.config.config_manager import ConfigManager
+            config_manager = ConfigManager()
+            
+            # 获取当前配置
+            config = config_manager.get_module_config("ai_assistant")
+            
+            # 更新配置
+            provider = self.llm_provider_combo.currentData()
+            config["llm_provider"] = provider
+            
+            # 更新 API 设置
+            if "api_settings" not in config:
+                config["api_settings"] = {}
+            config["api_settings"]["api_key"] = self.api_key_input.text()
+            config["api_settings"]["api_url"] = self.api_url_input.text()
+            
+            # 更新 Ollama 设置
+            if "ollama_settings" not in config:
+                config["ollama_settings"] = {}
+            config["ollama_settings"]["base_url"] = self.ollama_url_input.text()
+            config["ollama_settings"]["model_name"] = self.ollama_model_input.text()
+            
+            # 保存配置
+            config_manager.save_user_config("ai_assistant", config)
+            
+            # 提示用户
+            QMessageBox.information(
+                self,
+                "保存成功",
+                f"AI 助手设置已保存！\n\n当前供应商：{provider}\n\n新设置将在下次对话时生效。"
+            )
+            
+            logger.info(f"AI 助手设置已保存（供应商: {provider}）")
+        
+        except Exception as e:
+            logger.error(f"保存 AI 助手设置失败: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                "保存失败",
+                f"保存 AI 助手设置时出错：\n\n{str(e)}"
+            )
+    
+    def _test_ollama_connection(self):
+        """测试 Ollama 连接"""
+        try:
+            from modules.ai_assistant.clients import OllamaLLMClient
+            
+            ollama_config = {
+                "base_url": self.ollama_url_input.text() or "http://localhost:11434",
+                "model_name": self.ollama_model_input.text() or "llama3"
+            }
+            
+            client = OllamaLLMClient(config=ollama_config)
+            
+            # 检查服务状态
+            if client.check_ollama_status():
+                self.ollama_status_label.setText("✅ 连接成功！Ollama 服务正常运行。")
+                self.ollama_status_label.setStyleSheet("color: green; font-size: 12px;")
+                
+                QMessageBox.information(
+                    self,
+                    "连接成功",
+                    f"成功连接到 Ollama 服务！\n\n地址：{ollama_config['base_url']}"
+                )
+            else:
+                self.ollama_status_label.setText("❌ 连接失败。请确保 Ollama 已启动。")
+                self.ollama_status_label.setStyleSheet("color: red; font-size: 12px;")
+                
+                QMessageBox.warning(
+                    self,
+                    "连接失败",
+                    f"无法连接到 Ollama 服务。\n\n请检查：\n1. Ollama 是否已安装并启动\n2. 服务地址是否正确：{ollama_config['base_url']}"
+                )
+        
+        except Exception as e:
+            self.ollama_status_label.setText(f"❌ 测试失败：{str(e)}")
+            self.ollama_status_label.setStyleSheet("color: red; font-size: 12px;")
+            logger.error(f"测试 Ollama 连接失败: {e}", exc_info=True)
+    
+    def _refresh_ollama_models(self):
+        """刷新 Ollama 可用模型列表"""
+        try:
+            from modules.ai_assistant.clients import OllamaLLMClient
+            
+            ollama_config = {
+                "base_url": self.ollama_url_input.text() or "http://localhost:11434",
+                "model_name": "temp"
+            }
+            
+            client = OllamaLLMClient(config=ollama_config)
+            models = client.list_available_models()
+            
+            if models:
+                model_list = "\n".join(f"  - {m}" for m in models)
+                self.ollama_status_label.setText(f"✅ 找到 {len(models)} 个模型：\n{model_list}")
+                self.ollama_status_label.setStyleSheet("color: green; font-size: 12px;")
+                
+                QMessageBox.information(
+                    self,
+                    "可用模型",
+                    f"Ollama 中可用的模型：\n\n{model_list}\n\n请在"模型名称"中输入其中一个模型名。"
+                )
+            else:
+                self.ollama_status_label.setText("⚠️ 未找到可用模型。请先下载模型：ollama pull llama3")
+                self.ollama_status_label.setStyleSheet("color: orange; font-size: 12px;")
+                
+                QMessageBox.warning(
+                    self,
+                    "无可用模型",
+                    "Ollama 中没有可用的模型。\n\n请先下载模型，例如：\n  ollama pull llama3\n  ollama pull mistral"
+                )
+        
+        except Exception as e:
+            self.ollama_status_label.setText(f"❌ 刷新失败：{str(e)}")
+            self.ollama_status_label.setStyleSheet("color: red; font-size: 12px;")
+            logger.error(f"刷新 Ollama 模型列表失败: {e}", exc_info=True)
 
