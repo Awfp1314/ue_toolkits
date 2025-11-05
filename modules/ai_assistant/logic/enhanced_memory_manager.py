@@ -108,27 +108,34 @@ class EnhancedMemoryManager:
         
         self.logger.debug(f"添加记忆 [{level}]: {content[:50]}... (重要性: {memory.importance:.2f})")
     
-    def add_dialogue(self, user_query: str, assistant_response: str, 
+    def add_dialogue(self, user_query, assistant_response: str, 
                     auto_classify: bool = True):
         """添加对话到记忆
         
         Args:
-            user_query: 用户查询
+            user_query: 用户查询（字符串或列表）
             assistant_response: AI 回复
             auto_classify: 是否自动分类重要性并选择存储级别
         """
+        # 处理列表类型的 user_query
+        if isinstance(user_query, list):
+            # 提取所有文本内容
+            user_query_text = " ".join(str(item.get("text", item)) if isinstance(item, dict) else str(item) for item in user_query)
+        else:
+            user_query_text = str(user_query)
+        
         # 添加用户查询
         metadata_user = {'type': 'user_query'}
         level = MemoryLevel.CONTEXT  # 默认上下文级
         
         if auto_classify:
             # 智能判断是否值得长期保存
-            if self._is_important_query(user_query):
+            if self._is_important_query(user_query_text):
                 level = MemoryLevel.USER
                 metadata_user['tags'] = ['重要查询']
-                self.logger.info(f"[重要查询] 保存到用户级记忆: {user_query[:50]}...")
+                self.logger.info(f"[重要查询] 保存到用户级记忆: {user_query_text[:50]}...")
         
-        self.add_memory(f"用户: {user_query}", level, metadata_user)
+        self.add_memory(f"用户: {user_query_text}", level, metadata_user)
         
         # 添加 AI 回复（精简版）
         response_summary = assistant_response[:200] + "..." if len(assistant_response) > 200 else assistant_response
@@ -236,20 +243,39 @@ class EnhancedMemoryManager:
         if not self.user_memories:
             return ""
         
-        # 检索身份相关的记忆（关键词匹配）
-        identity_keywords = ['猫娘', '身份', '我是', '叫我', '角色', '人设', '喵']
+        # 检索身份相关的记忆（使用更精确的匹配规则）
+        # 只匹配明确的身份设定语句，避免匹配普通对话
+        identity_patterns = [
+            '从现在开始你是',
+            '从现在开始你不是', 
+            '你现在是',
+            '扮演猫娘',
+            '你是猫娘',
+            '不是猫娘了',
+            '恢复你的原来身份',
+            '你的身份是',
+            '你的角色是'
+        ]
         identity_memories = []
         
+        # 只检查用户级记忆（Memory类型）中标记为"用户相关信息"的记忆
         for memory in self.user_memories:
-            content_lower = memory.content.lower()
-            if any(keyword in content_lower for keyword in identity_keywords):
+            content = memory.content
+            # 必须同时满足：1) 包含"用户相关信息"或"用户偏好" 2) 包含身份设定短语
+            is_user_info = content.startswith("用户相关信息:") or content.startswith("用户偏好:")
+            has_identity_pattern = any(pattern in content for pattern in identity_patterns)
+            
+            if is_user_info and has_identity_pattern:
                 identity_memories.append(memory)
         
         if not identity_memories:
             return ""
         
-        # 返回最相关的身份记忆
-        return " | ".join([m.content for m in identity_memories[-2:]])  # 最近2条身份记忆
+        # 返回最新的身份记忆（按时间戳排序，只取最后一条）
+        # 避免返回多条矛盾的身份设定
+        identity_memories.sort(key=lambda m: m.timestamp)
+        latest_identity = identity_memories[-1].content
+        return latest_identity  # 只返回最新的1条身份记忆
     
     def get_user_profile(self) -> str:
         """获取用户画像（从用户级记忆中提取，排除身份信息）
@@ -353,18 +379,25 @@ class EnhancedMemoryManager:
         
         return min(1.0, max(0.0, score))
     
-    def _is_important_query(self, query: str) -> bool:
+    def _is_important_query(self, query) -> bool:
         """判断查询是否重要（值得长期保存）
         
         Args:
-            query: 查询内容
+            query: 查询内容（字符串或列表）
             
         Returns:
             bool: 是否重要
         """
+        # 处理列表类型（多部分消息）
+        if isinstance(query, list):
+            # 提取所有文本内容
+            query_text = " ".join(str(item.get("text", item)) if isinstance(item, dict) else str(item) for item in query)
+        else:
+            query_text = str(query)
+        
         # 包含特定关键词的查询视为重要
         important_indicators = ['怎么', '如何', '为什么', '配置', '设置', '问题', '错误']
-        query_lower = query.lower()
+        query_lower = query_text.lower()
         
         return any(indicator in query_lower for indicator in important_indicators)
     

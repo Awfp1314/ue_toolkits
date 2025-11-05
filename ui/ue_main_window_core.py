@@ -294,8 +294,13 @@ class UEMainWindow(QMainWindow):
         # 添加作者信息
         author_label = QLabel("作者：HUTAO")
         author_label.setObjectName("authorLabel")  # 设置对象名称以便样式表识别
-        author_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        author_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        author_label.setFixedHeight(30)  # 设置固定高度，防止溢出
+        author_label.setStyleSheet("background-color: transparent;")  # 确保背景透明
         left_layout.addWidget(author_label)
+        
+        # 添加底部间距，确保作者信息在侧边栏内
+        left_layout.addSpacing(10)
         
         parent_layout.addWidget(left_frame)
     

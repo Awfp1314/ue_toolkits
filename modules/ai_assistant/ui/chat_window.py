@@ -201,47 +201,38 @@ class ChatWindow(QWidget):
         progress = self.model_status_checker.get_model_load_progress()
         
         if is_loading and not self._model_loading_displayed:
-            # 首次检测到正在加载，显示提示
-            self._show_model_loading_message(progress)
+            # 首次检测到正在加载，不显示文字提示，只显示思考动画
             self._model_loading_displayed = True
+            # 创建思考动画气泡（加载动画不显示重新生成按钮）
+            self.add_streaming_bubble(show_regenerate=False)
             # 禁用输入框
-            if hasattr(self, 'input_area') and hasattr(self.input_area, 'input_field'):
-                self.input_area.input_field.setPlaceholderText("模型加载中，请稍候...")
-                self.input_area.input_field.lock()  # 锁定输入框
-                self.input_area.send_button.setEnabled(False)  # 禁用发送按钮
+            if hasattr(self, 'input_area') and hasattr(self.input_area, 'edit'):
+                self.input_area.edit.setPlaceholderText("模型加载中，请稍候...")
+                self.input_area.edit.lock()  # 锁定输入框
+                self.input_area.btn_send.setEnabled(False)  # 禁用发送按钮
             logger.info(f"模型正在加载: {progress}")
         
         elif not is_loading and is_loaded and self._model_loading_displayed:
-            # 加载完成
-            self._show_model_loaded_message(progress)
-            # 启用输入框
-            if hasattr(self, 'input_area') and hasattr(self.input_area, 'input_field'):
-                self.input_area.input_field.setPlaceholderText("输入消息...")
-                self.input_area.input_field.unlock()  # 解锁输入框
-                self.input_area.send_button.setEnabled(True)  # 启用发送按钮
+            # 加载完成，移除思考动画，直接生成AI欢迎消息
+            if self.current_streaming_bubble:
+                # 移除思考动画气泡
+                self.current_streaming_bubble.setParent(None)
+                self.current_streaming_bubble = None
+            # 不在这里启用输入框！等待AI欢迎消息完成后再启用
             # 停止定时器
             if self._model_check_timer:
                 self._model_check_timer.stop()
                 self._model_check_timer = None
             logger.info(f"模型加载完成: {progress}")
+            # 立即发送AI欢迎消息
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(100, self._send_intent_question)
         
         elif is_loading:
             # 更新加载进度
             self._update_loading_progress(progress)
     
-    def _show_model_loading_message(self, progress: str):
-        """显示模型加载中的提示消息"""
-        message = f"⏳ AI 模型正在后台加载中...\n\n{progress}\n\n请稍等片刻，加载完成后即可开始对话"
-        self.add_message(message, is_user=False, is_system=True)
-    
-    def _show_model_loaded_message(self, progress: str):
-        """显示模型加载完成的提示消息"""
-        message = f"✅ {progress}\n\n现在可以开始对话了！"
-        self.add_message(message, is_user=False, is_system=True)
-        
-        # 延迟1秒后发送询问意图的消息
-        from PyQt6.QtCore import QTimer
-        QTimer.singleShot(1000, self._send_intent_question)
+    # 已移除文字提示，改为直接显示思考动画
     
     def _update_loading_progress(self, progress: str):
         """更新加载进度（可选：更新最后一条消息）"""
@@ -249,9 +240,8 @@ class ChatWindow(QWidget):
         pass
     
     def _send_intent_question(self):
-        """自动发送询问用户意图的消息（使用流式输出动画）"""
+        """自动发送询问用户意图的消息（AI生成，每次不同）"""
         from core.logger import get_logger
-        from PyQt6.QtCore import QTimer
         logger = get_logger(__name__)
         
         # 检查是否已发送过询问消息
@@ -259,56 +249,84 @@ class ChatWindow(QWidget):
             logger.info("询问意图消息已发送过，跳过")
             return
         
-        # 完整的询问消息
-        intent_message = (
-            "👋 你好！我是**虚幻引擎资产管理工具箱**的 AI 助手。\n\n"
-            "📦 **这个工具箱是做什么的？**\n"
-            "帮你整理和管理虚幻引擎的资产、配置模板、文档和日志（不是UE项目本身哦）\n\n"
-            "我可以帮你：\n"
-            "1. 🔍 **使用工具箱管理资产**\n"
-            "   - 查询、筛选、导出工具箱中的资产\n"
-            "   - 了解资产详细信息和使用方法\n\n"
-            "2. 💡 **解答虚幻引擎开发问题**\n"
-            "   - UE 开发技巧和最佳实践\n"
-            "   - 蓝图、C++、材质等技术问题\n"
-            "   - 项目配置和优化建议\n\n"
-            "请告诉我你需要什么帮助？ 💬"
+        # 创建流式输出气泡（欢迎消息不显示重新生成按钮）
+        self.add_streaming_bubble(show_regenerate=False)
+        
+        # 构建精简的欢迎消息系统提示（减少token消耗）
+        base_prompt = "你是虚幻引擎资产管理工具箱的AI助手。"
+        
+        # 只获取最新的身份设定（使用 get_user_identity，避免重复搜索）
+        identity_info = ""
+        if self.context_manager and hasattr(self.context_manager, 'memory'):
+            try:
+                user_identity = self.context_manager.memory.get_user_identity()
+                if user_identity:
+                    identity_info = f"\n你的角色设定：{user_identity}"
+                    logger.info(f"欢迎消息使用身份设定: {user_identity[:50]}...")
+            except Exception as e:
+                logger.warning(f"获取身份记忆失败: {e}")
+        
+        # 精简的欢迎消息生成指令
+        welcome_instruction = (
+            "\n\n生成一个简短的欢迎消息（100字以内）：\n"
+            "1. 保持你的角色身份（如果有特殊设定）\n"
+            "2. 介绍工具箱功能：管理UE资产、配置、文档\n"
+            "3. 说明你可以帮助用户管理资产和解答UE问题\n"
+            "4. 询问用户需要什么帮助\n"
+            "5. 使用Emoji和Markdown格式\n\n"
+            "直接输出欢迎消息。"
         )
         
-        # 创建流式输出气泡
-        self.add_streaming_bubble()
+        # 组合精简的系统提示（大幅减少token）
+        full_system_prompt = base_prompt + identity_info + welcome_instruction
         
-        # 分段发送，模拟流式输出
-        # 将消息分成多个片段，每个片段逐步添加
-        chunks = []
-        chunk_size = 5  # 每次添加5个字符
-        for i in range(0, len(intent_message), chunk_size):
-            chunks.append(intent_message[i:i+chunk_size])
+        welcome_prompt = {
+            "role": "system",
+            "content": full_system_prompt
+        }
         
-        # 使用定时器逐段添加
-        self._streaming_index = 0
-        self._streaming_chunks = chunks
+        # 构建临时的消息历史（包含完整的系统提示）
+        temp_messages = [welcome_prompt, {"role": "user", "content": "请开始你的自我介绍"}]
         
-        def stream_next_chunk():
-            if self._streaming_index < len(self._streaming_chunks):
-                chunk = self._streaming_chunks[self._streaming_index]
-                if self.current_streaming_bubble:
-                    self.current_streaming_bubble.append_text(chunk)
-                self._streaming_index += 1
-                # 继续下一个片段（每20ms一个片段，模拟打字速度）
-                QTimer.singleShot(20, stream_next_chunk)
-            else:
-                # 流式输出完成，标记气泡为完成状态
-                if self.current_streaming_bubble:
-                    self.current_streaming_bubble.finish()
-                self.current_streaming_bubble = None
-                logger.info("询问意图消息流式输出完成")
+        # 创建API客户端并连接信号
+        from modules.ai_assistant.logic.api_client import APIClient
         
-        # 开始流式输出
-        stream_next_chunk()
+        self.current_api_client = APIClient(
+            messages=temp_messages,
+            model="gemini-2.5-flash",  # 使用快速模型
+            temperature=0.9  # 提高温度，增加创意性和多样性
+        )
+        
+        # 连接流式输出信号
+        self.current_api_client.chunk_received.connect(self.on_chunk_received)
+        
+        # 连接完成信号（欢迎消息完成后的处理）
+        def on_welcome_finished():
+            logger.info("欢迎消息生成完成")
+            if self.current_streaming_bubble:
+                self.current_streaming_bubble.finish()
+            self.current_streaming_bubble = None
+            self.current_api_client = None
+            
+            # 欢迎消息完成后，解锁输入框（发送按钮状态由内容决定）
+            if hasattr(self, 'input_area') and hasattr(self.input_area, 'edit'):
+                self.input_area.edit.setPlaceholderText("输入消息...")
+                self.input_area.edit.unlock()  # 解锁输入框
+                # 根据输入框内容更新发送按钮状态（空则禁用，有内容则启用）
+                self.input_area._update_send_enabled()
+                self.input_field.setFocus()  # 设置焦点到输入框
+                logger.info("输入框已启用，用户可以开始对话")
+        
+        self.current_api_client.request_finished.connect(on_welcome_finished)
+        self.current_api_client.error_occurred.connect(
+            lambda err: logger.error(f"欢迎消息生成失败: {err}")
+        )
+        
+        # 启动API调用
+        self.current_api_client.start()
         
         self._intent_question_sent = True
-        logger.info("已自动发送询问意图消息")
+        logger.info("已开始生成AI欢迎消息")
     
     def _init_context_manager(self, logger):
         """初始化上下文管理器（内部方法）
@@ -452,7 +470,7 @@ class ChatWindow(QWidget):
     def create_input_area(self):
         """创建底部输入区域（ChatGPT 风格）"""
         # 使用新的 ChatGPTComposer 组件
-        self.input_area = ChatGPTComposer()
+        self.input_area = ChatGPTComposer(attachments_enabled=True)
         self.input_area.submitted.connect(self.on_message_sent)
         self.input_area.submitted_detail.connect(self.on_message_with_images_sent)
         self.input_area.stop_requested.connect(self.stop_generation)
@@ -462,9 +480,17 @@ class ChatWindow(QWidget):
             lambda: self.position_input_area(self.chat_widget)
         )
         
-        # 保持兼容性（ChatGPTComposer 提供了这些属性）
-        self.input_field = self.input_area.input_field
-        self.send_button = self.input_area.send_button
+        # 保持兼容性
+        self.input_field = self.input_area.edit
+        self.send_button = self.input_area.btn_send
+        
+        # 刷新主题
+        self.input_area.refresh_theme(self.current_theme)
+        
+        # 初始状态为锁定（等待模型加载完成 + AI欢迎消息完成）
+        self.input_field.lock()
+        self.input_field.setPlaceholderText("模型加载中，请稍候...")
+        self.send_button.setEnabled(False)
         
         return self.input_area
     
@@ -473,7 +499,7 @@ class ChatWindow(QWidget):
         self.send_message()
     
     def on_message_with_images_sent(self, message, images):
-        """处理带图片的消息（images 是 base64 字符串列表）"""
+        """处理带图片的消息"""
         self.send_message_with_images(message, images)
     
     def eventFilter(self, obj, event):
@@ -537,11 +563,19 @@ class ChatWindow(QWidget):
             import traceback
             traceback.print_exc()
     
-    def add_streaming_bubble(self):
-        """添加流式输出 Markdown 消息"""
-        self.current_streaming_bubble = StreamingMarkdownMessage(theme=self.current_theme)
-        # 连接重新生成信号
-        self.current_streaming_bubble.regenerate_clicked.connect(self.on_regenerate_response)
+    def add_streaming_bubble(self, show_regenerate=True):
+        """添加流式输出 Markdown 消息
+        
+        Args:
+            show_regenerate: 是否显示重新生成按钮（默认True，欢迎消息设为False）
+        """
+        self.current_streaming_bubble = StreamingMarkdownMessage(
+            theme=self.current_theme, 
+            show_regenerate=show_regenerate
+        )
+        # 只在显示重新生成按钮时才连接信号
+        if show_regenerate:
+            self.current_streaming_bubble.regenerate_clicked.connect(self.on_regenerate_response)
         self.messages_layout.insertWidget(
             self.messages_layout.count() - 1,
             self.current_streaming_bubble
@@ -559,13 +593,18 @@ class ChatWindow(QWidget):
     
     def scroll_to_bottom(self):
         """滚动到底部"""
-        # 使用 QTimer 确保在主线程中更新
+        # 使用 QTimer 确保在控件渲染完成后滚动
+        # 立即滚动一次
         QTimer.singleShot(0, self._do_scroll)
+        # 再次滚动以确保布局更新后的位置正确
+        QTimer.singleShot(50, self._do_scroll)
+        QTimer.singleShot(100, self._do_scroll)
     
     def _do_scroll(self):
         """执行滚动"""
         try:
             scrollbar = self.scroll_area.verticalScrollBar()
+            # 强制滚动到最底部
             scrollbar.setValue(scrollbar.maximum())
         except:
             pass
@@ -583,6 +622,9 @@ class ChatWindow(QWidget):
             
             # 保存消息并清空输入框（切换为暂停按钮）
             self.input_area.save_and_clear_message()
+            
+            # 锁定输入框（阻止用户编辑，但不影响按钮事件）
+            self.input_field.lock()
             
             # 添加用户消息
             self.add_message(message, is_user=True)
@@ -638,31 +680,57 @@ class ChatWindow(QWidget):
             request_messages = []
             
             # 1. 添加系统提示词（包含身份信息）
-            if len(self.conversation_history) <= 1:  # 只有刚添加的用户消息
-                from modules.ai_assistant.logic.config import SYSTEM_PROMPT
-                
-                # 检查是否有用户身份设定
-                system_prompt = SYSTEM_PROMPT
-                if self.context_manager and hasattr(self.context_manager, 'memory'):
-                    user_identity = self.context_manager.memory.get_user_identity()
-                    if user_identity:
-                        # 将身份融入系统提示词
-                        system_prompt = f"""{SYSTEM_PROMPT}
+            # 每次对话都重新构建系统提示词，确保包含最新的身份设定
+            from modules.ai_assistant.logic.config import SYSTEM_PROMPT
+            
+            # 获取用户身份设定
+            system_prompt = SYSTEM_PROMPT
+            if self.context_manager and hasattr(self.context_manager, 'memory'):
+                user_identity = self.context_manager.memory.get_user_identity()
+                print(f"[DEBUG] [身份检查] get_user_identity() 返回: '{user_identity}'")
+                if user_identity:
+                    # 将身份融入系统提示词
+                    system_prompt = f"""{SYSTEM_PROMPT}
 
 ## 🎭 特殊角色设定
 {user_identity}
 
 ⚠️ 重要：请始终保持这个身份设定，在每次回答中都要展现这个角色特征。"""
-                        print(f"[DEBUG] [身份设定] 已融入系统提示词: {user_identity[:50]}...")
-                
-                request_messages.append({
-                    "role": "system",
-                    "content": system_prompt
-                })
-                print(f"[DEBUG] [第一次对话] 已添加系统提示词")
+                    print(f"[DEBUG] [身份设定] 已融入系统提示词: {user_identity[:50]}...")
+                else:
+                    print(f"[WARNING] [身份设定] get_user_identity() 返回空值，未添加身份设定")
             
-            # 2. 添加历史对话（已压缩）
-            request_messages.extend(self.conversation_history.copy())
+            # 创建系统消息
+            system_msg = {
+                "role": "system",
+                "content": system_prompt
+            }
+            
+            # 添加到请求消息
+            request_messages.append(system_msg)
+            
+            # 检查并更新历史记录中的系统提示词
+            has_system_in_history = (
+                len(self.conversation_history) > 0 and 
+                self.conversation_history[0].get("role") == "system"
+            )
+            
+            if has_system_in_history:
+                # 更新历史中的系统提示词（确保包含最新身份设定）
+                self.conversation_history[0] = system_msg
+                print(f"[DEBUG] [系统提示词] 已更新历史中的系统提示词")
+            else:
+                # 添加到历史记录的开头
+                if len(self.conversation_history) > 0:
+                    self.conversation_history.insert(0, system_msg)
+                else:
+                    self.conversation_history.append(system_msg)
+                print(f"[DEBUG] [系统提示词] 已创建并保存系统提示词到历史")
+            
+            # 2. 添加历史对话（已压缩，跳过系统提示词因为已经添加了）
+            for msg in self.conversation_history:
+                if msg.get("role") != "system":  # 跳过系统提示词，避免重复
+                    request_messages.append(msg)
             
             # 3. 如果有上下文信息，插入到最后一条用户消息之前
             if context_message:
@@ -704,6 +772,7 @@ class ChatWindow(QWidget):
             import traceback
             traceback.print_exc()
             # 恢复输入框状态
+            self.input_field.unlock()
             self.input_area.set_generating(False)
     
     def send_message_with_images(self, message, images):
@@ -713,6 +782,9 @@ class ChatWindow(QWidget):
             
             # 保存消息并清空输入框（切换为暂停按钮）
             self.input_area.save_and_clear_message()
+            
+            # 锁定输入框（阻止用户编辑，但不影响按钮事件）
+            self.input_field.lock()
             
             # 添加用户消息（暂时只显示文本，后续可以优化显示图片）
             display_message = message if message else "[图片]"
@@ -759,6 +831,7 @@ class ChatWindow(QWidget):
             import traceback
             traceback.print_exc()
             # 恢复输入框状态
+            self.input_field.unlock()
             self.input_area.set_generating(False)
     
     def on_chunk_received(self, chunk):
@@ -766,13 +839,16 @@ class ChatWindow(QWidget):
         try:
             # 使用 repr 避免 Unicode 编码错误
             try:
-                print(f"[DEBUG] 收到数据块: {chunk[:20]}...")
+                print(f"[STREAM] 收到数据块: {chunk[:20]}... (长度: {len(chunk)})")
             except UnicodeEncodeError:
                 pass  # 忽略 print 的编码错误
             
             if self.current_streaming_bubble:
+                print(f"[STREAM] 正在追加到流式气泡...")
                 self.current_streaming_bubble.append_text(chunk)
                 self.scroll_to_bottom()
+            else:
+                print(f"[WARNING] 流式气泡为空，无法追加文本！")
         except Exception as e:
             try:
                 print(f"[ERROR] 处理数据块时出错: {e}")
@@ -811,9 +887,19 @@ class ChatWindow(QWidget):
                         user_message = ""
                         for msg in reversed(self.conversation_history):
                             if msg.get("role") == "user":
-                                user_message = msg.get("content", "")
+                                content = msg.get("content", "")
+                                # 处理多模态消息（list 类型）
+                                if isinstance(content, list):
+                                    # 提取文本部分
+                                    text_parts = []
+                                    for item in content:
+                                        if isinstance(item, dict) and item.get("type") == "text":
+                                            text_parts.append(item.get("text", ""))
+                                    user_message = " ".join(text_parts)
+                                else:
+                                    user_message = content
                                 # 确保不包含上下文信息（只保存用户原始输入）
-                                if "[当前查询的上下文信息]" in user_message:
+                                if isinstance(user_message, str) and "[当前查询的上下文信息]" in user_message:
                                     # 如果包含上下文，提取用户原始消息
                                     user_message = user_message.split("[当前查询的上下文信息]")[0].strip()
                                 break
@@ -847,8 +933,13 @@ class ChatWindow(QWidget):
                                 import traceback
                                 traceback.print_exc()
             
-            # 解锁输入框并恢复发送按钮状态
+            # 解锁输入框
+            print("[DEBUG] 开始解锁输入框...")
+            self.input_field.unlock()
+            # 恢复发送按钮状态（从暂停切换回发送）
+            print("[DEBUG] 调用 set_generating(False)...")
             self.input_area.set_generating(False)
+            print("[DEBUG] 输入框已解锁，按钮状态已恢复")
             self.input_field.setFocus()
             
             # 清理
@@ -858,6 +949,12 @@ class ChatWindow(QWidget):
             print(f"[ERROR] 请求完成处理时出错: {e}")
             import traceback
             traceback.print_exc()
+            # 确保即使异常也要解锁输入框
+            try:
+                self.input_field.unlock()
+                self.input_area.set_generating(False)
+            except:
+                pass
     
     def on_error_occurred(self, error_message):
         """处理错误（显示思考动画，然后显示错误消息）"""
@@ -886,7 +983,8 @@ class ChatWindow(QWidget):
     
     def _enable_input_after_error(self):
         """重新启用输入（错误显示后）"""
-        # 恢复发送按钮状态
+        self.input_field.unlock()
+        # 恢复发送按钮状态（从暂停切换回发送）
         self.input_area.set_generating(False)
         self.input_field.setFocus()
     
@@ -918,7 +1016,8 @@ class ChatWindow(QWidget):
                 self.current_streaming_bubble = None
             
             # 恢复输入框和消息
-            self.input_area.set_generating(False)
+            self.input_field.unlock()
+            self.input_area.set_generating(False)  # 恢复发送按钮状态
             self.input_area.restore_message()
             self.input_field.setFocus()
             
@@ -928,6 +1027,7 @@ class ChatWindow(QWidget):
             import traceback
             traceback.print_exc()
             # 确保恢复正常状态
+            self.input_field.unlock()
             self.input_area.set_generating(False)
     
     def on_regenerate_response(self):
@@ -951,7 +1051,7 @@ class ChatWindow(QWidget):
                 widget = self.messages_layout.itemAt(i).widget()
                 if widget:
                     # 检查是否是 StreamingMarkdownMessage 或 MarkdownMessage
-                    from markdown_message import StreamingMarkdownMessage, MarkdownMessage
+                    from modules.ai_assistant.ui.markdown_message import StreamingMarkdownMessage, MarkdownMessage
                     if isinstance(widget, (StreamingMarkdownMessage, MarkdownMessage)):
                         # 检查是否是 assistant 角色的消息
                         if hasattr(widget, 'role') and widget.role == "assistant":
@@ -1052,9 +1152,9 @@ class ChatWindow(QWidget):
                     if widget and isinstance(widget, (MarkdownMessage, StreamingMarkdownMessage)):
                         widget.set_theme(self.current_theme)
             
-            # 刷新输入框主题
-            if hasattr(self, 'input_area') and hasattr(self.input_area, 'refresh_theme'):
-                self.input_area.refresh_theme()
+            # 更新输入框组件的主题
+            if hasattr(self, 'input_area') and self.input_area:
+                self.input_area.refresh_theme(self.current_theme)
             
             print(f"[DEBUG] AI助手主题已刷新: {self.current_theme}，已更新 {self.messages_layout.count() if hasattr(self, 'messages_layout') else 0} 条消息")
         except Exception as e:
@@ -1074,6 +1174,12 @@ class ChatWindow(QWidget):
         if theme_file.exists():
             with open(theme_file, "r", encoding="utf-8") as f:
                 main_stylesheet = f.read()
+            # 调试：检查是否读取到了正确的背景色
+            if "chat_area" in main_stylesheet:
+                import re
+                chat_area_match = re.search(r'(?:QWidget)?#chat_area\s*\{[^}]*background-color:\s*([^;]+)', main_stylesheet)
+                if chat_area_match:
+                    print(f"[DEBUG] 从 {theme_file.name} 读取到 chat_area 背景色: {chat_area_match.group(1).strip()}")
         else:
             # 如果文件不存在，使用内置样式
             if theme_name == "dark":

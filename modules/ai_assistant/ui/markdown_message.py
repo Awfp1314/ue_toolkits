@@ -5,7 +5,7 @@ ChatGPT 风格的 Markdown 消息组件
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QTextBrowser, QGraphicsOpacityEffect, QPushButton
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRectF, pyqtProperty, pyqtSignal, QSize, QUrl
-from PyQt6.QtGui import QFont, QPainter, QColor, QIcon, QPixmap, QPen, QDesktopServices
+from PyQt6.QtGui import QFont, QPainter, QColor, QIcon, QPixmap, QPen, QDesktopServices, QPainterPath, QLinearGradient, QBrush
 
 try:
     import markdown
@@ -16,6 +16,33 @@ try:
 except ImportError:
     MARKDOWN_AVAILABLE = False
     print("警告: markdown 库未安装，将使用基础渲染。请运行: pip install markdown")
+
+
+class RoundedBubble(QWidget):
+    """自定义圆角气泡（使用 QPainter 手动绘制）"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.radius = 18  # 圆角半径
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+    
+    def paintEvent(self, event):
+        """绘制圆角渐变背景"""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)  # 抗锯齿
+        
+        # 创建圆角路径
+        path = QPainterPath()
+        rect = QRectF(0, 0, self.width(), self.height())
+        path.addRoundedRect(rect, self.radius, self.radius)
+        
+        # 创建线性渐变（从紫色到粉色）
+        gradient = QLinearGradient(0, 0, self.width(), self.height())
+        gradient.setColorAt(0, QColor("#8B5CF6"))  # 紫色
+        gradient.setColorAt(1, QColor("#EC4899"))  # 粉色
+        
+        # 绘制
+        painter.fillPath(path, QBrush(gradient))
 
 
 class ThinkingIndicator(QWidget):
@@ -218,7 +245,7 @@ def markdown_to_html(text, theme="dark", compact=False):
             
             pre {
                 background-color: #1E1E1E;
-                border: 1px solid #2d2d2d;
+                border: none;
                 border-radius: 8px;
                 padding: 16px 20px;
                 overflow-x: auto;
@@ -521,10 +548,9 @@ class MarkdownMessage(QFrame):
         # 左侧留白（弹性空间）
         bubble_container_layout.addStretch(1)
         
-        # 用户消息气泡（ChatGPT 粉紫渐变风格）
-        self.bubble = QFrame()
+        # 用户消息气泡（ChatGPT 粉紫渐变风格 - 使用自定义绘制）
+        self.bubble = RoundedBubble()
         self.bubble.setObjectName("user_bubble")
-        # 样式由 QSS 文件控制
         
         bubble_layout = QVBoxLayout(self.bubble)
         bubble_layout.setContentsMargins(16, 7, 16, 7)  # 左右16px，上下7px（更紧凑）
@@ -536,7 +562,8 @@ class MarkdownMessage(QFrame):
         self.text_label.setWordWrap(True)  # 自动换行
         self.text_label.setTextFormat(Qt.TextFormat.PlainText)  # 纯文本格式
         self.text_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        # 样式由 QSS 文件控制
+        # 设置白色文字
+        self.text_label.setStyleSheet("QLabel#user_text_label { color: #FFFFFF; background-color: transparent; }")
         
         # 设置字体以确保清晰度（ChatGPT 风格）
         font = QFont()
@@ -576,11 +603,13 @@ class MarkdownMessage(QFrame):
         self.user_copy_button = QPushButton()
         self.user_copy_button.setObjectName("action_button")
         self.user_copy_button.setProperty("theme", self.theme)  # 设置主题属性
-        self.user_copy_button.setFixedSize(30, 30)
+        self.user_copy_button.setFixedSize(28, 28)  # 稍微减小按钮尺寸，减少锯齿
         self.user_copy_button.setToolTip("复制内容")
         self.user_copy_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.user_copy_button.setFlat(False)  # 确保QSS背景颜色生效
+        self.user_copy_button.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)  # 启用样式背景
         self.user_copy_button.setIcon(self._create_copy_icon())
-        self.user_copy_button.setIconSize(QSize(20, 20))
+        self.user_copy_button.setIconSize(QSize(18, 18))  # 相应减小图标尺寸
         # 样式由 QSS 文件控制
         self.user_copy_button.clicked.connect(self.on_user_copy_clicked)
         
@@ -838,11 +867,12 @@ class StreamingMarkdownMessage(QFrame):
     copy_clicked = pyqtSignal()  # 复制按钮点击信号
     regenerate_clicked = pyqtSignal()  # 重新生成按钮点击信号
     
-    def __init__(self, theme="dark", parent=None):
+    def __init__(self, theme="dark", show_regenerate=True, parent=None):
         super().__init__(parent)
         self.role = "assistant"  # 流式消息总是 AI 的回答
         self.current_text = ""
         self.theme = theme
+        self.show_regenerate = show_regenerate  # 是否显示重新生成按钮
         self.first_text_received = False  # 标记是否收到第一个文本块
         self.thinking_animation_started = False  # 标记思考动画是否已启动
         self.init_ui()
@@ -917,28 +947,33 @@ class StreamingMarkdownMessage(QFrame):
         self.copy_button = QPushButton()
         self.copy_button.setObjectName("action_button")
         self.copy_button.setProperty("theme", self.theme)  # 设置主题属性
-        self.copy_button.setFixedSize(30, 30)
+        self.copy_button.setFixedSize(28, 28)  # 稍微减小按钮尺寸，减少锯齿
         self.copy_button.setToolTip("复制内容")
         self.copy_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.copy_button.setFlat(False)  # 确保QSS背景颜色生效
+        self.copy_button.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)  # 启用样式背景
         self.copy_button.setIcon(self._create_copy_icon())
-        self.copy_button.setIconSize(QSize(20, 20))
+        self.copy_button.setIconSize(QSize(18, 18))  # 相应减小图标尺寸
         # 样式由 QSS 文件控制
         self.copy_button.clicked.connect(self.on_copy_clicked)
-        
-        # 重新生成按钮（使用自定义图标）
-        self.regenerate_button = QPushButton()
-        self.regenerate_button.setObjectName("action_button")
-        self.regenerate_button.setProperty("theme", self.theme)  # 设置主题属性
-        self.regenerate_button.setFixedSize(30, 30)
-        self.regenerate_button.setToolTip("重新生成回答")
-        self.regenerate_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.regenerate_button.setIcon(self._create_regenerate_icon())
-        self.regenerate_button.setIconSize(QSize(20, 20))
-        # 样式由 QSS 文件控制
-        self.regenerate_button.clicked.connect(self.on_regenerate_clicked)
-        
         buttons_layout.addWidget(self.copy_button)
-        buttons_layout.addWidget(self.regenerate_button)
+        
+        # 重新生成按钮（根据参数决定是否创建）
+        if self.show_regenerate:
+            self.regenerate_button = QPushButton()
+            self.regenerate_button.setObjectName("action_button")
+            self.regenerate_button.setProperty("theme", self.theme)  # 设置主题属性
+            self.regenerate_button.setFixedSize(28, 28)  # 稍微减小按钮尺寸，减少锯齿
+            self.regenerate_button.setToolTip("重新生成回答")
+            self.regenerate_button.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.regenerate_button.setFlat(False)  # 确保QSS背景颜色生效
+            self.regenerate_button.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)  # 启用样式背景
+            self.regenerate_button.setIcon(self._create_regenerate_icon())
+            self.regenerate_button.setIconSize(QSize(18, 18))  # 相应减小图标尺寸
+            # 样式由 QSS 文件控制
+            self.regenerate_button.clicked.connect(self.on_regenerate_clicked)
+            buttons_layout.addWidget(self.regenerate_button)
+        
         buttons_layout.addStretch(1)
         
         container_layout.addWidget(self.action_buttons_container)

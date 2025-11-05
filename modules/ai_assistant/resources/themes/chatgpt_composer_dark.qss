@@ -19,7 +19,7 @@ QFrame#ComposerPreviewHolder {
 
 QFrame#ImageCard {
     background-color: #2a2b32;
-    border: 1px solid #565869;
+    border: 1px solid #323232;
     border-radius: 10px;
 }
 
@@ -43,27 +43,26 @@ QPushButton#RemoveImage:hover {
    胶囊外壳
    ======================================== */
 QFrame#ComposerShell {
-    background-color: #40414F;
-    border: 1px solid #565869;
+    background-color: #303030;
+    border: 1px solid #323232;
     border-radius: 22px;
-    min-height: 44px;
+    min-height: 36px;
     padding: 4px 8px;
 }
 
 QFrame#ComposerShell[focus="true"] {
     border: 1px solid #8E8EA0;
-    background-color: #40414F;
+    background-color: #303030;
 }
 
 QFrame#ComposerShell[hasText="true"] {
-    background-color: #3a3b46;
+    background-color: #2a2a2a;
 }
 
 /* ========================================
-   左右小按钮（加号、麦克风）
+   左侧小按钮（加号）
    ======================================== */
-QPushButton#PlusButton,
-QPushButton#MicButton {
+QPushButton#PlusButton {
     min-width: 32px;
     max-width: 32px;
     min-height: 32px;
@@ -75,8 +74,7 @@ QPushButton#MicButton {
     border-radius: 16px;
 }
 
-QPushButton#PlusButton:hover,
-QPushButton#MicButton:hover {
+QPushButton#PlusButton:hover {
     background-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -87,7 +85,7 @@ QTextEdit#ComposerEdit {
     border: none;
     background-color: transparent;
     color: #ECECF1;
-    padding: 4px 0px;
+    padding: 10px 4px 8px 4px;
     selection-background-color: #6a6b76;
     selection-color: #ffffff;
 }

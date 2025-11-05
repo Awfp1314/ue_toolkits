@@ -46,7 +46,7 @@ QFrame#ComposerShell {
     background-color: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 22px;
-    min-height: 44px;
+    min-height: 36px;
     padding: 4px 8px;
 }
 
@@ -60,10 +60,9 @@ QFrame#ComposerShell[hasText="true"] {
 }
 
 /* ========================================
-   左右小按钮（加号、麦克风）
+   左侧小按钮（加号）
    ======================================== */
-QPushButton#PlusButton,
-QPushButton#MicButton {
+QPushButton#PlusButton {
     min-width: 32px;
     max-width: 32px;
     min-height: 32px;
@@ -75,8 +74,7 @@ QPushButton#MicButton {
     border-radius: 16px;
 }
 
-QPushButton#PlusButton:hover,
-QPushButton#MicButton:hover {
+QPushButton#PlusButton:hover {
     background-color: rgba(0, 0, 0, 0.05);
 }
 
@@ -87,7 +85,7 @@ QTextEdit#ComposerEdit {
     border: none;
     background-color: transparent;
     color: #111827;
-    padding: 4px 0px;
+    padding: 10px 4px 8px 4px;
     selection-background-color: #bfdbfe;
     selection-color: #1e40af;
 }

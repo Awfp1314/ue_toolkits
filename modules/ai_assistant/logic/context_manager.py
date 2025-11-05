@@ -202,16 +202,18 @@ class ContextManager:
             chitchat_context = "[角色提示]\n你是虚幻引擎资产管理工具箱的AI助手。这是一个帮助用户管理UE资产、配置、文档的工具软件（不是UE项目本身）。你友好、专业、乐于帮助，拥有记忆功能。"
             
             # 检查用户身份设定（应该始终展现）
-            user_identity = self.memory.get_user_identity()
-            if user_identity:
-                chitchat_context += f"\n\n[你的角色设定]\n{user_identity}\n⚠️ 请始终保持这个角色身份！"
-                self.logger.info(f"闲聊模式下添加身份设定: {user_identity[:50]}...")
+            # 身份设定已在 chat_window.py 的系统提示词中添加，这里不再重复添加
+            # 避免重复导致混乱
+            # user_identity = self.memory.get_user_identity()
+            # if user_identity:
+            #     chitchat_context += f"\n\n[你的角色设定]\n{user_identity}\n⚠️ 请始终保持这个角色身份！"
+            #     self.logger.info(f"闲聊模式下添加身份设定: {user_identity[:50]}...")
             
-            # 只在用户明确询问记忆时才检索（如"还记得吗"、"你记得我吗"）
+            # 智能检索相关记忆（控制数量和重要性）
             is_asking_memory = any(keyword in query.lower() for keyword in ['记得', '还记得', '记不记得', '忘了'])
             
             if is_asking_memory:
-                # 用户在询问记忆，检索相关记忆
+                # 用户明确询问记忆，检索更多且降低阈值
                 relevant_memories = self.memory.get_relevant_memories(query, limit=3, min_importance=0.1)
                 
                 if relevant_memories:
@@ -221,8 +223,14 @@ class ContextManager:
                     chitchat_context += "\n\n⚠️ 系统未找到相关记忆。"
                     self.logger.warning("用户询问记忆，但未找到相关记忆！")
             else:
-                # 普通闲聊，不检索记忆
-                self.logger.info("普通闲聊，不检索历史记忆")
+                # 普通闲聊，也检索少量高质量记忆（避免完全失忆）
+                relevant_memories = self.memory.get_relevant_memories(query, limit=2, min_importance=0.5)
+                
+                if relevant_memories:
+                    chitchat_context += "\n\n[相关记忆]\n" + "\n".join(f"- {m}" for m in relevant_memories[:2])
+                    self.logger.info(f"闲聊模式检索到 {len(relevant_memories)} 条高质量记忆")
+                else:
+                    self.logger.info("普通闲聊，未找到高质量相关记忆")
             
             return chitchat_context
         

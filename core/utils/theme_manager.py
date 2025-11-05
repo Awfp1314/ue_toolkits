@@ -77,7 +77,7 @@ class ThemeManager:
         """加载当前主题的变量"""
         if self.current_theme == Theme.DARK:
             self._theme_variables = {
-                'bg_primary': '#1e1e1e',
+                'bg_primary': '#212121',
                 'bg_secondary': '#2b2b2b',
                 'bg_tertiary': '#353535',
                 'bg_hover': '#3d3d3d',
@@ -113,7 +113,7 @@ class ThemeManager:
                 'danger_hover': '#E53935',
                 
                 # 透明度变体
-                'bg_primary_alpha': 'rgba(30, 30, 30, 0.85)',
+                'bg_primary_alpha': 'rgba(33, 33, 33, 0.85)',
                 'bg_secondary_alpha': 'rgba(43, 43, 43, 0.8)',
                 'accent_alpha': 'rgba(76, 175, 80, 0.8)',
             }

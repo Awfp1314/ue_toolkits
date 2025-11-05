@@ -84,12 +84,12 @@ SidebarToggleButton, QToolButton#collapse_button, QToolButton#expand_button {
 }
 
 /* 聊天区域 */
-#chat_area {
-    background-color: #343541;
+QWidget#chat_area {
+    background-color: #212121;
 }
 
-#header {
-    background-color: #343541;
+QWidget#header {
+    background-color: #212121;
     border-bottom: 1px solid #4a4a5f;
 }
 
@@ -107,8 +107,14 @@ SidebarToggleButton, QToolButton#collapse_button, QToolButton#expand_button {
     background-color: #444654;
 }
 
-#messages_scroll {
-    background-color: #343541;
+QScrollArea#messages_scroll {
+    background-color: #212121;
+    border: none;
+}
+
+/* AI 消息内容区域 */
+QTextBrowser#assistant_message_content {
+    background-color: transparent;
     border: none;
 }
 
@@ -116,13 +122,29 @@ SidebarToggleButton, QToolButton#collapse_button, QToolButton#expand_button {
 QFrame#message_bubble[is_user="false"] {
     background-color: #444654;
     border-radius: 12px;
-    border: 1px solid #565869;
+    border: none;
 }
 
 QFrame#message_bubble[is_user="true"] {
     background-color: #2a6f3f;
     border-radius: 12px;
-    border: 1px solid #3a8f5f;
+    border: none;
+}
+
+/* 用户消息气泡（ChatGPT 风格 - 粉紫渐变） */
+QFrame#user_bubble {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:1, y2:1,
+        stop:0 #8B5CF6,
+        stop:1 #EC4899
+    );
+    border-radius: 18px;
+    border: 1px solid transparent;
+}
+
+QLabel#user_text_label {
+    color: #FFFFFF;
+    background-color: transparent;
 }
 
 #role_label {
@@ -149,8 +171,8 @@ QFrame#message_bubble[is_user="true"] {
 }
 
 /* 输入区域 */
-#input_container {
-    background-color: #343541;
+QWidget#input_container {
+    background-color: #212121;
     border-top: 1px solid #4a4a5f;
 }
 
@@ -180,7 +202,7 @@ QFrame#message_bubble[is_user="true"] {
 
 /* 输入区域外层容器 */
 QWidget#BottomBar {
-    background-color: #343541;
+    background-color: #212121;
 }
 
 /* ChatGPT 风格输入容器 */
@@ -310,22 +332,41 @@ QPushButton#image_close_btn:hover {
 }
 
 /* 滚动条 */
-QScrollBar:vertical {
-    background-color: #343541;
+QScrollArea#messages_scroll QScrollBar:vertical {
+    background-color: #212121;
     width: 12px;
     border-radius: 6px;
 }
 
-QScrollBar::handle:vertical {
+QScrollArea#messages_scroll QScrollBar::handle:vertical {
     background-color: #565869;
     border-radius: 6px;
     min-height: 20px;
 }
 
-QScrollBar::handle:vertical:hover {
+QScrollArea#messages_scroll QScrollBar::handle:vertical:hover {
     background-color: #6e6e80;
 }
 
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+QScrollArea#messages_scroll QScrollBar::add-line:vertical,
+QScrollArea#messages_scroll QScrollBar::sub-line:vertical {
     height: 0px;
+}
+
+/* 消息操作按钮（复制、重新生成） */
+QPushButton#action_button {
+    background-color: transparent;
+    border: none;  /* 移除边框 */
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QPushButton#action_button:hover {
+    background-color: rgba(255, 255, 255, 0.08);  /* 统一的半透明背景 */
+    border: none;  /* 悬停时也无边框 */
+}
+
+QPushButton#action_button:pressed {
+    background-color: rgba(255, 255, 255, 0.12);
+    border: none;
 }

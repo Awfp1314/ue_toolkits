@@ -5,6 +5,7 @@ API 客户端模块
 
 import json
 import os
+import time
 import requests
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -95,64 +96,90 @@ class APIClient(QThread):
                 self.error_occurred.emit(f"API 错误 ({response.status_code}): {error_msg}")
                 return
             
-            # 处理流式响应
-            for line in response.iter_lines():
+            # 处理流式响应（使用 iter_content 实现真正的流式输出）
+            buffer = ""
+            for chunk in response.iter_content(chunk_size=None, decode_unicode=False):
                 if not self.is_running:
                     break
                 
-                if not line:
+                if not chunk:
                     continue
-                
-                line = line.decode('utf-8')
-                
-                # 跳过非数据行
-                if not line.startswith('data: '):
-                    continue
-                
-                # 提取数据
-                data_str = line[6:]
-                
-                # 检查结束标记
-                if data_str == '[DONE]':
-                    print("[API] 流式响应结束标记 [DONE]")
-                    break
                 
                 try:
-                    # 解析 JSON
-                    data = json.loads(data_str)
+                    # 解码并添加到缓冲区
+                    buffer += chunk.decode('utf-8')
                     
-                    # 提取内容（兼容多种格式）
-                    if 'choices' in data and len(data['choices']) > 0:
-                        choice = data['choices'][0]
+                    # 处理缓冲区中的完整行
+                    while '\n' in buffer:
+                        line, buffer = buffer.split('\n', 1)
+                        line = line.strip()
                         
-                        # 尝试从 delta 获取（OpenAI/GPT 格式）
-                        delta = choice.get('delta', {})
-                        content = delta.get('content', '')
+                        if not line:
+                            continue
                         
-                        # 如果 delta 中没有，尝试从 message 获取（Gemini 可能的格式）
-                        if not content:
-                            message = choice.get('message', {})
-                            content = message.get('content', '')
+                        # 跳过非数据行
+                        if not line.startswith('data: '):
+                            continue
                         
-                        # 如果还是没有，尝试直接从 choice 获取 text
-                        if not content:
-                            content = choice.get('text', '')
+                        # 提取数据
+                        data_str = line[6:]
                         
-                        if content:
-                            # 发送内容块
-                            self.chunk_received.emit(content)
-                            try:
-                                print(f"[DEBUG] 收到数据块: {content[:20]}...")
-                            except UnicodeEncodeError:
-                                pass  # 忽略 print 的编码错误
+                        # 检查结束标记
+                        if data_str == '[DONE]':
+                            print("[API] 流式响应结束标记 [DONE]")
+                            # 发射完成信号
+                            self.request_finished.emit()
+                            return  # 直接返回，不处理后续数据
+                        
+                        # 处理数据块（移到这里，避免重复代码）
+                        try:
+                            # 解析 JSON
+                            data = json.loads(data_str)
+                            
+                            # 提取内容（兼容多种格式）
+                            if 'choices' in data and len(data['choices']) > 0:
+                                choice = data['choices'][0]
+                                
+                                # 尝试从 delta 获取（OpenAI/GPT 格式）
+                                delta = choice.get('delta', {})
+                                content = delta.get('content', '')
+                                
+                                # 如果 delta 中没有，尝试从 message 获取（Gemini 可能的格式）
+                                if not content:
+                                    message = choice.get('message', {})
+                                    content = message.get('content', '')
+                                
+                                # 如果还是没有，尝试直接从 choice 获取 text
+                                if not content:
+                                    content = choice.get('text', '')
+                                
+                                if content:
+                                    # 将大块内容切分成小块，以获得更流畅的打字效果
+                                    # 每次发送3-5个字符（中文1个字符，英文/数字/标点1个字符）
+                                    chunk_size = 3  # 每次发送3个字符（减少块大小以获得更流畅的效果）
+                                    for i in range(0, len(content), chunk_size):
+                                        if not self.is_running:
+                                            break
+                                        small_chunk = content[i:i+chunk_size]
+                                        self.chunk_received.emit(small_chunk)
+                                        # 添加小延迟以模拟打字效果（每3个字符延迟15ms）
+                                        time.sleep(0.015)  # 15毫秒延迟
+                                    try:
+                                        print(f"[STREAM] 发射数据块: {content[:30]}... (长度: {len(content)})")
+                                    except (UnicodeEncodeError, UnicodeDecodeError):
+                                        # Windows 终端 GBK 编码问题，使用安全方式打印
+                                        print(f"[STREAM] 发射数据块 (长度: {len(content)})")
+                        
+                        except json.JSONDecodeError:
+                            # 忽略 JSON 解析错误
+                            continue
+                        except Exception as e:
+                            # 其他错误
+                            print(f"[ERROR] 处理数据块时出错: {str(e)}")
+                            continue
                 
-                except json.JSONDecodeError as e:
-                    # 忽略 JSON 解析错误
-                    print(f"[DEBUG] JSON 解析失败: {data_str[:100]}")
-                    continue
-                except Exception as e:
-                    # 其他错误
-                    print(f"处理数据块时出错: {str(e)}")
+                except UnicodeDecodeError:
+                    # 如果解码失败，可能是多字节字符被分割，继续累积
                     continue
             
             # 请求完成

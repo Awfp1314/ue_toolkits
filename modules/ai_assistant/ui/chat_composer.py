@@ -19,7 +19,7 @@ class _GrowTextEdit(QTextEdit):
     """自适应高度的文本编辑框"""
     heightChanged = pyqtSignal(int)
 
-    def __init__(self, min_h=44, max_h=200, *args, **kwargs):
+    def __init__(self, min_h=36, max_h=200, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._min_h = min_h
         self._max_h = max_h
@@ -34,9 +34,13 @@ class _GrowTextEdit(QTextEdit):
         return QSize(super().minimumSizeHint().width(), self._min_h)
 
     def _compute_doc_height(self) -> int:
+        """计算文档高度（包含 contentsMargins，其中包括 QSS padding）"""
         doc = self.document()
         doc.setTextWidth(self.viewport().width())
-        return int(doc.size().height()) + 4
+        doc_height = int(doc.size().height())
+        # contentsMargins 会包含 QSS 的 padding
+        margins = self.contentsMargins()
+        return doc_height + margins.top() + margins.bottom()
 
     def _recalc_height(self):
         h = max(self._min_h, min(self._compute_doc_height(), self._max_h))
@@ -122,11 +126,12 @@ class ChatGPTComposer(QFrame):
         # ===== 关键修复：设置初始属性 =====
         self.shell.setProperty("focus", "false")
         self.shell.setProperty("hasText", "false")
-        self.shell.setMinimumHeight(44)  # 减小最小高度到 44px
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(16)
-        shadow.setOffset(0, 2)
-        self.shell.setGraphicsEffect(shadow)
+        self.shell.setMinimumHeight(36)  # 减小最小高度到 36px
+        # 禁用阴影效果（阴影会显示为方形，不跟随圆角）
+        # shadow = QGraphicsDropShadowEffect(self)
+        # shadow.setBlurRadius(16)
+        # shadow.setOffset(0, 2)
+        # self.shell.setGraphicsEffect(shadow)
 
         shell_h = QHBoxLayout(self.shell)
         shell_h.setContentsMargins(8, 4, 8, 4)  # 减小 padding：左右 8px，上下 4px
@@ -138,7 +143,7 @@ class ChatGPTComposer(QFrame):
         self.btn_plus.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_plus.setToolTip("添加附件")
         self.btn_plus.setFixedSize(32, 32)  # 减小按钮尺寸
-        shell_h.addWidget(self.btn_plus, 0, Qt.AlignmentFlag.AlignBottom)
+        shell_h.addWidget(self.btn_plus, 0, Qt.AlignmentFlag.AlignVCenter)
 
         # 中：文本框（自增高）
         self.edit = _GrowTextEdit(parent=self.shell)
@@ -152,13 +157,6 @@ class ChatGPTComposer(QFrame):
         self.edit.heightChanged.connect(self._on_edit_height_changed)
         shell_h.addWidget(self.edit, 1)
 
-        # 右：麦克风
-        self.btn_mic = QPushButton("🎙", self.shell)  # 直接设置文本
-        self.btn_mic.setObjectName("MicButton")
-        self.btn_mic.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_mic.setFixedSize(32, 32)  # 减小按钮尺寸
-        shell_h.addWidget(self.btn_mic, 0, Qt.AlignmentFlag.AlignBottom)
-
         # 右：发送/停止
         self.btn_send = QPushButton("↑", self.shell)  # 直接设置文本（向上箭头）
         self.btn_send.setObjectName("SendButton")
@@ -167,7 +165,7 @@ class ChatGPTComposer(QFrame):
         # ===== 关键修复：设置初始状态 =====
         self.btn_send.setProperty("state", "send")
         self.btn_send.clicked.connect(self._on_send_clicked)
-        shell_h.addWidget(self.btn_send, 0, Qt.AlignmentFlag.AlignBottom)
+        shell_h.addWidget(self.btn_send, 0, Qt.AlignmentFlag.AlignVCenter)
 
         root.addWidget(self.shell)
 
@@ -262,7 +260,7 @@ class ChatGPTComposer(QFrame):
             self.setStyleSheet(fallback_qss)
         
         # 刷新所有组件样式
-        for widget in [self, self.shell, self.btn_send, self.btn_plus, self.btn_mic, 
+        for widget in [self, self.shell, self.btn_send, self.btn_plus, 
                        self._preview_holder, self.edit, self.hint]:
             if widget:
                 widget.style().unpolish(widget)
@@ -285,13 +283,13 @@ class ChatGPTComposer(QFrame):
                 background-color: #ffffff;
                 border: 1px solid #d1d5db;
                 border-radius: 22px;
-                min-height: 44px;
+                min-height: 36px;
                 padding: 4px 8px;
             }
             QFrame#ComposerShell[focus="true"] {
                 border: 1px solid #9ca3af;
             }
-            QPushButton#PlusButton, QPushButton#MicButton {
+            QPushButton#PlusButton {
                 background-color: transparent;
                 color: #6b7280;
                 border: none;
@@ -302,15 +300,15 @@ class ChatGPTComposer(QFrame):
                 min-height: 32px;
                 max-height: 32px;
             }
-            QPushButton#PlusButton:hover, QPushButton#MicButton:hover {
+            QPushButton#PlusButton:hover {
                 background-color: rgba(0, 0, 0, 0.05);
             }
-            QTextEdit#ComposerEdit {
-                background-color: transparent;
-                color: #111827;
-                border: none;
-                padding: 4px 0px;
-            }
+                    QTextEdit#ComposerEdit {
+                        background-color: transparent;
+                        color: #111827;
+                        border: none;
+                        padding: 10px 4px 8px 4px;
+                    }
             QPushButton#SendButton {
                 background-color: #10a37f;
                 color: #ffffff;
@@ -347,16 +345,20 @@ class ChatGPTComposer(QFrame):
             # 深色主题（默认）
             return """
             QFrame#ComposerShell {
-                background-color: #40414F;
-                border: 1px solid #565869;
+                background-color: #303030;
+                border: 1px solid #323232;
                 border-radius: 22px;
-                min-height: 44px;
+                min-height: 36px;
                 padding: 4px 8px;
             }
             QFrame#ComposerShell[focus="true"] {
                 border: 1px solid #8E8EA0;
+                background-color: #303030;
             }
-            QPushButton#PlusButton, QPushButton#MicButton {
+            QFrame#ComposerShell[hasText="true"] {
+                background-color: #2a2a2a;
+            }
+            QPushButton#PlusButton {
                 background-color: transparent;
                 color: #C5C5D2;
                 border: none;
@@ -367,15 +369,15 @@ class ChatGPTComposer(QFrame):
                 min-height: 32px;
                 max-height: 32px;
             }
-            QPushButton#PlusButton:hover, QPushButton#MicButton:hover {
+            QPushButton#PlusButton:hover {
                 background-color: rgba(255, 255, 255, 0.08);
             }
-            QTextEdit#ComposerEdit {
-                background-color: transparent;
-                color: #ECECF1;
-                border: none;
-                padding: 4px 0px;
-            }
+                    QTextEdit#ComposerEdit {
+                        background-color: transparent;
+                        color: #ECECF1;
+                        border: none;
+                        padding: 10px 4px 8px 4px;
+                    }
             QPushButton#SendButton {
                 background-color: #b23565;
                 color: #ffffff;
@@ -536,8 +538,14 @@ class ChatGPTComposer(QFrame):
         self._last_message = text
         self._last_images = self._images_base64.copy()
 
-        self.submitted.emit(text)
-        self.submitted_detail.emit(text, self._images_base64.copy())
+        # 只发射一个信号，避免重复处理
+        if self._images_base64:
+            # 如果有图片，只发射 submitted_detail
+            self.submitted_detail.emit(text, self._images_base64.copy())
+        else:
+            # 如果没有图片，只发射 submitted
+            self.submitted.emit(text)
+        
         self.edit.clear()
         self._images.clear()
         self._images_base64.clear()
@@ -550,17 +558,23 @@ class ChatGPTComposer(QFrame):
 
     # ---- 对外 API ----
     def set_generating(self, generating: bool):
+        print(f"[DEBUG] set_generating 被调用: {generating}")
         self._is_generating = generating
         if generating:
             self.btn_send.setEnabled(True)
             self.btn_send.setProperty("state", "stop")
+            self.btn_send.setText("■")  # 生成中显示停止图标
+            print("[DEBUG] 按钮设置为 stop 状态，文本: ■")
             self.edit.lock()
         else:
             self.btn_send.setProperty("state", "send")
+            self.btn_send.setText("↑")  # 恢复发送图标
+            print("[DEBUG] 按钮设置为 send 状态，文本: ↑")
             self.edit.unlock()
             self._update_send_enabled()
         self.btn_send.style().unpolish(self.btn_send)
         self.btn_send.style().polish(self.btn_send)
+        print(f"[DEBUG] 按钮状态已更新，enabled: {self.btn_send.isEnabled()}")
 
     def restore_message(self, text: str = None):
         """恢复消息（停止生成时）"""
@@ -597,6 +611,11 @@ class ChatGPTComposer(QFrame):
             if w:
                 w.setParent(None)
         self._preview_holder.setVisible(False)
+        # 强制更新文档布局，然后重置高度
+        self.edit.document().setTextWidth(self.edit.viewport().width())  # 更新文档宽度
+        self.edit.setFixedHeight(self.edit._min_h)                       # 直接重置为最小高度 (36px)
+        self.shell.setMinimumHeight(self.edit._min_h + 8)               # 同步更新外壳高度
+        self.height_changed.emit()                                        # 发射高度变化信号
         self.set_generating(True)
 
     # ---- 诊断与自检 ----
@@ -618,7 +637,6 @@ class ChatGPTComposer(QFrame):
             "ComposerEdit": self.edit.objectName(),
             "SendButton": self.btn_send.objectName(),
             "PlusButton": self.btn_plus.objectName(),
-            "MicButton": self.btn_mic.objectName(),
             "ComposerHint": self.hint.objectName(),
             "ComposerPreviewHolder": self._preview_holder.objectName()
         }
@@ -648,8 +666,7 @@ class ChatGPTComposer(QFrame):
         results["min_sizes_ok"] = (
             self.shell.minimumHeight() >= 44 and
             self.btn_send.width() == 36 and self.btn_send.height() == 36 and
-            self.btn_plus.width() == 36 and self.btn_plus.height() == 36 and
-            self.btn_mic.width() == 36 and self.btn_mic.height() == 36
+            self.btn_plus.width() == 36 and self.btn_plus.height() == 36
         )
         
         # 6. Enter 行为检查（模拟按键）
@@ -768,11 +785,9 @@ class ChatGPTComposer(QFrame):
             self.btn_send.setText("➤")
         if not self.btn_plus.text() and self.btn_plus.icon().isNull():
             self.btn_plus.setText("+")
-        if not self.btn_mic.text() and self.btn_mic.icon().isNull():
-            self.btn_mic.setText("🎙")
         
         # 5. 强制刷新样式
-        for widget in [self, self.shell, self.btn_send, self.btn_plus, self.btn_mic, self._preview_holder]:
+        for widget in [self, self.shell, self.btn_send, self.btn_plus, self._preview_holder]:
             widget.style().unpolish(widget)
             widget.style().polish(widget)
         

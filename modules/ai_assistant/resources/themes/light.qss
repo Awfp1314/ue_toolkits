@@ -113,16 +113,38 @@ SidebarToggleButton, QToolButton#collapse_button, QToolButton#expand_button {
 }
 
 /* 消息气泡 */
+/* AI 消息内容区域 */
+QTextBrowser#assistant_message_content {
+    background-color: transparent;
+    border: none;
+}
+
 QFrame#message_bubble[is_user="false"] {
     background-color: #f7f7f8;
     border-radius: 12px;
-    border: 1px solid #e5e5e7;
+    border: none;
 }
 
 QFrame#message_bubble[is_user="true"] {
     background-color: #d1f4cc;
     border-radius: 12px;
-    border: 1px solid #b8e6b0;
+    border: none;
+}
+
+/* 用户消息气泡（ChatGPT 风格 - 粉紫渐变） */
+QFrame#user_bubble {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:1, y2:1,
+        stop:0 #8B5CF6,
+        stop:1 #EC4899
+    );
+    border-radius: 18px;
+    border: 1px solid transparent;
+}
+
+QLabel#user_text_label {
+    color: #FFFFFF;
+    background-color: transparent;
 }
 
 #role_label {
@@ -328,4 +350,22 @@ QScrollBar::handle:vertical:hover {
 
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
+}
+
+/* 消息操作按钮（复制、重新生成） */
+QPushButton#action_button {
+    background-color: transparent;
+    border: none;  /* 移除边框 */
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QPushButton#action_button:hover {
+    background-color: rgba(0, 0, 0, 0.05);  /* 统一的半透明背景 */
+    border: none;  /* 悬停时也无边框 */
+}
+
+QPushButton#action_button:pressed {
+    background-color: rgba(0, 0, 0, 0.1);
+    border: none;
 }

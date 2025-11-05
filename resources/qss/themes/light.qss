@@ -53,7 +53,8 @@ QPushButton[class="toolButton"]:checked {
 #authorLabel {
     color: ${text_tertiary};
     font-size: 11px;
-    padding: 10px;
+    padding: 5px 10px 5px 20px;  /* 左边距20px与工具按钮对齐 */
+    background-color: transparent;
 }
 
 /* 右侧框架 */
