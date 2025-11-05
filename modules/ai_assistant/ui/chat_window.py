@@ -17,7 +17,7 @@ from modules.ai_assistant.ui.message_bubble import MessageBubble, StreamingBubbl
 from modules.ai_assistant.ui.markdown_message import MarkdownMessage, StreamingMarkdownMessage, ErrorMarkdownMessage
 from modules.ai_assistant.logic.api_client import APIClient
 from modules.ai_assistant.ui.chat_composer import ChatGPTComposer
-from modules.ai_assistant.logic.config import SYSTEM_PROMPT, SYSTEM_PROMPT_SIMPLE
+from modules.ai_assistant.logic.config import SYSTEM_PROMPT
 from modules.ai_assistant.logic.context_manager import ContextManager
 
 
