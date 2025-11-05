@@ -33,6 +33,8 @@ class BGEEmbeddingFunction:
             embedding_service: 统一的嵌入服务实例
         """
         self.embedding_service = embedding_service
+        # ChromaDB 需要的属性
+        self.name = "bge-small-zh-v1.5"
     
     def __call__(self, input: List[str]) -> List[List[float]]:
         """

@@ -64,6 +64,9 @@ class ContextManager:
             debug: 是否开启 debug 模式（输出完整上下文快照到日志）
             max_context_tokens: 上下文最大 token 数（默认 4000，约2万字符）
         """
+        # 首先初始化 logger（其他方法需要使用）
+        self.logger = _get_logger()
+        
         self.asset_reader = AssetReader(asset_manager_logic)
         self.document_reader = DocumentReader()
         self.log_analyzer = LogAnalyzer()
@@ -106,7 +109,6 @@ class ContextManager:
         # Debug 模式
         self.debug = debug
         
-        self.logger = _get_logger()  # 延迟获取
         self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，统一嵌入服务: ✓，向量检索: ✓）")
     
     def _init_chromadb_client(self):
