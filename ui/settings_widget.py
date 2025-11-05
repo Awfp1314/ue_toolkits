@@ -1416,7 +1416,7 @@ class SettingsWidget(QWidget):
                 QMessageBox.information(
                     self,
                     "可用模型",
-                    f"Ollama 中可用的模型：\n\n{model_list}\n\n请在"模型名称"中输入其中一个模型名。"
+                    f"Ollama 中可用的模型：\n\n{model_list}\n\n请在【模型名称】中输入其中一个模型名。"
                 )
             else:
                 self.ollama_status_label.setText("⚠️ 未找到可用模型。请先下载模型：ollama pull llama3")
