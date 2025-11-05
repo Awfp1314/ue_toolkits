@@ -16,7 +16,7 @@ from PyQt6.QtGui import QFont, QTextCursor
 from modules.ai_assistant.ui.message_bubble import MessageBubble, StreamingBubble, ErrorBubble
 from modules.ai_assistant.ui.markdown_message import MarkdownMessage, StreamingMarkdownMessage, ErrorMarkdownMessage
 from modules.ai_assistant.logic.api_client import APIClient
-from modules.ai_assistant.ui.chat_input import ChatInputArea
+from modules.ai_assistant.ui.chat_composer import ChatGPTComposer
 from modules.ai_assistant.logic.config import SYSTEM_PROMPT
 from modules.ai_assistant.logic.context_manager import ContextManager
 
@@ -451,18 +451,18 @@ class ChatWindow(QWidget):
     
     def create_input_area(self):
         """创建底部输入区域（ChatGPT 风格）"""
-        # 使用新的 ChatInputArea 组件
-        self.input_area = ChatInputArea()
-        self.input_area.message_sent.connect(self.on_message_sent)
-        self.input_area.message_with_images_sent.connect(self.on_message_with_images_sent)
-        self.input_area.stop_generation.connect(self.stop_generation)
+        # 使用新的 ChatGPTComposer 组件
+        self.input_area = ChatGPTComposer()
+        self.input_area.submitted.connect(self.on_message_sent)
+        self.input_area.submitted_detail.connect(self.on_message_with_images_sent)
+        self.input_area.stop_requested.connect(self.stop_generation)
         
         # 监听输入框高度变化，触发重新定位（保持底部固定，向上增长）
         self.input_area.height_changed.connect(
             lambda: self.position_input_area(self.chat_widget)
         )
         
-        # 保持兼容性
+        # 保持兼容性（ChatGPTComposer 提供了这些属性）
         self.input_field = self.input_area.input_field
         self.send_button = self.input_area.send_button
         
@@ -473,7 +473,7 @@ class ChatWindow(QWidget):
         self.send_message()
     
     def on_message_with_images_sent(self, message, images):
-        """处理带图片的消息"""
+        """处理带图片的消息（images 是 base64 字符串列表）"""
         self.send_message_with_images(message, images)
     
     def eventFilter(self, obj, event):
@@ -583,9 +583,6 @@ class ChatWindow(QWidget):
             
             # 保存消息并清空输入框（切换为暂停按钮）
             self.input_area.save_and_clear_message()
-            
-            # 锁定输入框（阻止用户编辑，但不影响按钮事件）
-            self.input_field.lock()
             
             # 添加用户消息
             self.add_message(message, is_user=True)
@@ -707,8 +704,7 @@ class ChatWindow(QWidget):
             import traceback
             traceback.print_exc()
             # 恢复输入框状态
-            self.input_field.unlock()
-            self.input_area.set_generating_state(False)
+            self.input_area.set_generating(False)
     
     def send_message_with_images(self, message, images):
         """发送带图片的消息"""
@@ -717,9 +713,6 @@ class ChatWindow(QWidget):
             
             # 保存消息并清空输入框（切换为暂停按钮）
             self.input_area.save_and_clear_message()
-            
-            # 锁定输入框（阻止用户编辑，但不影响按钮事件）
-            self.input_field.lock()
             
             # 添加用户消息（暂时只显示文本，后续可以优化显示图片）
             display_message = message if message else "[图片]"
@@ -766,8 +759,7 @@ class ChatWindow(QWidget):
             import traceback
             traceback.print_exc()
             # 恢复输入框状态
-            self.input_field.unlock()
-            self.input_area.set_generating_state(False)
+            self.input_area.set_generating(False)
     
     def on_chunk_received(self, chunk):
         """接收流式数据"""
@@ -855,10 +847,8 @@ class ChatWindow(QWidget):
                                 import traceback
                                 traceback.print_exc()
             
-            # 解锁输入框
-            self.input_field.unlock()
-            # 恢复发送按钮状态（从暂停切换回发送）
-            self.input_area.set_generating_state(False)
+            # 解锁输入框并恢复发送按钮状态
+            self.input_area.set_generating(False)
             self.input_field.setFocus()
             
             # 清理
@@ -896,9 +886,8 @@ class ChatWindow(QWidget):
     
     def _enable_input_after_error(self):
         """重新启用输入（错误显示后）"""
-        self.input_field.unlock()
-        # 恢复发送按钮状态（从暂停切换回发送）
-        self.input_area.set_generating_state(False)
+        # 恢复发送按钮状态
+        self.input_area.set_generating(False)
         self.input_field.setFocus()
     
     def stop_generation(self):
@@ -929,7 +918,7 @@ class ChatWindow(QWidget):
                 self.current_streaming_bubble = None
             
             # 恢复输入框和消息
-            self.input_field.unlock()
+            self.input_area.set_generating(False)
             self.input_area.restore_message()
             self.input_field.setFocus()
             
@@ -939,8 +928,7 @@ class ChatWindow(QWidget):
             import traceback
             traceback.print_exc()
             # 确保恢复正常状态
-            self.input_field.unlock()
-            self.input_area.set_generating_state(False)
+            self.input_area.set_generating(False)
     
     def on_regenerate_response(self):
         """重新生成回答"""
@@ -1063,6 +1051,10 @@ class ChatWindow(QWidget):
                     widget = self.messages_layout.itemAt(i).widget()
                     if widget and isinstance(widget, (MarkdownMessage, StreamingMarkdownMessage)):
                         widget.set_theme(self.current_theme)
+            
+            # 刷新输入框主题
+            if hasattr(self, 'input_area') and hasattr(self.input_area, 'refresh_theme'):
+                self.input_area.refresh_theme()
             
             print(f"[DEBUG] AI助手主题已刷新: {self.current_theme}，已更新 {self.messages_layout.count() if hasattr(self, 'messages_layout') else 0} 条消息")
         except Exception as e:

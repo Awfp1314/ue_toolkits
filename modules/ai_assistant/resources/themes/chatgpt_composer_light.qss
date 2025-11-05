@@ -1,0 +1,166 @@
+/* ========================================
+   ChatGPT Composer - Light Theme
+   浅色主题（与 ChatGPT 浅色模式配色一致）
+   ======================================== */
+
+/* 根容器 */
+QFrame#ComposerRoot {
+    background: transparent;
+    border: none;
+}
+
+/* ========================================
+   图片预览区
+   ======================================== */
+QFrame#ComposerPreviewHolder {
+    background: transparent;
+    border: none;
+}
+
+QFrame#ImageCard {
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+}
+
+QPushButton#RemoveImage {
+    border: none;
+    border-radius: 11px;
+    background-color: #ef4444;
+    color: #ffffff;
+    font-weight: bold;
+    min-width: 22px;
+    max-width: 22px;
+    min-height: 22px;
+    max-height: 22px;
+}
+
+QPushButton#RemoveImage:hover {
+    background-color: #dc2626;
+}
+
+/* ========================================
+   胶囊外壳
+   ======================================== */
+QFrame#ComposerShell {
+    background-color: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 22px;
+    min-height: 44px;
+    padding: 4px 8px;
+}
+
+QFrame#ComposerShell[focus="true"] {
+    border: 1px solid #9ca3af;
+    background-color: #ffffff;
+}
+
+QFrame#ComposerShell[hasText="true"] {
+    background-color: #f9fafb;
+}
+
+/* ========================================
+   左右小按钮（加号、麦克风）
+   ======================================== */
+QPushButton#PlusButton,
+QPushButton#MicButton {
+    min-width: 32px;
+    max-width: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    border: none;
+    background-color: transparent;
+    color: #6b7280;
+    font-size: 16px;
+    border-radius: 16px;
+}
+
+QPushButton#PlusButton:hover,
+QPushButton#MicButton:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ========================================
+   文本框
+   ======================================== */
+QTextEdit#ComposerEdit {
+    border: none;
+    background-color: transparent;
+    color: #111827;
+    padding: 4px 0px;
+    selection-background-color: #bfdbfe;
+    selection-color: #1e40af;
+}
+
+/* 滚动条 */
+QTextEdit#ComposerEdit QScrollBar:vertical {
+    background-color: transparent;
+    width: 8px;
+    border: none;
+}
+
+QTextEdit#ComposerEdit QScrollBar::handle:vertical {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+QTextEdit#ComposerEdit QScrollBar::handle:vertical:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+QTextEdit#ComposerEdit QScrollBar::add-line:vertical,
+QTextEdit#ComposerEdit QScrollBar::sub-line:vertical {
+    height: 0px;
+    border: none;
+}
+
+QTextEdit#ComposerEdit QScrollBar::add-page:vertical,
+QTextEdit#ComposerEdit QScrollBar::sub-page:vertical {
+    background-color: transparent;
+}
+
+/* ========================================
+   发送按钮（绿色圆形，ChatGPT 风格）
+   ======================================== */
+QPushButton#SendButton {
+    min-width: 32px;
+    max-width: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    border-radius: 16px;
+    border: none;
+    color: #ffffff;
+    background-color: #10a37f;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QPushButton#SendButton:disabled {
+    background-color: #d1d5db;
+    color: #9ca3af;
+}
+
+QPushButton#SendButton:enabled:hover {
+    background-color: #0e9070;
+}
+
+/* 停止按钮（红色） */
+QPushButton#SendButton[state="stop"] {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+
+QPushButton#SendButton[state="stop"]:hover {
+    background-color: #dc2626;
+}
+
+/* ========================================
+   提示文本
+   ======================================== */
+QLabel#ComposerHint {
+    color: #6b7280;
+    font-size: 12px;
+    background-color: transparent;
+}
+
