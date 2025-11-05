@@ -21,6 +21,15 @@ from modules.ai_assistant.logic.config import SYSTEM_PROMPT
 from modules.ai_assistant.logic.context_manager import ContextManager
 
 
+def safe_print(msg: str):
+    """安全的 print 函数，避免 Windows 控制台编码错误"""
+    try:
+        print(msg, flush=True)
+    except (OSError, UnicodeEncodeError):
+        # 如果 print 失败，忽略（不要让调试输出导致程序崩溃）
+        pass
+
+
 class ChatWindow(QWidget):
     """
     聊天窗口类
@@ -559,7 +568,7 @@ class ChatWindow(QWidget):
             print(f"[DEBUG] 启动自动问候 API 请求...")
             self.current_api_client.start()
         except Exception as e:
-            print(f"[ERROR] 自动发送问候消息时出错: {e}")
+            safe_print(f"[ERROR] 自动发送问候消息时出错: {e}")
             import traceback
             traceback.print_exc()
     
@@ -617,8 +626,8 @@ class ChatWindow(QWidget):
             if not message:
                 return
             
-            print(f"[DEBUG] 准备发送消息: {message[:50]}...")
-            print(f"[DEBUG] 上下文管理器状态: {self.context_manager is not None}")
+            safe_print("[DEBUG] 准备发送消息...")
+            safe_print(f"[DEBUG] 上下文管理器状态: {self.context_manager is not None}")
             
             # 保存消息并清空输入框（切换为暂停按钮）
             self.input_area.save_and_clear_message()
@@ -768,7 +777,7 @@ class ChatWindow(QWidget):
             print(f"[DEBUG] 启动 API 请求...")
             self.current_api_client.start()
         except Exception as e:
-            print(f"[ERROR] 发送消息时出错: {e}")
+            safe_print(f"[ERROR] 发送消息时出错: {e}")
             import traceback
             traceback.print_exc()
             # 恢复输入框状态
@@ -778,7 +787,7 @@ class ChatWindow(QWidget):
     def send_message_with_images(self, message, images):
         """发送带图片的消息"""
         try:
-            print(f"[DEBUG] 准备发送消息: {message[:50] if message else '(仅图片)'}... 图片数量: {len(images)}")
+            safe_print(f"[DEBUG] 准备发送消息（图片数量: {len(images)}）")
             
             # 保存消息并清空输入框（切换为暂停按钮）
             self.input_area.save_and_clear_message()
@@ -827,7 +836,7 @@ class ChatWindow(QWidget):
             print(f"[DEBUG] 启动 API 请求...")
             self.current_api_client.start()
         except Exception as e:
-            print(f"[ERROR] 发送消息时出错: {e}")
+            safe_print(f"[ERROR] 发送消息时出错: {e}")
             import traceback
             traceback.print_exc()
             # 恢复输入框状态
@@ -851,7 +860,7 @@ class ChatWindow(QWidget):
                 print(f"[WARNING] 流式气泡为空，无法追加文本！")
         except Exception as e:
             try:
-                print(f"[ERROR] 处理数据块时出错: {e}")
+                safe_print(f"[ERROR] 处理数据块时出错: {e}")
             except UnicodeEncodeError:
                 pass
             import traceback
@@ -872,7 +881,7 @@ class ChatWindow(QWidget):
                 
                 assistant_message = self.current_streaming_bubble.get_text()
                 try:
-                    print(f"[DEBUG] 助手消息: {assistant_message[:50]}...")
+                    safe_print("[DEBUG] 助手消息已接收")
                 except UnicodeEncodeError:
                     pass
                 if assistant_message:
@@ -912,7 +921,7 @@ class ChatWindow(QWidget):
                                 # 保存用户查询和 AI 回复为一轮对话
                                 self.context_manager.memory.add_dialogue(user_message, assistant_message)
                                 try:
-                                    print(f"[DEBUG] [记忆保存] 用户: {user_message[:50]}... | 助手: {assistant_message[:50]}...")
+                                    safe_print("[DEBUG] [记忆保存] 对话已保存")
                                 except UnicodeEncodeError:
                                     print(f"[DEBUG] [记忆保存] 用户消息和助手回复已保存（包含特殊字符）")
                                 
@@ -929,7 +938,7 @@ class ChatWindow(QWidget):
                                 
                                 print(f"[DEBUG] [OK] 已保存对话到记忆系统")
                             except Exception as e:
-                                print(f"[ERROR] 保存记忆失败: {e}")
+                                safe_print(f"[ERROR] 保存记忆失败: {e}")
                                 import traceback
                                 traceback.print_exc()
             
@@ -946,7 +955,7 @@ class ChatWindow(QWidget):
             self.current_api_client = None
             self.current_streaming_bubble = None
         except Exception as e:
-            print(f"[ERROR] 请求完成处理时出错: {e}")
+            safe_print(f"[ERROR] 请求完成处理时出错: {e}")
             import traceback
             traceback.print_exc()
             # 确保即使异常也要解锁输入框
@@ -959,7 +968,7 @@ class ChatWindow(QWidget):
     def on_error_occurred(self, error_message):
         """处理错误（显示思考动画，然后显示错误消息）"""
         try:
-            print(f"[ERROR] API错误: {error_message}")
+            safe_print(f"[ERROR] API错误: {error_message}")
             
             # 如果有流式气泡，在其中显示错误（带思考动画）
             if self.current_streaming_bubble:
@@ -977,7 +986,7 @@ class ChatWindow(QWidget):
             self.current_api_client = None
             self.current_streaming_bubble = None
         except Exception as e:
-            print(f"[ERROR] 错误处理时出错: {e}")
+            safe_print(f"[ERROR] 错误处理时出错: {e}")
             import traceback
             traceback.print_exc()
     
@@ -1023,7 +1032,7 @@ class ChatWindow(QWidget):
             
             print("[DEBUG] 生成已停止，消息已恢复")
         except Exception as e:
-            print(f"[ERROR] 停止生成时出错: {e}")
+            safe_print(f"[ERROR] 停止生成时出错: {e}")
             import traceback
             traceback.print_exc()
             # 确保恢复正常状态
@@ -1094,7 +1103,7 @@ class ChatWindow(QWidget):
             print(f"[DEBUG] 重新启动 API 请求...")
             self.current_api_client.start()
         except Exception as e:
-            print(f"[ERROR] 重新生成回答时出错: {e}")
+            safe_print(f"[ERROR] 重新生成回答时出错: {e}")
             import traceback
             traceback.print_exc()
     
@@ -1158,7 +1167,7 @@ class ChatWindow(QWidget):
             
             print(f"[DEBUG] AI助手主题已刷新: {self.current_theme}，已更新 {self.messages_layout.count() if hasattr(self, 'messages_layout') else 0} 条消息")
         except Exception as e:
-            print(f"[ERROR] 刷新AI助手主题失败: {e}")
+            safe_print(f"[ERROR] 刷新AI助手主题失败: {e}")
             import traceback
             traceback.print_exc()
     
@@ -1200,7 +1209,7 @@ class ChatWindow(QWidget):
                         component_stylesheets.append(f.read())
                         print(f"[DEBUG] 已加载组件样式: {qss_file.name}")
                 except Exception as e:
-                    print(f"[ERROR] 加载组件样式失败 {qss_file.name}: {e}")
+                    safe_print(f"[ERROR] 加载组件样式失败 {qss_file.name}: {e}")
         else:
             print(f"[WARNING] 组件样式目录不存在: {components_dir}")
         
