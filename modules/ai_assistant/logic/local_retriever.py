@@ -10,8 +10,48 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from core.logger import get_logger
+from core.ai_services import EmbeddingService
 
 logger = get_logger(__name__)
+
+
+class BGEEmbeddingFunction:
+    """
+    适配 ChromaDB 的嵌入函数包装器
+    使用统一的 EmbeddingService (bge-small-zh-v1.5)
+    """
+    
+    def __init__(self, embedding_service: EmbeddingService):
+        """
+        初始化嵌入函数
+        
+        Args:
+            embedding_service: 统一的嵌入服务实例
+        """
+        self.embedding_service = embedding_service
+    
+    def __call__(self, input: List[str]) -> List[List[float]]:
+        """
+        ChromaDB 要求的接口：接收文本列表，返回向量列表
+        
+        Args:
+            input: 文本列表
+            
+        Returns:
+            List[List[float]]: 向量列表
+        """
+        # 使用 EmbeddingService 批量编码
+        embeddings = self.embedding_service.encode_text(input, convert_to_numpy=False)
+        
+        if embeddings is None:
+            # 如果编码失败，返回零向量
+            dimension = self.embedding_service.get_embedding_dimension() or 384
+            return [[0.0] * dimension for _ in input]
+        
+        # 转换为列表格式（ChromaDB 需要）
+        if hasattr(embeddings, 'tolist'):
+            return embeddings.tolist()
+        return list(embeddings)
 
 
 class LocalDocIndex:
@@ -21,13 +61,13 @@ class LocalDocIndex:
     基于 Chroma 向量数据库，用于检索本地文档、README、配置模板等
     """
     
-    def __init__(self, db_path: Optional[Path] = None, embedding_function: Optional[Any] = None):
+    def __init__(self, db_path: Optional[Path] = None, embedding_service: Optional[EmbeddingService] = None):
         """
         初始化本地文档索引
         
         Args:
             db_path: Chroma 数据库路径（默认由 PathUtils 提供）
-            embedding_function: 嵌入函数（默认使用 Chroma 内置）
+            embedding_service: 嵌入服务实例（默认创建新实例）
         """
         self.logger = logger
         
@@ -46,12 +86,17 @@ class LocalDocIndex:
         # 确保目录存在
         self.db_path.mkdir(parents=True, exist_ok=True)
         
+        # 使用统一的 EmbeddingService（单例模式）
+        self.embedding_service = embedding_service or EmbeddingService()
+        
+        # 创建适配 ChromaDB 的嵌入函数
+        self._embedding_function = BGEEmbeddingFunction(self.embedding_service)
+        
         # 延迟初始化 Chroma（避免启动时加载）
         self._client = None
         self._collection = None
-        self._embedding_function = embedding_function
         
-        self.logger.info(f"本地文档索引初始化（数据库路径: {self.db_path}）")
+        self.logger.info(f"本地文档索引初始化（数据库路径: {self.db_path}，使用统一嵌入服务）")
     
     def _init_chroma(self):
         """延迟初始化 Chroma 客户端"""
@@ -71,13 +116,14 @@ class LocalDocIndex:
                 )
             )
             
-            # 获取或创建集合
+            # 获取或创建集合（使用自定义的 bge-small-zh-v1.5 嵌入函数）
             self._collection = self._client.get_or_create_collection(
                 name="ue_toolkit_docs",
-                metadata={"description": "UE Toolkit local documentation index"}
+                metadata={"description": "UE Toolkit local documentation index (bge-small-zh-v1.5)"},
+                embedding_function=self._embedding_function
             )
             
-            self.logger.info(f"Chroma 客户端初始化成功，文档数量: {self._collection.count()}")
+            self.logger.info(f"Chroma 客户端初始化成功（使用 bge-small-zh-v1.5），文档数量: {self._collection.count()}")
             
         except Exception as e:
             self.logger.error(f"初始化 Chroma 失败: {e}", exc_info=True)
