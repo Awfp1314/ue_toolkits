@@ -7,7 +7,9 @@
 
 import re
 from typing import Optional, Dict, Any, List
+from pathlib import Path
 from core.logger import get_logger
+from core.ai_services import EmbeddingService
 
 from modules.ai_assistant.logic.asset_reader import AssetReader
 from modules.ai_assistant.logic.document_reader import DocumentReader
@@ -64,8 +66,18 @@ class ContextManager:
         self.config_reader = ConfigReader(config_tool_logic)
         self.site_reader = SiteReader(site_recommendations_logic)
         
-        # 增强型记忆管理器（基于 Mem0 设计）
-        self.memory = EnhancedMemoryManager(user_id=user_id)
+        # 创建统一的 EmbeddingService（单例模式）
+        self.embedding_service = EmbeddingService()
+        
+        # 初始化 ChromaDB 客户端（用于向量存储）
+        self.db_client = self._init_chromadb_client()
+        
+        # 增强型记忆管理器（基于 Mem0 设计，支持向量检索）
+        self.memory = EnhancedMemoryManager(
+            user_id=user_id,
+            embedding_service=self.embedding_service,
+            db_client=self.db_client
+        )
         
         # v0.1 新增：意图引擎（延迟创建，避免与后台预加载冲突）
         self._intent_engine = None
@@ -74,8 +86,8 @@ class ContextManager:
         # v0.1 新增：运行态上下文管理器
         self.runtime_context = runtime_context or (RuntimeContextManager() if V01_AVAILABLE and RuntimeContextManager else None)
         
-        # v0.1 新增：本地文档索引（延迟加载）
-        self.local_index = LocalDocIndex() if V01_AVAILABLE and LocalDocIndex else None
+        # v0.1 新增：本地文档索引（使用统一的嵌入服务）
+        self.local_index = LocalDocIndex(embedding_service=self.embedding_service) if V01_AVAILABLE and LocalDocIndex else None
         
         # v0.1 新增：远程检索器（延迟加载）
         self.remote_retriever = RemoteRetriever() if V01_AVAILABLE and RemoteRetriever else None
@@ -91,7 +103,35 @@ class ContextManager:
         self.debug = debug
         
         self.logger = logger
-        self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，debug: {debug}，max_tokens: {max_context_tokens}，支持记忆、理解、学习、检索）")
+        self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，统一嵌入服务: ✓，向量检索: ✓）")
+    
+    def _init_chromadb_client(self):
+        """初始化 ChromaDB 客户端"""
+        try:
+            import chromadb
+            from chromadb.config import Settings
+            from core.utils.path_utils import PathUtils
+            
+            # 获取数据库路径
+            path_utils = PathUtils()
+            db_path = path_utils.get_user_data_dir() / "chroma_db"
+            db_path.mkdir(parents=True, exist_ok=True)
+            
+            # 创建持久化客户端
+            client = chromadb.PersistentClient(
+                path=str(db_path),
+                settings=Settings(
+                    anonymized_telemetry=False,
+                    allow_reset=True
+                )
+            )
+            
+            self.logger.info(f"ChromaDB 客户端初始化成功（路径: {db_path}）")
+            return client
+            
+        except Exception as e:
+            self.logger.error(f"初始化 ChromaDB 客户端失败: {e}", exc_info=True)
+            return None
     
     @property
     def intent_engine(self):
