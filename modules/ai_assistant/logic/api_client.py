@@ -1,6 +1,6 @@
 """
 API 客户端模块
-负责与 OpenAI-HK API 通信
+重构为使用策略模式，支持多种 LLM 供应商（API / Ollama）
 """
 
 import json
@@ -8,11 +8,15 @@ import os
 import time
 import requests
 from PyQt6.QtCore import QThread, pyqtSignal
+from typing import Dict, Any, Optional
+from pathlib import Path
 
 
 class APIClient(QThread):
     """
-    API 客户端线程
+    API 客户端线程（重构版）
+    
+    使用策略模式，通过工厂动态选择 LLM 供应商（API / Ollama）
     支持流式输出
     """
     # 信号定义
@@ -20,177 +24,85 @@ class APIClient(QThread):
     request_finished = pyqtSignal()       # 请求完成
     error_occurred = pyqtSignal(str)      # 发生错误
     
-    def __init__(self, messages, model="gemini-2.5-flash", temperature=0.8, tools=None):
+    def __init__(self, messages, model=None, temperature=None, tools=None, config=None):
+        """
+        初始化 API 客户端
+        
+        Args:
+            messages: 消息历史列表
+            model: 模型名称（可选，用于覆盖配置，向后兼容）
+            temperature: 温度参数（可选，向后兼容）
+            tools: Function Calling 工具列表（可选）
+            config: LLM 配置字典（可选，如果不提供则从配置文件加载）
+        """
         super().__init__()
         self.messages = messages
-        self.model = model
-        self.temperature = temperature
-        self.tools = tools  # v0.2 新增：OpenAI tools 参数
+        self.model = model  # 保留以向后兼容
+        self.temperature = temperature if temperature is not None else 0.8
+        self.tools = tools
         self.is_running = True
         
-        # API 配置
-        self.api_url = "https://api.openai-hk.com/v1/chat/completions"
-        self.headers = {
-            "Content-Type": "application/json",
-            "Authorization": "hk-rf256210000027899536cbcb497417e8dfc70c2960229c22"
-        }
+        # 加载配置
+        self.config = self._load_config() if config is None else config
+        
+        # 创建策略客户端（延迟到 run() 中，避免初始化阻塞）
+        self.strategy_client = None
+    
+    def _load_config(self) -> Dict[str, Any]:
+        """从配置文件加载 AI 助手配置"""
+        try:
+            from core.config.config_manager import ConfigManager
+            config_manager = ConfigManager()
+            return config_manager.get_module_config("ai_assistant")
+        except Exception as e:
+            print(f"[WARNING] 加载配置失败，使用默认 API 配置: {e}")
+            # 返回默认 API 配置
+            return {
+                "llm_provider": "api",
+                "api_settings": {
+                    "api_url": "https://api.openai-hk.com/v1/chat/completions",
+                    "api_key": "hk-rf256210000027899536cbcb497417e8dfc70c2960229c22",
+                    "default_model": "gemini-2.5-flash",
+                    "temperature": 0.8,
+                    "timeout": 60
+                }
+            }
     
     def run(self):
-        """执行 API 请求"""
+        """执行 LLM 请求（使用策略模式）"""
         try:
-            print(f"[API] 开始请求，模型: {self.model}")
+            # 创建策略客户端
+            from modules.ai_assistant.clients import create_llm_client
             
-            # 清除环境变量中的代理设置（临时）
-            env_backup = {}
-            proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']
-            for var in proxy_vars:
-                if var in os.environ:
-                    env_backup[var] = os.environ[var]
-                    del os.environ[var]
+            self.strategy_client = create_llm_client(self.config)
+            provider = self.config.get('llm_provider', 'api')
             
-            try:
-                # 构建请求体
-                payload = {
-                    "model": self.model,
-                    "messages": self.messages,
-                    "temperature": self.temperature,
-                    "stream": True  # 启用流式输出
-                }
-                
-                # v0.2 新增：添加 tools 参数（如果提供）
-                # 兼容 ChatGPT-style: tools=[{type:'function', function:{name,parameters}}]
-                if self.tools:
-                    payload["tools"] = self.tools
-                    print(f"[API] 启用工具调用模式，工具数量: {len(self.tools)}")
-                
-                print(f"[API] 发送请求到: {self.api_url}")
-                print(f"[API] 已禁用代理设置")
-                
-                # 创建一个 Session 对象，完全禁用代理
-                session = requests.Session()
-                session.trust_env = False  # 不信任环境变量
-                
-                # 发送请求（绕过系统代理）
-                response = session.post(
-                    self.api_url,
-                    headers=self.headers,
-                    json=payload,
-                    stream=True,
-                    timeout=60,
-                    proxies={'http': None, 'https': None}  # 明确禁用所有代理
-                )
-            finally:
-                # 恢复环境变量
-                for var, value in env_backup.items():
-                    os.environ[var] = value
-            print(f"[API] 收到响应，状态码: {response.status_code}")
+            print(f"[LLM] 使用供应商: {provider}, 模型: {self.strategy_client.get_model_name()}")
             
-            # 检查响应状态
-            if response.status_code != 200:
-                error_text = response.text
-                try:
-                    error_data = json.loads(error_text)
-                    error_msg = error_data.get('error', {}).get('message', error_text)
-                except:
-                    error_msg = error_text
-                self.error_occurred.emit(f"API 错误 ({response.status_code}): {error_msg}")
-                return
+            # 调用策略生成响应
+            response_generator = self.strategy_client.generate_response(
+                context_messages=self.messages,
+                stream=True,
+                temperature=self.temperature,
+                tools=self.tools
+            )
             
-            # 处理流式响应（使用 iter_content 实现真正的流式输出）
-            buffer = ""
-            for chunk in response.iter_content(chunk_size=None, decode_unicode=False):
+            # 处理生成器输出，发送信号到 UI
+            for chunk in response_generator:
                 if not self.is_running:
                     break
                 
-                if not chunk:
-                    continue
-                
-                try:
-                    # 解码并添加到缓冲区
-                    buffer += chunk.decode('utf-8')
-                    
-                    # 处理缓冲区中的完整行
-                    while '\n' in buffer:
-                        line, buffer = buffer.split('\n', 1)
-                        line = line.strip()
-                        
-                        if not line:
-                            continue
-                        
-                        # 跳过非数据行
-                        if not line.startswith('data: '):
-                            continue
-                        
-                        # 提取数据
-                        data_str = line[6:]
-                        
-                        # 检查结束标记
-                        if data_str == '[DONE]':
-                            print("[API] 流式响应结束标记 [DONE]")
-                            # 发射完成信号
-                            self.request_finished.emit()
-                            return  # 直接返回，不处理后续数据
-                        
-                        # 处理数据块（移到这里，避免重复代码）
-                        try:
-                            # 解析 JSON
-                            data = json.loads(data_str)
-                            
-                            # 提取内容（兼容多种格式）
-                            if 'choices' in data and len(data['choices']) > 0:
-                                choice = data['choices'][0]
-                                
-                                # 尝试从 delta 获取（OpenAI/GPT 格式）
-                                delta = choice.get('delta', {})
-                                content = delta.get('content', '')
-                                
-                                # 如果 delta 中没有，尝试从 message 获取（Gemini 可能的格式）
-                                if not content:
-                                    message = choice.get('message', {})
-                                    content = message.get('content', '')
-                                
-                                # 如果还是没有，尝试直接从 choice 获取 text
-                                if not content:
-                                    content = choice.get('text', '')
-                                
-                                if content:
-                                    # 将大块内容切分成小块，以获得更流畅的打字效果
-                                    # 每次发送3-5个字符（中文1个字符，英文/数字/标点1个字符）
-                                    chunk_size = 3  # 每次发送3个字符（减少块大小以获得更流畅的效果）
-                                    for i in range(0, len(content), chunk_size):
-                                        if not self.is_running:
-                                            break
-                                        small_chunk = content[i:i+chunk_size]
-                                        self.chunk_received.emit(small_chunk)
-                                        # 添加小延迟以模拟打字效果（每3个字符延迟15ms）
-                                        time.sleep(0.015)  # 15毫秒延迟
-                                    try:
-                                        print(f"[STREAM] 发射数据块: {content[:30]}... (长度: {len(content)})")
-                                    except (UnicodeEncodeError, UnicodeDecodeError):
-                                        # Windows 终端 GBK 编码问题，使用安全方式打印
-                                        print(f"[STREAM] 发射数据块 (长度: {len(content)})")
-                        
-                        except json.JSONDecodeError:
-                            # 忽略 JSON 解析错误
-                            continue
-                        except Exception as e:
-                            # 其他错误
-                            print(f"[ERROR] 处理数据块时出错: {str(e)}")
-                            continue
-                
-                except UnicodeDecodeError:
-                    # 如果解码失败，可能是多字节字符被分割，继续累积
-                    continue
+                if chunk:
+                    self.chunk_received.emit(chunk)
             
             # 请求完成
-            self.request_finished.emit()
+            if self.is_running:
+                self.request_finished.emit()
         
-        except requests.exceptions.Timeout:
-            self.error_occurred.emit("请求超时，请检查网络连接")
-        except requests.exceptions.ConnectionError:
-            self.error_occurred.emit("连接失败，请检查网络设置")
         except Exception as e:
-            self.error_occurred.emit(f"发生错误: {str(e)}")
+            error_msg = str(e)
+            print(f"[ERROR] LLM 请求失败: {error_msg}")
+            self.error_occurred.emit(error_msg)
     
     def stop(self):
         """停止请求"""
