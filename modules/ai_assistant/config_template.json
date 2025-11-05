@@ -1,0 +1,18 @@
+{
+  "_version": "1.0.0",
+  "llm_provider": "api",
+  "api_settings": {
+    "api_url": "https://api.openai-hk.com/v1/chat/completions",
+    "api_key": "hk-rf256210000027899536cbcb497417e8dfc70c2960229c22",
+    "default_model": "gemini-2.5-flash",
+    "temperature": 0.8,
+    "timeout": 60
+  },
+  "ollama_settings": {
+    "base_url": "http://localhost:11434",
+    "model_name": "llama3",
+    "stream": true,
+    "timeout": 60
+  }
+}
+
