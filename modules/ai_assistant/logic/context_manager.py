@@ -33,7 +33,8 @@ try:
     from modules.ai_assistant.logic.remote_retriever import RemoteRetriever
     V01_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"v0.1 功能不可用（缺少依赖）：{e}")
+    # logger 此时是 None，不能调用（模块级代码）
+    print(f"[WARNING] v0.1 功能不可用（缺少依赖）：{e}", flush=True)
     IntentEngine = None
     IntentType = None
     RuntimeContextManager = None
@@ -243,42 +244,26 @@ class ContextManager:
         
         # 闲聊模式：返回基本角色说明+相关记忆（仅在需要时）
         if is_chitchat:
-            self.logger.info("检测到闲聊模式，使用精简上下文")
+            self.logger.info("检测到闲聊模式，使用极简上下文")
             
-            chitchat_context = "[角色提示]\n你是虚幻引擎资产管理工具箱的AI助手。这是一个帮助用户管理UE资产、配置、文档的工具软件（不是UE项目本身）。你友好、专业、乐于帮助，拥有记忆功能。"
-            
-            # 检查用户身份设定（应该始终展现）
-            # 身份设定已在 chat_window.py 的系统提示词中添加，这里不再重复添加
-            # 避免重复导致混乱
-            # user_identity = self.memory.get_user_identity()
-            # if user_identity:
-            #     chitchat_context += f"\n\n[你的角色设定]\n{user_identity}\n⚠️ 请始终保持这个角色身份！"
-            #     self.logger.info(f"闲聊模式下添加身份设定: {user_identity[:50]}...")
-            
-            # 智能检索相关记忆（控制数量和重要性）
-            is_asking_memory = any(keyword in query.lower() for keyword in ['记得', '还记得', '记不记得', '忘了'])
+            # Token 优化：彻底精简闲聊模式的上下文
+            # 智能检索相关记忆（仅在明确询问记忆时）
+            is_asking_memory = any(keyword in query.lower() for keyword in ['记得', '还记得', '记不记得', '忘了', '说过'])
             
             if is_asking_memory:
-                # 用户明确询问记忆，检索更多且降低阈值
-                relevant_memories = self.memory.get_relevant_memories(query, limit=3, min_importance=0.1)
+                # 用户明确询问记忆，检索并返回
+                relevant_memories = self.memory.get_relevant_memories(query, limit=2, min_importance=0.1)
                 
                 if relevant_memories:
-                    chitchat_context += "\n\n[相关记忆]（以下是系统为你检索到的历史对话信息）\n" + "\n".join(f"- {m}" for m in relevant_memories[:3])
-                    self.logger.info(f"用户询问记忆，找到 {len(relevant_memories)} 条相关记忆")
+                    # Token优化：只返回记忆，不加额外描述
+                    return "[相关记忆]\n" + "\n".join(f"- {m}" for m in relevant_memories[:2])
                 else:
-                    chitchat_context += "\n\n⚠️ 系统未找到相关记忆。"
-                    self.logger.warning("用户询问记忆，但未找到相关记忆！")
+                    return ""  # 没找到就返回空，让AI自然回答
             else:
-                # 普通闲聊，也检索少量高质量记忆（避免完全失忆）
-                relevant_memories = self.memory.get_relevant_memories(query, limit=2, min_importance=0.5)
-                
-                if relevant_memories:
-                    chitchat_context += "\n\n[相关记忆]\n" + "\n".join(f"- {m}" for m in relevant_memories[:2])
-                    self.logger.info(f"闲聊模式检索到 {len(relevant_memories)} 条高质量记忆")
-                else:
-                    self.logger.info("普通闲聊，未找到高质量相关记忆")
-            
-            return chitchat_context
+                # 普通闲聊，完全不添加上下文（Token优化：0 token）
+                # 让AI依赖系统提示词和对话历史自然回答
+                self.logger.info("普通闲聊，跳过所有上下文（Token优化）")
+                return ""
         
         # ===== 第二层：系统级上下文（仅在显式要求时添加）=====
         if include_system_prompt:
@@ -291,14 +276,15 @@ class ContextManager:
             self.logger.info(f"已添加用户身份设定: {user_identity[:50]}...")
         
         # ===== 第四层：用户画像（习惯和偏好，排除身份）=====
+        # Token优化：用户画像缩短到300字符
         user_profile = self.memory.get_user_profile()
         if user_profile:
-            # 适度限制长度，但不要过于激进
-            context_sections['user_profile'] = user_profile[:500] if len(user_profile) > 500 else user_profile
+            context_sections['user_profile'] = user_profile[:300] if len(user_profile) > 300 else user_profile
             self.logger.info("已添加用户画像")
         
-        # ===== 第五层：智能记忆检索（优化：降低阈值，增加数量）=====
-        relevant_memories = self.memory.get_relevant_memories(query, limit=5, min_importance=0.2)
+        # ===== 第五层：智能记忆检索 =====
+        # Token优化：从 limit=5 降到 limit=3，提高阈值从 0.2 到 0.3
+        relevant_memories = self.memory.get_relevant_memories(query, limit=3, min_importance=0.3)
         
         # 调试：输出记忆检索详情
         self.logger.info(f"记忆检索结果: 找到 {len(relevant_memories)} 条记忆")
@@ -309,9 +295,10 @@ class ContextManager:
             self.logger.warning("未找到相关记忆！")
         
         if relevant_memories:
-            # 保留完整信息（不截断），让AI看到更多细节
-            context_sections['relevant_memories'] = "[相关历史记忆]（以下是系统为你检索到的历史对话信息，请优先参考）\n" + "\n".join(f"- {m}" for m in relevant_memories[:5])
-            self.logger.info(f"已添加 {len(relevant_memories)} 条相关记忆到上下文")
+            # Token优化：每条记忆限制150字符，最多3条
+            truncated_memories = [m[:150] + "..." if len(m) > 150 else m for m in relevant_memories[:3]]
+            context_sections['relevant_memories'] = "[相关记忆]\n" + "\n".join(f"- {m}" for m in truncated_memories)
+            self.logger.info(f"已添加 {len(truncated_memories)} 条记忆（已精简）")
         
         # ===== 第六层：最近对话摘要（如果有压缩摘要就包含）=====
         if hasattr(self.memory, 'compressed_summary') and self.memory.compressed_summary:
@@ -319,40 +306,33 @@ class ContextManager:
             self.logger.info("已添加对话历史摘要")
         
         # ===== 第七层：运行时状态（仅在需要资产/配置/日志时添加）=====
-        # Token优化：只在需要时才添加运行时状态
+        # Token优化：只在需要时才添加运行时状态，且更激进截断
         if analysis.get('needs_assets') or analysis.get('needs_configs') or analysis.get('needs_logs'):
             if self.runtime_context:
                 runtime_snapshot = self.runtime_context.get_formatted_snapshot()
                 if runtime_snapshot:
-                    # 适度限制，但保留足够信息
-                    context_sections['runtime_status'] = runtime_snapshot[:800] if len(runtime_snapshot) > 800 else runtime_snapshot
-                    self.logger.info("已添加运行态快照")
+                    # Token优化：从 800 降到 400 字符
+                    context_sections['runtime_status'] = runtime_snapshot[:400] if len(runtime_snapshot) > 400 else runtime_snapshot
+                    self.logger.info("已添加运行态快照（精简版）")
         
         # ===== 第八层：检索证据（本地优先，远程 fallback）=====
-        # 仅在需要文档/资产查询时检索
-        if analysis.get('needs_docs') or analysis.get('needs_assets'):
+        # Token优化：仅在需要文档时检索（资产查询用领域上下文）
+        if analysis.get('needs_docs'):
             retrieval_evidence = self._build_retrieval_evidence(query)
             if retrieval_evidence:
-                # 适度限制，保留足够细节
-                context_sections['retrieval_evidence'] = retrieval_evidence[:1500] if len(retrieval_evidence) > 1500 else retrieval_evidence
-                self.logger.info("已添加检索证据")
+                # Token优化：从 1500 降到 800 字符
+                context_sections['retrieval_evidence'] = retrieval_evidence[:800] if len(retrieval_evidence) > 800 else retrieval_evidence
+                self.logger.info("已添加检索证据（精简版）")
         
         # ===== 第九层：领域特定上下文 =====
         domain_contexts = self._build_domain_contexts(query, analysis)
         if domain_contexts:
             context_sections.update(domain_contexts)
         
-        # ===== 第十层：智能回退（仅在非闲聊且无特定领域需求时）=====
-        # 闲聊时完全跳过 fallback，避免加载系统概览
-        if not is_chitchat and not any([analysis['needs_assets'], analysis['needs_docs'], 
-                   analysis['needs_logs'], analysis['needs_configs']]):
-            self.logger.info("触发智能回退策略")
-            fallback = self._build_fallback_context(query)
-            if fallback:
-                context_sections['fallback'] = fallback
-        elif is_chitchat:
-            # 闲聊模式：只保留最基本的系统角色说明
-            self.logger.info("闲聊模式：跳过所有领域上下文和系统概览")
+        # ===== 第十层：智能回退 =====
+        # Token优化：取消自动 fallback，只在必要时才添加系统概览
+        # 让AI依赖系统提示词中的基础信息，减少冗余
+        self.logger.info("跳过 fallback（Token优化）")
         
         # ===== 上下文优化和去重 =====
         optimized_context = self._optimize_context(context_sections, query)
@@ -632,27 +612,32 @@ class ContextManager:
         if analysis['needs_assets']:
             asset_context = self._build_asset_context(query)
             if asset_context:
-                contexts['domain_assets'] = asset_context
+                # Token优化：资产上下文限制到 600 字符
+                contexts['domain_assets'] = asset_context[:600] if len(asset_context) > 600 else asset_context
         
         if analysis['needs_docs']:
             doc_context = self._build_document_context(query)
             if doc_context:
-                contexts['domain_docs'] = doc_context
+                # Token优化：文档上下文限制到 500 字符
+                contexts['domain_docs'] = doc_context[:500] if len(doc_context) > 500 else doc_context
         
         if analysis['needs_logs']:
             log_context = self._build_log_context(query)
             if log_context:
-                contexts['domain_logs'] = log_context
+                # Token优化：日志上下文限制到 600 字符
+                contexts['domain_logs'] = log_context[:600] if len(log_context) > 600 else log_context
         
         if analysis['needs_configs']:
             config_context = self._build_config_context(query)
             if config_context:
-                contexts['domain_configs'] = config_context
+                # Token优化：配置上下文限制到 600 字符
+                contexts['domain_configs'] = config_context[:600] if len(config_context) > 600 else config_context
         
         if analysis.get('needs_sites', False):
             site_context = self._build_site_context(query)
             if site_context:
-                contexts['domain_sites'] = site_context
+                # Token优化：站点上下文限制到 400 字符
+                contexts['domain_sites'] = site_context[:400] if len(site_context) > 400 else site_context
         
         return contexts
     
@@ -734,13 +719,11 @@ class ContextManager:
         
         # 格式化输出（Token优化：简化header/footer）
         if final_parts:
-            # 简化header，减少token消耗
-            header = "[上下文]\n"
-            
+            # Token优化：完全移除 header，直接返回内容
             # 记录token统计到日志，不添加到输出
             self.logger.info(f"上下文 Token 统计: {total_tokens}/{max_tokens}")
             
-            return header + "\n\n".join(final_parts)
+            return "\n\n".join(final_parts)
         
         return ""
     
@@ -861,21 +844,10 @@ class ContextManager:
             str: 系统概览
         """
         try:
+            # Token优化：大幅精简系统概览
             overview_parts = [
-                "[SYSTEM] **UE 工具箱系统概览**\n",
-                "我可以帮你：",
-                "1. [ASSET] 查找和管理虚幻引擎资产",
-                "2. [CONFIG] 查看和管理 UE 引擎配置模板",
-                "3. [DOC] 查阅项目文档和使用说明",
-                "4. [LOG] 分析日志文件和诊断错误",
-                "5. [HELP] 回答虚幻引擎相关问题\n",
-                "**可用命令**:",
-                "- '有哪些资产' - 查看资产库",
-                "- '有哪些配置' - 查看配置模板",
-                "- '搜索 [关键词]' - 搜索资产或配置",
-                "- '查看文档' - 查看可用文档",
-                "- '分析错误' - 查看最近的错误日志",
-                "- '查看日志' - 查看日志统计"
+                "[系统能力]",
+                "资产管理、配置查询、文档查阅、日志分析"
             ]
             
             return "\n".join(overview_parts)
@@ -923,21 +895,21 @@ class ContextManager:
             # 1. 优先本地文档检索
             try:
                 if self.local_index:
-                    local_results = self.local_index.search(query, top_k=3)
+                    # Token优化：从 top_k=3 降到 top_k=2
+                    local_results = self.local_index.search(query, top_k=2)
                 else:
                     local_results = []
                 
                 if local_results:
-                    evidence_parts.append("[本地文档检索结果]")
+                    evidence_parts.append("[文档]")
                     for i, result in enumerate(local_results, 1):
-                        content = result['content'][:300]  # 限制长度
+                        # Token优化：从 150 降到 120 字符
+                        content = result['content'][:120]
                         metadata = result.get('metadata', {})
                         source = metadata.get('source', 'unknown')
-                        path = metadata.get('path', '')
                         
-                        # 添加来源标签
-                        evidence_parts.append(f"\n{i}. {content}...")
-                        evidence_parts.append(f"   [来源: {source}]" + (f" [路径: {path}]" if path else ""))
+                        # Token优化：更简洁的格式
+                        evidence_parts.append(f"{i}. {content}...")
                     
                     self.logger.info(f"本地检索到 {len(local_results)} 条结果")
             
@@ -960,15 +932,13 @@ class ContextManager:
                         remote_results = []
                     
                     if remote_results:
-                        evidence_parts.append("[远程代码检索结果]")
+                        evidence_parts.append("[远程代码]")
                         for i, result in enumerate(remote_results, 1):
-                            snippet = result.get('content_snippet', '')[:200]
-                            url = result.get('url', '')
+                            # Token优化：从 200 降到 100 字符，移除冗余信息
+                            snippet = result.get('content_snippet', '')[:100]
                             path = result.get('path', '')
                             
-                            evidence_parts.append(f"\n{i}. {snippet}...")
-                            evidence_parts.append(f"   [来源: GitHub - {path}]")
-                            evidence_parts.append(f"   [链接: {url}]")
+                            evidence_parts.append(f"{i}. {snippet}... ({path})")
                         
                         self.logger.info(f"远程检索到 {len(remote_results)} 条结果")
                 
