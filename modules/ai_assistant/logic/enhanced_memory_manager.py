@@ -13,7 +13,11 @@ from collections import deque
 from core.logger import get_logger
 from core.ai_services import EmbeddingService
 
-logger = get_logger(__name__)
+# 延迟获取 logger，避免模块导入时卡住
+def _get_logger():
+    return get_logger(__name__)
+
+logger = None  # 延迟初始化
 
 
 class BGEEmbeddingFunctionForMemory:
@@ -79,7 +83,7 @@ class EnhancedMemoryManager:
             db_client: ChromaDB 客户端实例（用于向量存储）
         """
         self.user_id = user_id
-        self.logger = logger
+        self.logger = _get_logger()  # 延迟获取 logger
         
         # 存储目录
         if storage_dir:

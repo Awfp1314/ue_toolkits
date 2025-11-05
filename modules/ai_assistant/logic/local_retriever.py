@@ -12,7 +12,11 @@ from datetime import datetime
 from core.logger import get_logger
 from core.ai_services import EmbeddingService
 
-logger = get_logger(__name__)
+# 延迟获取 logger
+def _get_logger():
+    return get_logger(__name__)
+
+logger = None
 
 
 class BGEEmbeddingFunction:
@@ -69,7 +73,7 @@ class LocalDocIndex:
             db_path: Chroma 数据库路径（默认由 PathUtils 提供）
             embedding_service: 嵌入服务实例（默认创建新实例）
         """
-        self.logger = logger
+        self.logger = _get_logger()  # 延迟获取
         
         # 数据库路径
         if db_path is None:

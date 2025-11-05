@@ -18,7 +18,11 @@ from modules.ai_assistant.logic.config_reader import ConfigReader
 from modules.ai_assistant.logic.site_reader import SiteReader
 from modules.ai_assistant.logic.enhanced_memory_manager import EnhancedMemoryManager, MemoryLevel
 
-logger = get_logger(__name__)
+# 延迟获取 logger
+def _get_logger():
+    return get_logger(__name__)
+
+logger = None
 
 # v0.1 新增：意图解析、运行态上下文、本地/远程检索
 # 可选导入，如果依赖未安装则跳过（优雅降级）
@@ -102,7 +106,7 @@ class ContextManager:
         # Debug 模式
         self.debug = debug
         
-        self.logger = logger
+        self.logger = _get_logger()  # 延迟获取
         self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，统一嵌入服务: ✓，向量检索: ✓）")
     
     def _init_chromadb_client(self):

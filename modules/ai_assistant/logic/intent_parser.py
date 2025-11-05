@@ -11,7 +11,11 @@ from enum import Enum
 from core.logger import get_logger
 from core.ai_services import EmbeddingService
 
-logger = get_logger(__name__)
+# 延迟获取 logger
+def _get_logger():
+    return get_logger(__name__)
+
+logger = None
 
 
 class IntentType(str, Enum):
@@ -57,7 +61,7 @@ class IntentEngine:
         # 使用统一的 EmbeddingService
         self.embedding_service = EmbeddingService(model_name=model_path or "BAAI/bge-small-zh-v1.5")
         
-        self.logger = logger
+        self.logger = _get_logger()  # 延迟获取
         self.logger.info(f"意图引擎初始化（模型类型: {model_type}，使用统一嵌入服务）")
     
     def parse(self, query: str) -> Dict[str, Any]:
