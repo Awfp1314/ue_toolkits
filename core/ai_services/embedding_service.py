@@ -58,8 +58,6 @@ class EmbeddingService:
         if EmbeddingService._lock is None:
             import threading
             EmbeddingService._lock = threading.Lock()
-        
-        logger.info(f"嵌入服务已创建（模型: {model_name}，延迟加载模式）")
     
     def get_embedder(self):
         """
