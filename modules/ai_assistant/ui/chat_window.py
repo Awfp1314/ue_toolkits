@@ -92,29 +92,11 @@ class ChatWindow(QWidget):
         self.load_theme(self.current_theme)
     
     def _get_system_prompt(self) -> str:
-        """根据 LLM 供应商动态选择系统提示词"""
-        try:
-            from core.config.config_manager import ConfigManager
-            from pathlib import Path
-            
-            template_path = Path(__file__).parent.parent.parent / "modules" / "ai_assistant" / "config_template.json"
-            config_manager = ConfigManager("ai_assistant", template_path=template_path)
-            config = config_manager.get_module_config()
-            
-            provider = config.get("llm_provider", "api")
-            
-            if provider == "ollama":
-                # Ollama 本地小模型使用简化版提示词
-                print("[DEBUG] 使用简化版系统提示词（适配本地小模型）")
-                return SYSTEM_PROMPT_SIMPLE
-            else:
-                # API 大模型使用完整版提示词
-                print("[DEBUG] 使用完整版系统提示词（API 模型）")
-                return SYSTEM_PROMPT
-        
-        except Exception as e:
-            print(f"[WARNING] 无法判断 LLM 供应商，使用完整版提示词: {e}")
-            return SYSTEM_PROMPT
+        """获取系统提示词（统一使用完整版）"""
+        # 不再区分 API 和 Ollama，统一使用完整版提示词
+        # 用户升级了 Ollama 模型后，可以理解完整的提示词
+        print("[DEBUG] 使用完整版系统提示词（所有 LLM 供应商）")
+        return SYSTEM_PROMPT
     
     def set_asset_manager_logic(self, asset_manager_logic):
         """设置asset_manager逻辑层引用
