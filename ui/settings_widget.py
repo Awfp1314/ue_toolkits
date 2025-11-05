@@ -1295,15 +1295,21 @@ class SettingsWidget(QWidget):
             index = 0 if provider == "api" else 1
             self.llm_provider_combo.setCurrentIndex(index)
             
-            # 加载 API 设置
+            # 加载 API 设置（空字符串回退到默认值）
             api_settings = config.get("api_settings", {})
-            self.api_key_input.setText(api_settings.get("api_key", ""))
-            self.api_url_input.setText(api_settings.get("api_url", "https://api.openai-hk.com/v1/chat/completions"))
+            api_key = api_settings.get("api_key", "")
+            api_url = api_settings.get("api_url", "")
             
-            # 加载 Ollama 设置
+            self.api_key_input.setText(api_key if api_key else "")
+            self.api_url_input.setText(api_url if api_url else "https://api.openai-hk.com/v1/chat/completions")
+            
+            # 加载 Ollama 设置（空字符串回退到默认值）
             ollama_settings = config.get("ollama_settings", {})
-            self.ollama_url_input.setText(ollama_settings.get("base_url", "http://localhost:11434"))
-            self.ollama_model_input.setText(ollama_settings.get("model_name", "llama3"))
+            ollama_url = ollama_settings.get("base_url", "")
+            ollama_model = ollama_settings.get("model_name", "")
+            
+            self.ollama_url_input.setText(ollama_url if ollama_url else "http://localhost:11434")
+            self.ollama_model_input.setText(ollama_model if ollama_model else "llama3")
             
             # 触发显示/隐藏逻辑
             self._on_llm_provider_changed(index)
@@ -1326,17 +1332,38 @@ class SettingsWidget(QWidget):
             provider = self.llm_provider_combo.currentData()
             config["llm_provider"] = provider
             
-            # 更新 API 设置
+            # 更新 API 设置（如果输入框为空，保留原值或使用默认值）
             if "api_settings" not in config:
                 config["api_settings"] = {}
-            config["api_settings"]["api_key"] = self.api_key_input.text()
-            config["api_settings"]["api_url"] = self.api_url_input.text()
             
-            # 更新 Ollama 设置
+            api_key = self.api_key_input.text().strip()
+            if api_key:  # 只有非空时才更新
+                config["api_settings"]["api_key"] = api_key
+            
+            api_url = self.api_url_input.text().strip()
+            if api_url:  # 只有非空时才更新
+                config["api_settings"]["api_url"] = api_url
+            elif "api_url" not in config["api_settings"]:
+                # 如果从未设置过，使用默认值
+                config["api_settings"]["api_url"] = "https://api.openai-hk.com/v1/chat/completions"
+            
+            # 更新 Ollama 设置（如果输入框为空，保留原值或使用默认值）
             if "ollama_settings" not in config:
                 config["ollama_settings"] = {}
-            config["ollama_settings"]["base_url"] = self.ollama_url_input.text()
-            config["ollama_settings"]["model_name"] = self.ollama_model_input.text()
+            
+            ollama_url = self.ollama_url_input.text().strip()
+            if ollama_url:  # 只有非空时才更新
+                config["ollama_settings"]["base_url"] = ollama_url
+            elif "base_url" not in config["ollama_settings"]:
+                # 如果从未设置过，使用默认值
+                config["ollama_settings"]["base_url"] = "http://localhost:11434"
+            
+            ollama_model = self.ollama_model_input.text().strip()
+            if ollama_model:  # 只有非空时才更新
+                config["ollama_settings"]["model_name"] = ollama_model
+            elif "model_name" not in config["ollama_settings"]:
+                # 如果从未设置过，使用默认值
+                config["ollama_settings"]["model_name"] = "llama3"
             
             # 保存配置
             config_manager.save_user_config(config)

@@ -34,9 +34,10 @@ class ApiLLMClient(BaseLLMClient):
         """
         super().__init__(config)
         
-        self.api_url = config.get('api_url', 'https://api.openai-hk.com/v1/chat/completions')
-        self.api_key = config.get('api_key', '')
-        self.default_model = config.get('default_model', 'gemini-2.5-flash')
+        # 从配置读取，空字符串回退到默认值
+        self.api_url = config.get('api_url') or 'https://api.openai-hk.com/v1/chat/completions'
+        self.api_key = config.get('api_key') or 'hk-rf256210000027899536cbcb497417e8dfc70c2960229c22'
+        self.default_model = config.get('default_model') or 'gemini-2.5-flash'
         self.default_temperature = config.get('temperature', 0.8)
         self.timeout = config.get('timeout', 60)
         

@@ -32,8 +32,9 @@ class OllamaLLMClient(BaseLLMClient):
         """
         super().__init__(config)
         
-        self.base_url = config.get('base_url', 'http://localhost:11434')
-        self.model_name = config.get('model_name', 'llama3')
+        # 从配置读取，空字符串回退到默认值
+        self.base_url = config.get('base_url') or 'http://localhost:11434'
+        self.model_name = config.get('model_name') or 'llama3'
         self.stream = config.get('stream', True)
         self.timeout = config.get('timeout', 60)
         
