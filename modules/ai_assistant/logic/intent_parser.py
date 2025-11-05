@@ -9,11 +9,9 @@ import re
 from typing import Dict, Any, List, Optional
 from enum import Enum
 from core.logger import get_logger
+from core.ai_services import EmbeddingService
 
 logger = get_logger(__name__)
-
-# 全局模型缓存（多个 IntentEngine 实例共享同一个模型，避免重复加载）
-_CACHED_EMBEDDER = None
 
 
 class IntentType(str, Enum):
@@ -56,13 +54,11 @@ class IntentEngine:
         self.model_type = model_type
         self.model_path = model_path
         
-        # 延迟加载：模型在首次使用时才初始化
-        self._model = None
-        self._embedder = None
-        self._model_loaded = False
+        # 使用统一的 EmbeddingService
+        self.embedding_service = EmbeddingService(model_name=model_path or "BAAI/bge-small-zh-v1.5")
         
         self.logger = logger
-        self.logger.info(f"意图引擎初始化（模型类型: {model_type}，延迟加载模式）")
+        self.logger.info(f"意图引擎初始化（模型类型: {model_type}，使用统一嵌入服务）")
     
     def parse(self, query: str) -> Dict[str, Any]:
         """
@@ -79,12 +75,11 @@ class IntentEngine:
             }
         """
         try:
-            # 延迟加载模型
-            if not self._model_loaded:
-                self._load_model()
-            
             # 根据模型类型选择解析方法
-            if self.model_type == ModelType.BGE_SMALL and self._embedder is not None:
+            if self.model_type == ModelType.BGE_SMALL and self.embedding_service.is_loaded():
+                return self._parse_with_embedding(query)
+            elif self.model_type == ModelType.BGE_SMALL:
+                # 尝试使用嵌入模型（会触发延迟加载）
                 return self._parse_with_embedding(query)
             else:
                 return self._parse_with_rules(query)
@@ -93,45 +88,6 @@ class IntentEngine:
             self.logger.error(f"意图解析失败: {e}", exc_info=True)
             # 降级到规则匹配
             return self._parse_with_rules(query)
-    
-    def _load_model(self):
-        """
-        延迟加载模型（首次调用时执行）
-        
-        注意：此方法在首次 parse() 时才执行，避免影响 PyQt6 启动速度
-        
-        优化：使用全局缓存，多个 IntentEngine 实例共享同一个模型
-        """
-        # 检查全局缓存
-        global _CACHED_EMBEDDER
-        if _CACHED_EMBEDDER is not None:
-            self.logger.info("使用已缓存的语义模型")
-            self._embedder = _CACHED_EMBEDDER
-            self._model_loaded = True
-            return
-        
-        self._model_loaded = True
-        
-        if self.model_type == ModelType.RULE_BASED:
-            self.logger.info("使用规则匹配模式，无需加载模型")
-            return
-        
-        try:
-            self.logger.info("开始加载 sentence-transformers 模型...")
-            from sentence_transformers import SentenceTransformer
-            
-            # 使用 BAAI/bge-small-zh-v1.5（约 100MB，中文语义表现优秀）
-            model_name = self.model_path or "BAAI/bge-small-zh-v1.5"
-            self._embedder = SentenceTransformer(model_name)
-            
-            # 保存到全局缓存（供其他 IntentEngine 实例复用）
-            _CACHED_EMBEDDER = self._embedder
-            
-            self.logger.info(f"模型加载成功: {model_name}（已缓存到全局）")
-            
-        except Exception as e:
-            self.logger.warning(f"模型加载失败，将使用规则匹配作为 fallback: {e}")
-            self._embedder = None
     
     def _parse_with_embedding(self, query: str) -> Dict[str, Any]:
         """
@@ -144,6 +100,13 @@ class IntentEngine:
             Dict: 意图解析结果
         """
         try:
+            # 获取嵌入模型（通过统一的 EmbeddingService）
+            embedder = self.embedding_service.get_embedder()
+            
+            if embedder is None:
+                self.logger.warning("嵌入模型未加载，降级到规则匹配")
+                return self._parse_with_rules(query)
+            
             # 预定义的意图模板
             intent_templates = {
                 IntentType.ASSET_QUERY: [
@@ -181,14 +144,14 @@ class IntentEngine:
                 ]
             }
             
-            # 计算查询与各意图模板的相似度
-            query_embedding = self._embedder.encode(query, convert_to_numpy=True)
+            # 计算查询与各意图模板的相似度（使用 EmbeddingService）
+            query_embedding = embedder.encode(query, convert_to_numpy=True)
             
             max_similarity = 0.0
             best_intent = IntentType.CHITCHAT
             
             for intent, templates in intent_templates.items():
-                template_embeddings = self._embedder.encode(templates, convert_to_numpy=True)
+                template_embeddings = embedder.encode(templates, convert_to_numpy=True)
                 
                 # 计算余弦相似度
                 import numpy as np
