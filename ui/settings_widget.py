@@ -1271,6 +1271,10 @@ class SettingsWidget(QWidget):
         
         ai_group.setLayout(ai_layout)
         
+        # 延迟加载配置（避免在 UI 创建时阻塞）
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(100, self._load_ai_assistant_settings)
+        
         return ai_group
     
     def _on_llm_provider_changed(self, index):
