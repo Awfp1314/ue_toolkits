@@ -52,8 +52,8 @@ class APIClient(QThread):
         """从配置文件加载 AI 助手配置"""
         try:
             from core.config.config_manager import ConfigManager
-            config_manager = ConfigManager()
-            return config_manager.get_module_config("ai_assistant")
+            config_manager = ConfigManager("ai_assistant")
+            return config_manager.get_module_config()
         except Exception as e:
             print(f"[WARNING] 加载配置失败，使用默认 API 配置: {e}")
             # 返回默认 API 配置
@@ -66,7 +66,7 @@ class APIClient(QThread):
                     "temperature": 0.8,
                     "timeout": 60
                 }
-            }
+        }
     
     def run(self):
         """执行 LLM 请求（使用策略模式）"""

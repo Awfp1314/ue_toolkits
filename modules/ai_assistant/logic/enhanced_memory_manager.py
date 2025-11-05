@@ -28,8 +28,10 @@ class BGEEmbeddingFunctionForMemory:
     
     def __init__(self, embedding_service):
         self.embedding_service = embedding_service
-        # ChromaDB 需要的属性
-        self.name = "bge-small-zh-v1.5-memory"
+    
+    def name(self) -> str:
+        """ChromaDB 需要的方法（不是属性）"""
+        return "bge-small-zh-v1.5-memory"
     
     def __call__(self, input: List[str]) -> List[List[float]]:
         """ChromaDB 要求的接口"""

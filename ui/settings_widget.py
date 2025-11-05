@@ -1287,8 +1287,8 @@ class SettingsWidget(QWidget):
         """从配置加载 AI 助手设置"""
         try:
             from core.config.config_manager import ConfigManager
-            config_manager = ConfigManager()
-            config = config_manager.get_module_config("ai_assistant")
+            config_manager = ConfigManager("ai_assistant")
+            config = config_manager.get_module_config()
             
             # 加载 LLM 供应商
             provider = config.get("llm_provider", "api")
@@ -1317,10 +1317,10 @@ class SettingsWidget(QWidget):
         """保存 AI 助手设置"""
         try:
             from core.config.config_manager import ConfigManager
-            config_manager = ConfigManager()
+            config_manager = ConfigManager("ai_assistant")
             
             # 获取当前配置
-            config = config_manager.get_module_config("ai_assistant")
+            config = config_manager.get_module_config()
             
             # 更新配置
             provider = self.llm_provider_combo.currentData()
@@ -1339,7 +1339,7 @@ class SettingsWidget(QWidget):
             config["ollama_settings"]["model_name"] = self.ollama_model_input.text()
             
             # 保存配置
-            config_manager.save_user_config("ai_assistant", config)
+            config_manager.save_user_config(config)
             
             # 提示用户
             QMessageBox.information(
