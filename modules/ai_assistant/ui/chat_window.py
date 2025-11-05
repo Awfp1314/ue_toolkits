@@ -17,7 +17,7 @@ from modules.ai_assistant.ui.message_bubble import MessageBubble, StreamingBubbl
 from modules.ai_assistant.ui.markdown_message import MarkdownMessage, StreamingMarkdownMessage, ErrorMarkdownMessage
 from modules.ai_assistant.logic.api_client import APIClient
 from modules.ai_assistant.ui.chat_composer import ChatGPTComposer
-from modules.ai_assistant.logic.config import SYSTEM_PROMPT
+from modules.ai_assistant.logic.config import SYSTEM_PROMPT, SYSTEM_PROMPT_SIMPLE
 from modules.ai_assistant.logic.context_manager import ContextManager
 
 
@@ -48,11 +48,11 @@ class ChatWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, False)
         
         # 对话状态
-        # 初始化对话历史，包含系统提示词
+        # 初始化对话历史，系统提示词将根据 LLM 供应商动态选择
         self.conversation_history = [
             {
                 "role": "system",
-                "content": SYSTEM_PROMPT
+                "content": self._get_system_prompt()
             }
         ]
         self.current_api_client = None
@@ -90,6 +90,31 @@ class ChatWindow(QWidget):
         
         self.init_ui()
         self.load_theme(self.current_theme)
+    
+    def _get_system_prompt(self) -> str:
+        """根据 LLM 供应商动态选择系统提示词"""
+        try:
+            from core.config.config_manager import ConfigManager
+            from pathlib import Path
+            
+            template_path = Path(__file__).parent.parent.parent / "modules" / "ai_assistant" / "config_template.json"
+            config_manager = ConfigManager("ai_assistant", template_path=template_path)
+            config = config_manager.get_module_config()
+            
+            provider = config.get("llm_provider", "api")
+            
+            if provider == "ollama":
+                # Ollama 本地小模型使用简化版提示词
+                print("[DEBUG] 使用简化版系统提示词（适配本地小模型）")
+                return SYSTEM_PROMPT_SIMPLE
+            else:
+                # API 大模型使用完整版提示词
+                print("[DEBUG] 使用完整版系统提示词（API 模型）")
+                return SYSTEM_PROMPT
+        
+        except Exception as e:
+            print(f"[WARNING] 无法判断 LLM 供应商，使用完整版提示词: {e}")
+            return SYSTEM_PROMPT
     
     def set_asset_manager_logic(self, asset_manager_logic):
         """设置asset_manager逻辑层引用
@@ -713,10 +738,8 @@ class ChatWindow(QWidget):
             
             # 1. 添加系统提示词（包含身份信息）
             # 每次对话都重新构建系统提示词，确保包含最新的身份设定
-            from modules.ai_assistant.logic.config import SYSTEM_PROMPT
-            
-            # 获取用户身份设定
-            system_prompt = SYSTEM_PROMPT
+            # 根据 LLM 供应商选择合适的提示词
+            system_prompt = self._get_system_prompt()
             if self.context_manager and hasattr(self.context_manager, 'memory'):
                 user_identity = self.context_manager.memory.get_user_identity()
                 print(f"[DEBUG] [身份检查] get_user_identity() 返回: '{user_identity}'")
@@ -1132,11 +1155,11 @@ class ChatWindow(QWidget):
     
     def clear_chat(self):
         """清空当前对话"""
-        # 清空对话历史，并重新添加系统提示词
+        # 清空对话历史，并重新添加系统提示词（根据供应商选择）
         self.conversation_history.clear()
         self.conversation_history.append({
             "role": "system",
-            "content": SYSTEM_PROMPT
+            "content": self._get_system_prompt()
         })
         
         # 清空界面
