@@ -128,17 +128,26 @@ class AIAssistantModule:
                 logger.info(f"✅ 语义模型加载完成（耗时 {model_elapsed:.1f} 秒）")
                 self._model_load_progress = "语义模型加载完成，正在预热向量数据库..."
                 
-                # 2. 预热 ChromaDB（触发 ONNX 模型下载，约 1-2 秒）
+                # 2. 预热 FAISS 记忆系统（替代 ChromaDB，更稳定）
                 try:
-                    chroma_start = time.time()
-                    from modules.ai_assistant.logic.local_retriever import LocalDocIndex
-                    temp_index = LocalDocIndex()
-                    # 执行一次简单查询触发初始化
-                    temp_index.search("test", top_k=1)
-                    chroma_elapsed = time.time() - chroma_start
-                    logger.info(f"✅ ChromaDB 预热完成（耗时 {chroma_elapsed:.1f} 秒）")
+                    memory_start = time.time()
+                    from core.ai_services import EmbeddingService
+                    from modules.ai_assistant.logic.enhanced_memory_manager import EnhancedMemoryManager
+                    
+                    self._model_load_progress = "正在初始化 FAISS 记忆系统..."
+                    embedding_service = EmbeddingService()
+                    temp_memory = EnhancedMemoryManager(
+                        user_id="default",
+                        embedding_service=embedding_service
+                    )
+                    memory_elapsed = time.time() - memory_start
+                    
+                    if temp_memory.faiss_store:
+                        logger.info(f"✅ FAISS 记忆系统初始化完成（耗时 {memory_elapsed:.1f} 秒，记忆数: {temp_memory.faiss_store.count()}）")
+                    else:
+                        logger.warning("⚠️ FAISS 记忆系统初始化失败（将在运行时重试）")
                 except Exception as e:
-                    logger.warning(f"ChromaDB 预热失败（首次查询时会自动初始化）: {e}")
+                    logger.warning(f"⚠️ FAISS 记忆系统预热失败（首次对话时会自动初始化）: {e}")
                 
                 # 所有模型加载完成后，恢复代理设置和在线模式
                 for key, value in proxy_backup.items():
@@ -157,7 +166,7 @@ class AIAssistantModule:
                 # 标记加载完成
                 self._model_loading = False
                 self._model_loaded = True
-                self._model_load_progress = f"模型加载完成（耗时 {total_elapsed:.1f} 秒）"
+                self._model_load_progress = f"模型加载完成（耗时 {total_elapsed:.1f} 秒，已启用 FAISS 记忆系统）"
                 
             except Exception as e:
                 logger.warning(f"⚠️ 预加载模型失败: {e}", exc_info=True)
