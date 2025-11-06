@@ -35,6 +35,7 @@ class OllamaLLMClient(BaseLLMClient):
         # 从配置读取，空字符串回退到默认值
         self.base_url = config.get('base_url') or 'http://localhost:11434'
         self.model_name = config.get('model_name') or 'llama3'
+        self.default_temperature = config.get('temperature', 0.9)  # 默认 0.9，提高流畅度
         self.stream = config.get('stream', True)
         self.timeout = config.get('timeout', 60)
         
@@ -70,12 +71,9 @@ class OllamaLLMClient(BaseLLMClient):
             payload = {
                 "model": self.model_name,
                 "messages": context_messages,
-                "stream": stream
+                "stream": stream,
+                "temperature": temperature if temperature is not None else self.default_temperature
             }
-            
-            # 添加可选参数
-            if temperature is not None:
-                payload["temperature"] = temperature
             
             # Ollama 的 tools 格式（如果支持）
             if tools:

@@ -11,6 +11,7 @@
   "ollama_settings": {
     "base_url": "http://localhost:11434",
     "model_name": "llama3",
+    "temperature": 0.9,
     "stream": true,
     "timeout": 60
   }
