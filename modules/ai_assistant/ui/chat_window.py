@@ -1123,11 +1123,54 @@ class ChatWindow(QWidget):
             self.add_streaming_bubble()
             print("[DEBUG] 已添加新的流式气泡")
             
-            # 重新发起 API 请求
+            # 🔧 修复：重新构建上下文（包含记忆）
+            # 获取最后一条用户消息
+            last_user_message = None
+            for msg in reversed(self.conversation_history):
+                if msg.get("role") == "user":
+                    last_user_message = msg.get("content", "")
+                    break
+            
+            # 构建请求消息列表
+            request_messages = []
+            context_message = None
+            
+            # 如果找到用户消息且上下文管理器存在，重新构建上下文
+            if last_user_message and self.context_manager:
+                try:
+                    print(f"[DEBUG] [重新生成] 正在为用户消息构建上下文...")
+                    context = self.context_manager.build_context(last_user_message, include_system_prompt=False)
+                    if context:
+                        context_message = {
+                            "role": "system",
+                            "content": f"[当前查询的上下文信息]\n{context}"
+                        }
+                        print(f"[DEBUG] [重新生成] 已构建上下文（长度: {len(context)}）")
+                except Exception as e:
+                    print(f"[WARNING] [重新生成] 构建上下文失败: {e}")
+            
+            # 复制历史记录
+            for msg in self.conversation_history:
+                request_messages.append(msg)
+            
+            # 如果有上下文，插入到最后一条用户消息之前
+            if context_message:
+                # 找到最后一条用户消息的位置
+                last_user_idx = -1
+                for i in range(len(request_messages) - 1, -1, -1):
+                    if request_messages[i].get("role") == "user":
+                        last_user_idx = i
+                        break
+                
+                if last_user_idx >= 0:
+                    request_messages.insert(last_user_idx, context_message)
+                    print(f"[DEBUG] [重新生成] 已插入上下文到消息列表（位置: {last_user_idx}）")
+            
+            # 重新发起 API 请求（使用包含上下文的消息列表）
             model = self.input_area.get_selected_model()
-            print(f"[DEBUG] 使用模型: {model}")
+            print(f"[DEBUG] 使用模型: {model}，消息数: {len(request_messages)}")
             self.current_api_client = APIClient(
-                self.conversation_history.copy(),
+                request_messages,  # 使用包含上下文的请求消息
                 model=model
             )
             self.current_api_client.chunk_received.connect(self.on_chunk_received)
