@@ -43,7 +43,7 @@ QPushButton#RemoveImage:hover {
    胶囊外壳
    ======================================== */
 QFrame#ComposerShell {
-    background-color: #ffffff;
+    background-color: #f9fafb;
     border: 1px solid #d1d5db;
     border-radius: 22px;
     min-height: 36px;
@@ -52,7 +52,7 @@ QFrame#ComposerShell {
 
 QFrame#ComposerShell[focus="true"] {
     border: 1px solid #9ca3af;
-    background-color: #ffffff;
+    background-color: #f9fafb;
 }
 
 QFrame#ComposerShell[hasText="true"] {
@@ -88,6 +88,11 @@ QTextEdit#ComposerEdit {
     padding: 10px 4px 8px 4px;
     selection-background-color: #bfdbfe;
     selection-color: #1e40af;
+}
+
+/* Placeholder 文本颜色（与输入文字颜色一致） */
+QTextEdit#ComposerEdit[placeholderText]:empty {
+    color: #111827;
 }
 
 /* 滚动条 */

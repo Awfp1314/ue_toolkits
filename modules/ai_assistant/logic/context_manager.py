@@ -226,12 +226,12 @@ class ContextManager:
             ])
             
             if is_asking_memory:
-                # 用户明确询问记忆，检索并返回
-                relevant_memories = self.memory.get_relevant_memories(query, limit=2, min_importance=0.1)
+                # 用户明确询问记忆，检索并返回（增加limit确保覆盖更多相关记忆）
+                relevant_memories = self.memory.get_relevant_memories(query, limit=5, min_importance=0.1)
                 
                 if relevant_memories:
-                    # Token优化：只返回记忆，不加额外描述
-                    return "[相关记忆]\n" + "\n".join(f"- {m}" for m in relevant_memories[:2])
+                    # Token优化：只返回记忆，不加额外描述（最多返回5条）
+                    return "[相关记忆]\n" + "\n".join(f"- {m}" for m in relevant_memories[:5])
                 else:
                     return ""  # 没找到就返回空，让AI自然回答
             else:

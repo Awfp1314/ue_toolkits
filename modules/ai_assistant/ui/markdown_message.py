@@ -27,6 +27,17 @@ except ImportError:
     MARKDOWN_AVAILABLE = False
     safe_print("警告: markdown 库未安装，将使用基础渲染。请运行: pip install markdown")
 
+# Pygments 用于语法高亮
+try:
+    from pygments import highlight
+    from pygments.lexers import get_lexer_by_name, guess_lexer
+    from pygments.formatters import HtmlFormatter
+    from pygments.util import ClassNotFound
+    PYGMENTS_AVAILABLE = True
+except ImportError:
+    PYGMENTS_AVAILABLE = False
+    safe_print("提示: pygments 库未安装，代码块将不会有语法高亮。运行: pip install pygments")
+
 
 class RoundedBubble(QWidget):
     """自定义圆角气泡（使用 QPainter 手动绘制）"""
@@ -55,17 +66,82 @@ class RoundedBubble(QWidget):
         painter.fillPath(path, QBrush(gradient))
 
 
-class ThinkingIndicator(QWidget):
-    """思考中动画指示器（呼吸式圆形）"""
-    
+class CircleWidget(QWidget):
+    """圆形绘制 widget"""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedSize(20, 30)
         self._scale = 1.0
+        self.parent_indicator = parent
+    
+    def paintEvent(self, event):
+        """绘制圆形"""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(QColor("#E0E0E0"))
+        painter.setPen(Qt.PenStyle.NoPen)
         
-        # 设置透明度效果
-        self.opacity_effect = QGraphicsOpacityEffect(self)
-        self.setGraphicsEffect(self.opacity_effect)
+        # 从父对象获取缩放值
+        scale = self.parent_indicator._scale if self.parent_indicator else 1.0
+        
+        # 计算圆形位置和大小
+        radius = 5 * scale
+        center_x = self.width() / 2
+        center_y = self.height() / 2
+        rect = QRectF(center_x - radius, center_y - radius, radius * 2, radius * 2)
+        painter.drawEllipse(rect)
+
+
+class ThinkingIndicator(QWidget):
+    """思考中动画指示器（呼吸式圆形 + "正在思考"文字）"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._scale = 1.0
+        
+        # 创建水平布局（圆形 + 文字）
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        
+        # 圆形容器
+        self.circle_widget = CircleWidget(self)
+        layout.addWidget(self.circle_widget, 0, Qt.AlignmentFlag.AlignVCenter)
+        
+        # 设置圆形的透明度效果
+        self.opacity_effect = QGraphicsOpacityEffect(self.circle_widget)
+        self.circle_widget.setGraphicsEffect(self.opacity_effect)
+        
+        # 文字标签（初始隐藏，ChatGPT风格）
+        self.text_container = QWidget()
+        self.text_container.setVisible(False)
+        text_layout = QHBoxLayout(self.text_container)
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(0)
+        
+        # 创建"正在思考..."标签（整体动画，更优雅）
+        self.thinking_label = QLabel("正在思考...")
+        self.thinking_label.setStyleSheet("font-size: 14px; color: #E0E0E0;")
+        self.thinking_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        
+        # 为整个标签设置透明度效果（初始透明）
+        self.text_opacity_effect = QGraphicsOpacityEffect(self.thinking_label)
+        self.text_opacity_effect.setOpacity(0.3)  # 初始半透明
+        self.thinking_label.setGraphicsEffect(self.text_opacity_effect)
+        
+        text_layout.addWidget(self.thinking_label)
+        layout.addWidget(self.text_container, 0, Qt.AlignmentFlag.AlignVCenter)
+        
+        # 4秒后显示文字的定时器
+        self.show_text_timer = QTimer(self)
+        self.show_text_timer.setSingleShot(True)
+        self.show_text_timer.timeout.connect(self._show_thinking_text)
+        self.show_text_timer.start(4000)  # 4秒后触发
+        
+        # 文字呼吸动画（ChatGPT风格）
+        self.text_fade_in = None
+        self.text_fade_out = None
         
         # 缩放动画（使用定时器实现循环）
         self.scale_anim_forward = QPropertyAnimation(self, b"scale")
@@ -105,19 +181,33 @@ class ThinkingIndicator(QWidget):
         self.scale_anim_forward.start()
         self.opacity_anim_forward.start()
     
-    def paintEvent(self, event):
-        """绘制圆形"""
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor("#E0E0E0"))
-        painter.setPen(Qt.PenStyle.NoPen)
+    def _show_thinking_text(self):
+        """显示"正在思考..."文字并启动动画（ChatGPT风格）"""
+        self.text_container.setVisible(True)
+        self._start_text_animation()
+    
+    def _start_text_animation(self):
+        """启动文字呼吸动画（ChatGPT风格：整体柔和的透明度变化）"""
+        # 渐入动画（0.3 -> 1.0）
+        self.text_fade_in = QPropertyAnimation(self.text_opacity_effect, b"opacity")
+        self.text_fade_in.setStartValue(0.3)
+        self.text_fade_in.setEndValue(1.0)
+        self.text_fade_in.setDuration(1200)  # 1.2秒
+        self.text_fade_in.setEasingCurve(QEasingCurve.Type.InOutQuad)
         
-        # 计算圆形位置和大小
-        radius = 5 * self._scale
-        center_x = self.width() / 2
-        center_y = self.height() / 2
-        rect = QRectF(center_x - radius, center_y - radius, radius * 2, radius * 2)
-        painter.drawEllipse(rect)
+        # 渐出动画（1.0 -> 0.3）
+        self.text_fade_out = QPropertyAnimation(self.text_opacity_effect, b"opacity")
+        self.text_fade_out.setStartValue(1.0)
+        self.text_fade_out.setEndValue(0.3)
+        self.text_fade_out.setDuration(1200)  # 1.2秒
+        self.text_fade_out.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        
+        # 连接动画完成信号，实现循环（柔和的呼吸效果）
+        self.text_fade_in.finished.connect(self.text_fade_out.start)
+        self.text_fade_out.finished.connect(self.text_fade_in.start)
+        
+        # 启动动画
+        self.text_fade_in.start()
     
     def get_scale(self):
         """获取缩放值"""
@@ -126,16 +216,27 @@ class ThinkingIndicator(QWidget):
     def set_scale(self, value):
         """设置缩放值"""
         self._scale = value
-        self.update()
+        self.circle_widget.update()  # 触发圆形重绘
     
     scale = pyqtProperty(float, get_scale, set_scale)
     
     def stop(self):
-        """停止动画"""
+        """停止所有动画"""
+        # 停止圆形动画
         self.scale_anim_forward.stop()
         self.scale_anim_backward.stop()
         self.opacity_anim_forward.stop()
         self.opacity_anim_backward.stop()
+        
+        # 停止4秒定时器（如果还没触发）
+        if self.show_text_timer and self.show_text_timer.isActive():
+            self.show_text_timer.stop()
+        
+        # 停止文字呼吸动画（ChatGPT风格）
+        if self.text_fade_in:
+            self.text_fade_in.stop()
+        if self.text_fade_out:
+            self.text_fade_out.stop()
 
 
 def markdown_to_html(text, theme="dark", compact=False):
@@ -149,16 +250,24 @@ def markdown_to_html(text, theme="dark", compact=False):
         return f'<div style="white-space: pre-wrap;"></div>'
     
     try:
+        # 配置 CodeHilite 扩展以使用 Pygments
+        extensions = [
+            'fenced_code',
+            'tables',
+            'nl2br',  # 换行支持
+            'sane_lists'  # 更好的列表支持
+        ]
+        
+        # 如果 Pygments 可用，启用代码高亮
+        if PYGMENTS_AVAILABLE:
+            extensions.append(CodeHiliteExtension(
+                linenums=False,  # 不显示行号（可以改为True显示行号）
+                guess_lang=True,  # 自动猜测语言
+                css_class='highlight'  # CSS 类名
+            ))
+        
         # 使用 markdown 库转换
-        html = markdown.markdown(
-            text,
-            extensions=[
-                'fenced_code',
-                'tables',
-                'nl2br',  # 换行支持
-                'sane_lists'  # 更好的列表支持
-            ]
-        )
+        html = markdown.markdown(text, extensions=extensions)
     except Exception as e:
         # 如果转换失败，返回纯文本
         print(f"[ERROR] Markdown 转换错误: {e}")
@@ -214,6 +323,7 @@ def markdown_to_html(text, theme="dark", compact=False):
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
                     text-rendering: optimizeLegibility;
+                    overflow-x: hidden;
                 }
             
             h1, h2, h3, h4, h5, h6 {
@@ -260,9 +370,13 @@ def markdown_to_html(text, theme="dark", compact=False):
                 border-radius: 8px;
                 padding: 16px 20px;
                 overflow-x: auto;
+                overflow-y: hidden;
                 margin: 0.8em 0;
                 max-width: 100%;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                white-space: pre;
+                word-wrap: normal;
+                word-break: normal;
             }
             
             pre code {
@@ -274,7 +388,83 @@ def markdown_to_html(text, theme="dark", compact=False):
                 line-height: 1.6;
                 letter-spacing: 0;
                 font-family: "JetBrains Mono", "Fira Code", "Consolas", "Courier New", "Monaco", monospace;
+                white-space: pre;
+                word-wrap: normal;
+                display: inline-block;
+                min-width: 100%;
             }
+            
+            /* Pygments 语法高亮样式 (VS Code Dark+ 主题) */
+            .highlight { background: #1E1E1E; border-radius: 8px; }
+            .highlight .hll { background-color: #49483e }
+            .highlight .c { color: #6A9955; font-style: italic } /* Comment */
+            .highlight .err { color: #f92672 } /* Error */
+            .highlight .k { color: #C586C0 } /* Keyword */
+            .highlight .l { color: #ae81ff } /* Literal */
+            .highlight .n { color: #d4d4d4 } /* Name */
+            .highlight .o { color: #d4d4d4 } /* Operator */
+            .highlight .p { color: #d4d4d4 } /* Punctuation */
+            .highlight .ch { color: #6A9955; font-style: italic } /* Comment.Hashbang */
+            .highlight .cm { color: #6A9955; font-style: italic } /* Comment.Multiline */
+            .highlight .cp { color: #6A9955; font-weight: bold } /* Comment.Preproc */
+            .highlight .cpf { color: #6A9955; font-style: italic } /* Comment.PreprocFile */
+            .highlight .c1 { color: #6A9955; font-style: italic } /* Comment.Single */
+            .highlight .cs { color: #6A9955; font-weight: bold; font-style: italic } /* Comment.Special */
+            .highlight .gd { color: #f92672 } /* Generic.Deleted */
+            .highlight .ge { font-style: italic } /* Generic.Emph */
+            .highlight .gi { color: #a6e22e } /* Generic.Inserted */
+            .highlight .gs { font-weight: bold } /* Generic.Strong */
+            .highlight .gu { color: #75715e } /* Generic.Subheading */
+            .highlight .kc { color: #C586C0 } /* Keyword.Constant */
+            .highlight .kd { color: #569CD6 } /* Keyword.Declaration */
+            .highlight .kn { color: #C586C0 } /* Keyword.Namespace */
+            .highlight .kp { color: #C586C0 } /* Keyword.Pseudo */
+            .highlight .kr { color: #C586C0 } /* Keyword.Reserved */
+            .highlight .kt { color: #4EC9B0 } /* Keyword.Type */
+            .highlight .ld { color: #CE9178 } /* Literal.Date */
+            .highlight .m { color: #B5CEA8 } /* Literal.Number */
+            .highlight .s { color: #CE9178 } /* Literal.String */
+            .highlight .na { color: #9CDCFE } /* Name.Attribute */
+            .highlight .nb { color: #4EC9B0 } /* Name.Builtin */
+            .highlight .nc { color: #4EC9B0; font-weight: bold } /* Name.Class */
+            .highlight .no { color: #DCDCAA } /* Name.Constant */
+            .highlight .nd { color: #DCDCAA } /* Name.Decorator */
+            .highlight .ni { color: #d4d4d4 } /* Name.Entity */
+            .highlight .ne { color: #DCDCAA; font-weight: bold } /* Name.Exception */
+            .highlight .nf { color: #DCDCAA } /* Name.Function */
+            .highlight .nl { color: #d4d4d4 } /* Name.Label */
+            .highlight .nn { color: #4EC9B0 } /* Name.Namespace */
+            .highlight .nx { color: #9CDCFE } /* Name.Other */
+            .highlight .py { color: #d4d4d4 } /* Name.Property */
+            .highlight .nt { color: #569CD6 } /* Name.Tag */
+            .highlight .nv { color: #9CDCFE } /* Name.Variable */
+            .highlight .ow { color: #C586C0; font-weight: bold } /* Operator.Word */
+            .highlight .w { color: #d4d4d4 } /* Text.Whitespace */
+            .highlight .mb { color: #B5CEA8 } /* Literal.Number.Bin */
+            .highlight .mf { color: #B5CEA8 } /* Literal.Number.Float */
+            .highlight .mh { color: #B5CEA8 } /* Literal.Number.Hex */
+            .highlight .mi { color: #B5CEA8 } /* Literal.Number.Integer */
+            .highlight .mo { color: #B5CEA8 } /* Literal.Number.Oct */
+            .highlight .sa { color: #CE9178 } /* Literal.String.Affix */
+            .highlight .sb { color: #CE9178 } /* Literal.String.Backtick */
+            .highlight .sc { color: #CE9178 } /* Literal.String.Char */
+            .highlight .dl { color: #CE9178 } /* Literal.String.Delimiter */
+            .highlight .sd { color: #CE9178; font-style: italic } /* Literal.String.Doc */
+            .highlight .s2 { color: #CE9178 } /* Literal.String.Double */
+            .highlight .se { color: #D7BA7D } /* Literal.String.Escape */
+            .highlight .sh { color: #CE9178 } /* Literal.String.Heredoc */
+            .highlight .si { color: #CE9178 } /* Literal.String.Interpol */
+            .highlight .sx { color: #CE9178 } /* Literal.String.Other */
+            .highlight .sr { color: #D16969 } /* Literal.String.Regex */
+            .highlight .s1 { color: #CE9178 } /* Literal.String.Single */
+            .highlight .ss { color: #CE9178 } /* Literal.String.Symbol */
+            .highlight .bp { color: #4EC9B0 } /* Name.Builtin.Pseudo */
+            .highlight .fm { color: #DCDCAA } /* Name.Function.Magic */
+            .highlight .vc { color: #9CDCFE } /* Name.Variable.Class */
+            .highlight .vg { color: #9CDCFE } /* Name.Variable.Global */
+            .highlight .vi { color: #9CDCFE } /* Name.Variable.Instance */
+            .highlight .vm { color: #9CDCFE } /* Name.Variable.Magic */
+            .highlight .il { color: #B5CEA8 } /* Literal.Number.Integer.Long */
             
             a {
                 color: #19c37d;
@@ -388,6 +578,7 @@ def markdown_to_html(text, theme="dark", compact=False):
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
                     text-rendering: optimizeLegibility;
+                    overflow-x: hidden;
                 }
             
             h1, h2, h3, h4, h5, h6 {
@@ -434,9 +625,13 @@ def markdown_to_html(text, theme="dark", compact=False):
                 border-radius: 8px;
                 padding: 16px 20px;
                 overflow-x: auto;
+                overflow-y: hidden;
                 margin: 0.8em 0;
                 max-width: 100%;
                 box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+                white-space: pre;
+                word-wrap: normal;
+                word-break: normal;
             }
             
             pre code {
@@ -448,7 +643,81 @@ def markdown_to_html(text, theme="dark", compact=False):
                 line-height: 1.6;
                 letter-spacing: 0;
                 font-family: "JetBrains Mono", "Fira Code", "Consolas", "Courier New", "Monaco", monospace;
+                white-space: pre;
+                word-wrap: normal;
+                display: inline-block;
+                min-width: 100%;
             }
+            
+            /* Pygments 语法高亮样式 (Light 主题) */
+            .highlight { background: #f9fafb; border-radius: 8px; }
+            .highlight .hll { background-color: #ffc }
+            .highlight .c { color: #008000; font-style: italic } /* Comment */
+            .highlight .err { border: 1px solid #FF0000 } /* Error */
+            .highlight .k { color: #0000ff } /* Keyword */
+            .highlight .ch { color: #008000; font-style: italic } /* Comment.Hashbang */
+            .highlight .cm { color: #008000; font-style: italic } /* Comment.Multiline */
+            .highlight .cp { color: #0000ff } /* Comment.Preproc */
+            .highlight .cpf { color: #008000; font-style: italic } /* Comment.PreprocFile */
+            .highlight .c1 { color: #008000; font-style: italic } /* Comment.Single */
+            .highlight .cs { color: #008000; font-style: italic } /* Comment.Special */
+            .highlight .gd { color: #A00000 } /* Generic.Deleted */
+            .highlight .ge { font-style: italic } /* Generic.Emph */
+            .highlight .gr { color: #FF0000 } /* Generic.Error */
+            .highlight .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+            .highlight .gi { color: #00A000 } /* Generic.Inserted */
+            .highlight .go { color: #888888 } /* Generic.Output */
+            .highlight .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+            .highlight .gs { font-weight: bold } /* Generic.Strong */
+            .highlight .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+            .highlight .gt { color: #0044DD } /* Generic.Traceback */
+            .highlight .kc { color: #0000ff } /* Keyword.Constant */
+            .highlight .kd { color: #0000ff } /* Keyword.Declaration */
+            .highlight .kn { color: #0000ff } /* Keyword.Namespace */
+            .highlight .kp { color: #0000ff } /* Keyword.Pseudo */
+            .highlight .kr { color: #0000ff } /* Keyword.Reserved */
+            .highlight .kt { color: #2b91af } /* Keyword.Type */
+            .highlight .m { color: #009999 } /* Literal.Number */
+            .highlight .s { color: #a31515 } /* Literal.String */
+            .highlight .na { color: #FF0000 } /* Name.Attribute */
+            .highlight .nb { color: #2b91af } /* Name.Builtin */
+            .highlight .nc { color: #2b91af } /* Name.Class */
+            .highlight .no { color: #2b91af } /* Name.Constant */
+            .highlight .nd { color: #2b91af } /* Name.Decorator */
+            .highlight .ni { color: #999999 } /* Name.Entity */
+            .highlight .ne { color: #2b91af } /* Name.Exception */
+            .highlight .nf { color: #795e26 } /* Name.Function */
+            .highlight .nl { color: #2b91af } /* Name.Label */
+            .highlight .nn { color: #2b91af } /* Name.Namespace */
+            .highlight .nt { color: #800000 } /* Name.Tag */
+            .highlight .nv { color: #001080 } /* Name.Variable */
+            .highlight .ow { color: #0000ff } /* Operator.Word */
+            .highlight .w { color: #bbbbbb } /* Text.Whitespace */
+            .highlight .mb { color: #009999 } /* Literal.Number.Bin */
+            .highlight .mf { color: #009999 } /* Literal.Number.Float */
+            .highlight .mh { color: #009999 } /* Literal.Number.Hex */
+            .highlight .mi { color: #009999 } /* Literal.Number.Integer */
+            .highlight .mo { color: #009999 } /* Literal.Number.Oct */
+            .highlight .sa { color: #a31515 } /* Literal.String.Affix */
+            .highlight .sb { color: #a31515 } /* Literal.String.Backtick */
+            .highlight .sc { color: #a31515 } /* Literal.String.Char */
+            .highlight .dl { color: #a31515 } /* Literal.String.Delimiter */
+            .highlight .sd { color: #a31515; font-style: italic } /* Literal.String.Doc */
+            .highlight .s2 { color: #a31515 } /* Literal.String.Double */
+            .highlight .se { color: #ee0077; font-weight: bold } /* Literal.String.Escape */
+            .highlight .sh { color: #a31515 } /* Literal.String.Heredoc */
+            .highlight .si { color: #a31515 } /* Literal.String.Interpol */
+            .highlight .sx { color: #a31515 } /* Literal.String.Other */
+            .highlight .sr { color: #811f3f } /* Literal.String.Regex */
+            .highlight .s1 { color: #a31515 } /* Literal.String.Single */
+            .highlight .ss { color: #a31515 } /* Literal.String.Symbol */
+            .highlight .bp { color: #2b91af } /* Name.Builtin.Pseudo */
+            .highlight .fm { color: #795e26 } /* Name.Function.Magic */
+            .highlight .vc { color: #001080 } /* Name.Variable.Class */
+            .highlight .vg { color: #001080 } /* Name.Variable.Global */
+            .highlight .vi { color: #001080 } /* Name.Variable.Instance */
+            .highlight .vm { color: #001080 } /* Name.Variable.Magic */
+            .highlight .il { color: #009999 } /* Literal.Number.Integer.Long */
             
             a {
                 color: #10a37f;
@@ -676,6 +945,19 @@ class MarkdownMessage(QFrame):
         self.markdown_browser.setReadOnly(True)
         self.markdown_browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.markdown_browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        # 设置鼠标指针为文本编辑样式（I-beam）
+        self.markdown_browser.viewport().setCursor(Qt.CursorShape.IBeamCursor)
+        
+        # 设置选中文本的样式（深色主题/浅色主题都保持高对比度）
+        selection_bg = "#3390FF" if self.theme == "dark" else "#0078D7"
+        selection_fg = "#FFFFFF"
+        self.markdown_browser.setStyleSheet(f"""
+            QTextBrowser {{
+                selection-background-color: {selection_bg};
+                selection-color: {selection_fg};
+            }}
+        """)
         
         # 连接链接点击信号，手动处理链接打开
         self.markdown_browser.anchorClicked.connect(lambda url: QDesktopServices.openUrl(url))
@@ -932,6 +1214,19 @@ class StreamingMarkdownMessage(QFrame):
         self.markdown_browser.setReadOnly(True)
         self.markdown_browser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.markdown_browser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        # 设置鼠标指针为文本编辑样式（I-beam）
+        self.markdown_browser.viewport().setCursor(Qt.CursorShape.IBeamCursor)
+        
+        # 设置选中文本的样式（深色主题/浅色主题都保持高对比度）
+        selection_bg = "#3390FF" if self.theme == "dark" else "#0078D7"
+        selection_fg = "#FFFFFF"
+        self.markdown_browser.setStyleSheet(f"""
+            QTextBrowser {{
+                selection-background-color: {selection_bg};
+                selection-color: {selection_fg};
+            }}
+        """)
         
         # 连接链接点击信号，手动处理链接打开
         self.markdown_browser.anchorClicked.connect(lambda url: QDesktopServices.openUrl(url))

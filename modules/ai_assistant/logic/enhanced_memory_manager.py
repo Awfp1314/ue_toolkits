@@ -339,7 +339,7 @@ class EnhancedMemoryManager:
     def get_user_identity(self) -> str:
         """获取用户身份信息（应该融入AI角色设定的记忆）
         
-        从用户级记忆中提取身份、角色、人设相关的信息
+        从用户级记忆中提取所有重要的用户相关信息
         
         Returns:
             str: 用户身份信息（如果有）
@@ -347,39 +347,63 @@ class EnhancedMemoryManager:
         if not self.user_memories:
             return ""
         
-        # 检索身份相关的记忆（使用更精确的匹配规则）
-        # 只匹配明确的身份设定语句，避免匹配普通对话
-        identity_patterns = [
-            '从现在开始你是',
-            '从现在开始你不是', 
-            '你现在是',
-            '扮演猫娘',
-            '你是猫娘',
-            '不是猫娘了',
-            '恢复你的原来身份',
-            '你的身份是',
-            '你的角色是'
-        ]
-        identity_memories = []
+        # ⚠️ 修复失忆问题：只返回"陈述句"（答案），过滤掉"疑问句"（用户的提问）
+        important_memories = []
         
-        # 只检查用户级记忆（Memory类型）中标记为"用户相关信息"的记忆
+        # 疑问词列表（用于过滤问题）
+        question_keywords = ['什么', '怎么', '如何', '为什么', '哪', '吗', '呢', '?', '？']
+        
         for memory in self.user_memories:
             content = memory.content
-            # 必须同时满足：1) 包含"用户相关信息"或"用户偏好" 2) 包含身份设定短语
-            is_user_info = content.startswith("用户相关信息:") or content.startswith("用户偏好:")
-            has_identity_pattern = any(pattern in content for pattern in identity_patterns)
             
-            if is_user_info and has_identity_pattern:
-                identity_memories.append(memory)
+            # 只保留高重要性的记忆（>0.7）或明确的"用户相关信息"
+            is_user_info = content.startswith("用户相关信息:") or content.startswith("用户偏好:")
+            is_important = memory.importance > 0.7
+            
+            if not (is_user_info or is_important):
+                continue
+            
+            # ⚠️ 关键修复：过滤掉疑问句（用户的提问）
+            # 提取核心内容
+            core_content = content.replace("用户相关信息:", "").replace("用户偏好:", "").strip()
+            
+            # 如果包含疑问词，说明这是用户的问题，不是答案，跳过
+            is_question = any(keyword in core_content for keyword in question_keywords)
+            
+            # ✅ 只保留陈述句（答案），比如"我喜欢胡桃"
+            if not is_question:
+                important_memories.append((memory, core_content))
         
-        if not identity_memories:
+        if not important_memories:
             return ""
         
-        # 返回最新的身份记忆（按时间戳排序，只取最后一条）
-        # 避免返回多条矛盾的身份设定
-        identity_memories.sort(key=lambda m: m.timestamp)
-        latest_identity = identity_memories[-1].content
-        return latest_identity  # 只返回最新的1条身份记忆
+        # 按重要性排序（重要性高的在后）
+        important_memories.sort(key=lambda m: m[0].importance)
+        
+        # 去重：如果多条记忆内容相似，只保留重要性最高的
+        unique_memories = []
+        seen_contents = set()
+        
+        for memory, core_content in important_memories:
+            # 简单去重：只保留前30个字符进行比较
+            content_key = core_content[:30]
+            
+            if content_key not in seen_contents:
+                unique_memories.append(memory.content)
+                seen_contents.add(content_key)
+        
+        # 限制数量：最多返回10条最重要的记忆（避免Token过多）
+        if len(unique_memories) > 10:
+            unique_memories = unique_memories[-10:]
+        
+        # 组合所有记忆，用换行分隔
+        result = "\n".join(unique_memories)
+        
+        # Debug log
+        if hasattr(self, 'logger') and self.logger:
+            self.logger.info(f"[get_user_identity] 返回 {len(unique_memories)} 条记忆（已过滤疑问句）")
+        
+        return result
     
     def get_user_profile(self) -> str:
         """获取用户画像（从用户级记忆中提取，排除身份信息）

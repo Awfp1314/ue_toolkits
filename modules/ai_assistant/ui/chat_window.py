@@ -59,6 +59,12 @@ class ChatWindow(QWidget):
         self.current_coordinator = None  # Function Calling 协调器
         self.current_streaming_bubble = None
         
+        # 流式输出批量更新机制（避免频繁渲染导致UI卡顿）
+        self._text_buffer = ""  # 文本缓冲区
+        self._update_timer = QTimer(self)
+        self._update_timer.timeout.connect(self._flush_text_buffer)
+        self._update_timer.setInterval(50)  # 每50ms刷新一次UI
+        
         # 从全局主题管理器获取当前主题
         try:
             from core.utils.theme_manager import get_theme_manager, Theme
@@ -88,6 +94,10 @@ class ChatWindow(QWidget):
         self._streaming_index = 0  # 流式输出当前索引
         self._streaming_chunks = []  # 流式输出片段列表
         
+        # 智能滚动控制
+        self._auto_scroll_enabled = True  # 是否启用自动滚动（用户在底部时跟随）
+        self._user_is_scrolling = False  # 用户是否正在手动滚动
+        
         self.init_ui()
         self.load_theme(self.current_theme)
     
@@ -110,14 +120,15 @@ class ChatWindow(QWidget):
         
         self.asset_manager_logic = asset_manager_logic
         
-        # 🔧 修复：如果上下文管理器已存在，更新其 asset_reader
+        # ⚡ 性能优化：延迟初始化 ContextManager，只在首次需要时创建（避免启动阻塞）
+        # 如果上下文管理器已存在，更新其 asset_reader
         if self.context_manager is not None and hasattr(self.context_manager, 'asset_reader'):
             print(f"[DEBUG] [FIX] 上下文管理器已存在，更新 AssetReader 的引用")
             self.context_manager.asset_reader.asset_manager_logic = asset_manager_logic
             print(f"[DEBUG] [OK] AssetReader 已更新为新的 asset_manager_logic")
         else:
-            # 第一次调用，初始化上下文管理器
-            self._init_context_manager(logger)
+            # 延迟初始化：不在这里创建 ContextManager，等到首次发送消息时再创建
+            print("[DEBUG] [PERF] AssetReader 引用已保存，ContextManager 将延迟到首次对话时初始化")
     
     def set_config_tool_logic(self, config_tool_logic):
         """设置config_tool逻辑层引用
@@ -133,14 +144,14 @@ class ChatWindow(QWidget):
         
         self.config_tool_logic = config_tool_logic
         
-        # 🔧 修复：如果上下文管理器已存在，更新其 config_reader
+        # ⚡ 性能优化：延迟初始化 ContextManager
         if self.context_manager is not None and hasattr(self.context_manager, 'config_reader'):
             print(f"[DEBUG] [FIX] 上下文管理器已存在，更新 ConfigReader 的引用")
             self.context_manager.config_reader.config_tool_logic = config_tool_logic
             print(f"[DEBUG] [OK] ConfigReader 已更新为新的 config_tool_logic")
         else:
-            # 第一次调用，初始化上下文管理器
-            self._init_context_manager(logger)
+            # 延迟初始化：不在这里创建 ContextManager
+            print("[DEBUG] [PERF] ConfigReader 引用已保存，ContextManager 将延迟到首次对话时初始化")
     
     def set_site_recommendations_logic(self, site_recommendations_logic):
         """设置site_recommendations逻辑层引用
@@ -156,14 +167,14 @@ class ChatWindow(QWidget):
         
         self.site_recommendations_logic = site_recommendations_logic
         
-        # 🔧 修复：如果上下文管理器已存在，更新其 site_reader
+        # ⚡ 性能优化：延迟初始化 ContextManager
         if self.context_manager is not None and hasattr(self.context_manager, 'site_reader'):
             print(f"[DEBUG] [FIX] 上下文管理器已存在，更新 SiteReader 的引用")
-            self.context_manager.site_reader.site_logic = site_recommendations_logic  # 🔧 修复：正确的属性名是 site_logic
+            self.context_manager.site_reader.site_logic = site_recommendations_logic
             print(f"[DEBUG] [OK] SiteReader 已更新为新的 site_recommendations_logic")
         else:
-            # 第一次调用，初始化上下文管理器
-            self._init_context_manager(logger)
+            # 延迟初始化：不在这里创建 ContextManager
+            print("[DEBUG] [PERF] SiteReader 引用已保存，ContextManager 将延迟到首次对话时初始化")
     
     def set_runtime_context(self, runtime_context):
         """设置运行态上下文管理器（v0.1 新增）
@@ -178,7 +189,13 @@ class ChatWindow(QWidget):
         print(f"[DEBUG] runtime_context 类型: {type(runtime_context)}")
         
         self.runtime_context = runtime_context
-        self._init_context_manager(logger)
+        # ⚡ 性能优化：延迟初始化 ContextManager
+        if self.context_manager is not None:
+            self.context_manager.runtime_context = runtime_context
+            print("[DEBUG] [OK] RuntimeContext 已更新到现有 ContextManager")
+        else:
+            # 延迟初始化：不在这里创建 ContextManager
+            print("[DEBUG] [PERF] RuntimeContext 引用已保存，ContextManager 将延迟到首次对话时初始化")
     
     def set_tools_system(self, tools_registry, action_engine=None):
         """设置工具系统（v0.2 新增）
@@ -196,6 +213,17 @@ class ChatWindow(QWidget):
         self.tools_registry = tools_registry
         # action_engine 已废弃，不再使用
         logger.info("ChatWindow 工具系统已设置")
+        
+        # 🔄 在所有依赖设置完成后，立即初始化 ContextManager（确保记忆系统正常工作）
+        if self.context_manager is None and all([
+            self.asset_manager_logic,
+            self.config_tool_logic,
+            self.site_recommendations_logic,
+            self.runtime_context
+        ]):
+            print("[DEBUG] [INIT] 所有依赖已就绪，立即初始化 ContextManager...")
+            self._init_context_manager(logger)
+            print("[DEBUG] [OK] ContextManager 已在启动时初始化完成")
     
     def set_model_status_checker(self, ai_module):
         """设置模型加载状态检查器
@@ -277,7 +305,10 @@ class ChatWindow(QWidget):
         pass
     
     def _send_intent_question(self):
-        """自动发送询问用户意图的消息（AI生成，每次不同）"""
+        """自动发送询问用户意图的消息（AI生成，每次不同）
+        
+        性能优化：欢迎消息不加载 context_manager，避免阻塞（延迟到真正需要时加载）
+        """
         from core.logger import get_logger
         logger = get_logger(__name__)
         
@@ -290,27 +321,29 @@ class ChatWindow(QWidget):
         self.add_streaming_bubble(show_regenerate=False)
         
         # 构建精简的欢迎消息系统提示（减少token消耗）
-        base_prompt = "你是虚幻引擎资产管理工具箱的AI助手。"
+        base_prompt = "你是一个全能型AI助手，精通编程、UE开发和各类技术问题。"
         
-        # 只获取最新的身份设定（使用 get_user_identity，避免重复搜索）
+        # 恢复身份设定读取，确保记忆系统正常工作
         identity_info = ""
         if self.context_manager and hasattr(self.context_manager, 'memory'):
             try:
                 user_identity = self.context_manager.memory.get_user_identity()
                 if user_identity:
-                    identity_info = f"\n你的角色设定：{user_identity}"
-                    logger.info(f"欢迎消息使用身份设定: {user_identity[:50]}...")
+                    # ⚠️ 明确标注这是"关于用户的信息"，避免AI误认为是自己的身份
+                    identity_info = f"\n\n【关于这位用户的信息】（供你参考，但不要重复）：\n{user_identity}\n"
+                    logger.info(f"已读取用户身份设定: {user_identity[:50]}...")
             except Exception as e:
-                logger.warning(f"获取身份记忆失败: {e}")
+                logger.warning(f"读取用户身份设定失败: {e}")
+        logger.info("欢迎消息已读取身份设定（确保记忆系统正常）")
         
         # 精简的欢迎消息生成指令
         welcome_instruction = (
-            "\n\n生成一个简短的欢迎消息（100字以内）：\n"
-            "1. 保持你的角色身份（如果有特殊设定）\n"
-            "2. 介绍工具箱功能：管理UE资产、配置、文档\n"
-            "3. 说明你可以帮助用户管理资产和解答UE问题\n"
+            "\n\n生成一个简短、热情的欢迎消息（120字以内）：\n"
+            "1. 你是一个全能型、友好的AI助手（不要把用户的偏好当作你自己的属性）\n"
+            "2. 简要介绍你的能力：编程助手、UE开发专家、工具箱管理器\n"
+            "3. 说明你可以帮助用户编写代码、解答技术问题、管理UE资产\n"
             "4. 询问用户需要什么帮助\n"
-            "5. 使用Emoji和Markdown格式\n\n"
+            "5. 使用Emoji和Markdown格式，语气轻松专业\n\n"
             "直接输出欢迎消息。"
         )
         
@@ -328,9 +361,11 @@ class ChatWindow(QWidget):
         # 创建API客户端并连接信号
         from modules.ai_assistant.logic.api_client import APIClient
         
+        # ⚡ 修复：使用配置中选择的模型，而不是硬编码
+        # 这样Ollama用户就能享受到本地模型的速度优势
         self.current_api_client = APIClient(
             messages=temp_messages,
-            model="gemini-2.5-flash",  # 使用快速模型
+            model=None,  # None表示使用配置文件中的模型
             temperature=0.9  # 提高温度，增加创意性和多样性
         )
         
@@ -340,6 +375,12 @@ class ChatWindow(QWidget):
         # 连接完成信号（欢迎消息完成后的处理）
         def on_welcome_finished():
             logger.info("欢迎消息生成完成")
+            
+            # 停止定时器并刷新剩余缓冲区
+            if self._update_timer.isActive():
+                self._update_timer.stop()
+            self._flush_text_buffer()  # 确保所有文本都已渲染
+            
             if self.current_streaming_bubble:
                 self.current_streaming_bubble.finish()
             self.current_streaming_bubble = None
@@ -476,6 +517,12 @@ class ChatWindow(QWidget):
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         
+        # 安装事件过滤器，监听滚轮事件和滚动条拖动
+        self.scroll_area.viewport().installEventFilter(self)
+        scrollbar = self.scroll_area.verticalScrollBar()
+        scrollbar.sliderPressed.connect(self._on_slider_pressed)
+        scrollbar.sliderReleased.connect(self._on_slider_released)
+        
         # 外层容器（用于居中内容列）
         viewport_widget = QWidget()
         outer_layout = QVBoxLayout(viewport_widget)
@@ -569,8 +616,9 @@ class ChatWindow(QWidget):
         self.send_message_with_images(message, images)
     
     def eventFilter(self, obj, event):
-        """事件过滤器（处理 Enter 键）"""
-        if obj == self.input_field and event.type() == QEvent.Type.KeyPress:
+        """事件过滤器（处理 Enter 键和滚轮事件）"""
+        # 处理输入框的 Enter 键
+        if hasattr(self, 'input_field') and obj == self.input_field and event.type() == QEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
                 # Shift+Enter 换行，Enter 发送
                 if event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
@@ -578,7 +626,34 @@ class ChatWindow(QWidget):
                 else:
                     self.send_message()
                     return True
+        
+        # 处理滚动区域的滚轮事件
+        if hasattr(self, 'scroll_area') and obj == self.scroll_area.viewport() and event.type() == QEvent.Type.Wheel:
+            # 获取滚轮滚动方向
+            delta = event.angleDelta().y()
+            
+            # 如果向上滚动（delta > 0），立即禁用自动滚动
+            if delta > 0:
+                self._auto_scroll_enabled = False
+            
+            # 让事件正常处理
+            result = super().eventFilter(obj, event)
+            
+            # 只有向下滚动时才延迟检查是否恢复自动滚动
+            if delta < 0:  # 向下滚动
+                QTimer.singleShot(50, self._check_scroll_position_after_wheel)
+            
+            return result
+        
         return super().eventFilter(obj, event)
+    
+    def _check_scroll_position_after_wheel(self):
+        """滚轮事件后检查滚动位置（只有滚动到最底部才启用自动跟随）"""
+        try:
+            if self._is_at_bottom():
+                self._auto_scroll_enabled = True
+        except:
+            pass
     
     def add_message(self, message, is_user=False, is_system=False):
         """添加 Markdown 消息
@@ -597,6 +672,8 @@ class ChatWindow(QWidget):
             self.messages_layout.count() - 1,
             markdown_msg
         )
+        # 新消息添加时，重新启用自动滚动
+        self._auto_scroll_enabled = True
         self.scroll_to_bottom()
     
     def send_auto_greeting(self):
@@ -646,6 +723,8 @@ class ChatWindow(QWidget):
             self.messages_layout.count() - 1,
             self.current_streaming_bubble
         )
+        # AI开始回答时，重新启用自动滚动
+        self._auto_scroll_enabled = True
         self.scroll_to_bottom()
     
     def add_error_bubble(self, error_message):
@@ -657,17 +736,46 @@ class ChatWindow(QWidget):
         )
         self.scroll_to_bottom()
     
+    def _is_at_bottom(self):
+        """检测滚动条是否在底部（或接近底部）"""
+        try:
+            scrollbar = self.scroll_area.verticalScrollBar()
+            # 如果滚动条在最底部的 50 像素范围内，认为是在底部
+            threshold = 50
+            return scrollbar.value() >= (scrollbar.maximum() - threshold)
+        except:
+            return True  # 出错时默认认为在底部
+    
+    def _on_slider_pressed(self):
+        """用户按下滚动条滑块"""
+        self._user_is_scrolling = True
+    
+    def _on_slider_released(self):
+        """用户释放滚动条滑块"""
+        self._user_is_scrolling = False
+        # 检查是否在底部
+        if self._is_at_bottom():
+            self._auto_scroll_enabled = True
+        else:
+            self._auto_scroll_enabled = False
+    
     def scroll_to_bottom(self):
-        """滚动到底部"""
+        """智能滚动到底部（只有当用户在底部时才自动滚动）"""
+        # 只有在启用自动滚动且用户没有在拖动滚动条时才执行
+        if not self._auto_scroll_enabled or self._user_is_scrolling:
+            return
+        
         # 使用 QTimer 确保在控件渲染完成后滚动
-        # 立即滚动一次
         QTimer.singleShot(0, self._do_scroll)
-        # 再次滚动以确保布局更新后的位置正确
         QTimer.singleShot(50, self._do_scroll)
         QTimer.singleShot(100, self._do_scroll)
     
     def _do_scroll(self):
-        """执行滚动"""
+        """执行滚动（只有在启用自动滚动且用户未手动滚动时才执行）"""
+        # 再次检查状态，防止延迟执行的滚动在用户滚动后仍然触发
+        if not self._auto_scroll_enabled or self._user_is_scrolling:
+            return
+        
         try:
             scrollbar = self.scroll_area.verticalScrollBar()
             # 强制滚动到最底部
@@ -1032,13 +1140,40 @@ class ChatWindow(QWidget):
         except Exception as e:
             safe_print(f"[ERROR] 处理工具完成回调时出错: {e}")
     
+    def _flush_text_buffer(self):
+        """批量刷新文本缓冲区到UI（减少渲染频率，防止卡顿）"""
+        if not self._text_buffer or not self.current_streaming_bubble:
+            return
+        
+        try:
+            # 如果用户向上滚动了，保存当前滚动位置
+            scrollbar = self.scroll_area.verticalScrollBar()
+            old_value = scrollbar.value() if not self._auto_scroll_enabled else None
+            
+            # 批量更新内容
+            self.current_streaming_bubble.append_text(self._text_buffer)
+            self._text_buffer = ""  # 清空缓冲区
+            
+            # 恢复滚动位置（如果用户向上滚动了）
+            if old_value is not None:
+                scrollbar.setValue(old_value)
+            else:
+                # 用户在底部，执行自动滚动
+                self.scroll_to_bottom()
+        except Exception as e:
+            safe_print(f"[ERROR] 刷新文本缓冲区时出错: {e}")
+    
     def on_chunk_received_text(self, text):
         """接收文本块（从协调器，文本已经提取）"""
         try:
             safe_print(f"[STREAM] 收到文本块: {text[:20]}... (长度: {len(text)})")
             if self.current_streaming_bubble:
-                self.current_streaming_bubble.append_text(text)
-                self.scroll_to_bottom()
+                # 将文本放入缓冲区，而不是立即渲染（防止频繁渲染导致卡顿）
+                self._text_buffer += text
+                
+                # 如果定时器未启动，启动它
+                if not self._update_timer.isActive():
+                    self._update_timer.start()
             else:
                 safe_print(f"[WARNING] 流式气泡为空，无法追加文本！")
         except Exception as e:
@@ -1055,8 +1190,12 @@ class ChatWindow(QWidget):
                     if text:
                         print(f"[STREAM] 收到内容块: {text[:20]}... (长度: {len(text)})")
                         if self.current_streaming_bubble:
-                            self.current_streaming_bubble.append_text(text)
-                            self.scroll_to_bottom()
+                            # 将文本放入缓冲区，而不是立即渲染（防止频繁渲染导致卡顿）
+                            self._text_buffer += text
+                            
+                            # 如果定时器未启动，启动它
+                            if not self._update_timer.isActive():
+                                self._update_timer.start()
                 # 忽略 tool_calls 类型（由协调器处理）
                 elif chunk.get('type') == 'tool_calls':
                     print(f"[DEBUG] 收到 tool_calls，由协调器处理")
@@ -1069,8 +1208,13 @@ class ChatWindow(QWidget):
                 
                 if self.current_streaming_bubble:
                     print(f"[STREAM] 正在追加到流式气泡...")
-                    self.current_streaming_bubble.append_text(chunk)
-                    self.scroll_to_bottom()
+                    
+                    # 将文本放入缓冲区，而不是立即渲染（防止频繁渲染导致卡顿）
+                    self._text_buffer += chunk
+                    
+                    # 如果定时器未启动，启动它
+                    if not self._update_timer.isActive():
+                        self._update_timer.start()
                 else:
                     print(f"[WARNING] 流式气泡为空，无法追加文本！")
         except Exception as e:
@@ -1091,6 +1235,11 @@ class ChatWindow(QWidget):
             
             # 保存助手回复并完成渲染
             if self.current_streaming_bubble:
+                # 停止定时器并刷新剩余缓冲区
+                if self._update_timer.isActive():
+                    self._update_timer.stop()
+                self._flush_text_buffer()  # 确保所有文本都已渲染
+                
                 # 调用 finish 方法完成流式输出
                 self.current_streaming_bubble.finish()
                 
@@ -1197,6 +1346,11 @@ class ChatWindow(QWidget):
                 self.add_error_bubble(error_message)
                 self._enable_input_after_error()
             
+            # 停止定时器并清空缓冲区
+            if self._update_timer.isActive():
+                self._update_timer.stop()
+            self._text_buffer = ""  # 清空缓冲区（发生错误时不需要渲染了）
+            
             # 清理
             self.current_api_client = None
             self.current_streaming_bubble = None
@@ -1226,6 +1380,11 @@ class ChatWindow(QWidget):
             
             # 清理流式气泡
             if self.current_streaming_bubble:
+                # 停止定时器并刷新剩余缓冲区
+                if self._update_timer.isActive():
+                    self._update_timer.stop()
+                self._flush_text_buffer()  # 确保所有文本都已渲染
+                
                 # 完成当前的流式输出（显示已接收的部分）
                 self.current_streaming_bubble.finish()
                 

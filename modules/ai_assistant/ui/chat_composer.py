@@ -136,11 +136,14 @@ class ChatGPTComposer(QFrame):
         self.shell.setProperty("focus", "false")
         self.shell.setProperty("hasText", "false")
         self.shell.setMinimumHeight(36)  # 减小最小高度到 36px
-        # 禁用阴影效果（阴影会显示为方形，不跟随圆角）
-        # shadow = QGraphicsDropShadowEffect(self)
-        # shadow.setBlurRadius(16)
-        # shadow.setOffset(0, 2)
-        # self.shell.setGraphicsEffect(shadow)
+        # 添加边框阴影效果
+        from PyQt6.QtWidgets import QGraphicsDropShadowEffect
+        from PyQt6.QtGui import QColor
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(8)  # 较小的模糊半径，更贴近边框
+        shadow.setColor(QColor(0x20, 0x20, 0x20, 120))  # #202020，透明度 120
+        shadow.setOffset(0, 1)  # 向下偏移 1px
+        self.shell.setGraphicsEffect(shadow)
 
         shell_h = QHBoxLayout(self.shell)
         shell_h.setContentsMargins(8, 4, 8, 4)  # 减小 padding：左右 8px，上下 4px
@@ -267,6 +270,13 @@ class ChatGPTComposer(QFrame):
             safe_print(f"[ChatGPTComposer] Using fallback inline styles (theme: {theme})")
             fallback_qss = self._get_fallback_qss(theme)
             self.setStyleSheet(fallback_qss)
+        
+        # 设置 placeholder 颜色与输入文字颜色一致
+        from PyQt6.QtGui import QPalette, QColor
+        palette = self.edit.palette()
+        text_color = palette.color(QPalette.ColorRole.Text)
+        palette.setColor(QPalette.ColorRole.PlaceholderText, text_color)
+        self.edit.setPalette(palette)
         
         # 刷新所有组件样式
         for widget in [self, self.shell, self.btn_send, self.btn_plus, 

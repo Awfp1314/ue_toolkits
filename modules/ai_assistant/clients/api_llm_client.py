@@ -189,12 +189,10 @@ class ApiLLMClient(BaseLLMClient):
                                         content = choice.get('text', '')
                                     
                                     if content:
-                                        # 将大块内容切分成小块（模拟打字效果）
-                                        chunk_size = 3
-                                        for i in range(0, len(content), chunk_size):
-                                            small_chunk = content[i:i+chunk_size]
-                                            yield {'type': 'content', 'text': small_chunk}
-                                            time.sleep(0.015)  # 15ms 延迟
+                                        # 逐字符输出，模拟打字机效果
+                                        for char in content:
+                                            time.sleep(0.015)  # 每个字符延迟15ms
+                                            yield {'type': 'content', 'text': char}
                             
                             except json.JSONDecodeError:
                                 continue

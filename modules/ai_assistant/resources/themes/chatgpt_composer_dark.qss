@@ -44,7 +44,7 @@ QPushButton#RemoveImage:hover {
    ======================================== */
 QFrame#ComposerShell {
     background-color: #303030;
-    border: 1px solid #323232;
+    border: 1px solid #343434;
     border-radius: 22px;
     min-height: 36px;
     padding: 4px 8px;
@@ -56,7 +56,7 @@ QFrame#ComposerShell[focus="true"] {
 }
 
 QFrame#ComposerShell[hasText="true"] {
-    background-color: #2a2a2a;
+    background-color: #303030;
 }
 
 /* ========================================
@@ -88,6 +88,11 @@ QTextEdit#ComposerEdit {
     padding: 10px 4px 8px 4px;
     selection-background-color: #6a6b76;
     selection-color: #ffffff;
+}
+
+/* Placeholder 文本颜色（与输入文字颜色一致） */
+QTextEdit#ComposerEdit[placeholderText]:empty {
+    color: #ECECF1;
 }
 
 /* 滚动条 */
