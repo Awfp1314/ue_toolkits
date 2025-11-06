@@ -48,11 +48,11 @@ class ChatWindow(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, False)
         
         # 对话状态
-        # 初始化对话历史，系统提示词将根据 LLM 供应商动态选择
+        # 初始化对话历史，先使用默认提示词，避免初始化时加载配置阻塞
         self.conversation_history = [
             {
                 "role": "system",
-                "content": self._get_system_prompt()
+                "content": SYSTEM_PROMPT  # 初始化时使用默认值
             }
         ]
         self.current_api_client = None
@@ -93,9 +93,7 @@ class ChatWindow(QWidget):
     
     def _get_system_prompt(self) -> str:
         """获取系统提示词（统一使用完整版）"""
-        # 不再区分 API 和 Ollama，统一使用完整版提示词
-        # 用户升级了 Ollama 模型后，可以理解完整的提示词
-        print("[DEBUG] 使用完整版系统提示词（所有 LLM 供应商）")
+        # 统一使用完整版提示词（不再区分 API 和 Ollama）
         return SYSTEM_PROMPT
     
     def set_asset_manager_logic(self, asset_manager_logic):
