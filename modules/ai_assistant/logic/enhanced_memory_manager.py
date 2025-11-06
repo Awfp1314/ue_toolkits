@@ -515,19 +515,32 @@ class EnhancedMemoryManager:
         """
         text_lower = text.lower()
         
-        # 排除疑问句（通常是提问，不是陈述信息）
-        question_words = ['吗', '呢', '？', '?', '什么', '怎么', '如何', '为什么', '哪', '谁']
-        if any(word in text_lower for word in question_words):
+        # 强问句标志：直接排除
+        strong_question_indicators = [
+            '你还记得', '你知道', '你觉得', '是不是', 
+            '能不能', '会不会', '有没有'
+        ]
+        if any(q in text_lower for q in strong_question_indicators):
             return False
         
-        # 包含偏好、身份、喜好等关键词的陈述句
-        valuable_indicators = [
-            '我喜欢', '我是', '我叫', '我在', '我的', '我想',
-            '我觉得', '我认为', '我需要', '我有', '我用',
-            '喜欢玩', '正在开发', '正在做', '擅长'
-        ]
+        # 一般疑问句标志
+        question_words = ['吗', '呢', '？', '?', '什么', '怎么', '如何', '为什么', '哪', '谁']
+        is_question = any(word in text_lower for word in question_words)
         
-        return any(indicator in text_lower for indicator in valuable_indicators)
+        # 陈述关键词（必须在句子开头）
+        statement_patterns = [
+            '我喜欢玩', '我喜欢', '我是', '我叫', '我在', '我的名字',
+            '我想', '我觉得', '我认为', '我需要', '我有', '我用',
+            '正在开发', '正在做', '擅长', '最喜欢的'
+        ]
+        has_statement = any(text_lower.startswith(p) for p in statement_patterns)
+        
+        # 如果是问句但没有强陈述开头，排除
+        if is_question and not has_statement:
+            return False
+        
+        # 必须包含有价值关键词
+        return has_statement
     
     def _load_user_memories(self):
         """从文件加载用户级记忆"""
