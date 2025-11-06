@@ -92,8 +92,8 @@ class ContextManager:
         # v0.1 新增：运行态上下文管理器
         self.runtime_context = runtime_context or (RuntimeContextManager() if V01_AVAILABLE and RuntimeContextManager else None)
         
-        # v0.1 新增：本地文档索引（使用统一的嵌入服务）
-        self.local_index = LocalDocIndex(embedding_service=self.embedding_service) if V01_AVAILABLE and LocalDocIndex else None
+        # v0.1 新增：本地文档索引（已禁用，等待改用 FAISS）
+        self.local_index = None  # LocalDocIndex 依赖 ChromaDB，已移除
         
         # v0.1 新增：远程检索器（延迟加载）
         self.remote_retriever = RemoteRetriever() if V01_AVAILABLE and RemoteRetriever else None

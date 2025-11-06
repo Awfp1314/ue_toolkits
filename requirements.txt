@@ -32,7 +32,7 @@ numpy>=1.24.0,<2.0
 # 语义意图解析（IntentEngine）
 sentence-transformers>=2.2.0
 
-# 向量存储和检索（FAISS - 主存储，替代 ChromaDB）
+# 向量存储和检索（FAISS - 主存储）
 faiss-cpu>=1.7.4
 
 # GitHub 代码搜索（GitHubConnector）
@@ -40,6 +40,8 @@ PyGithub>=1.59.0
 
 # Ollama 本地模型支持（OllamaLLMClient）
 httpx>=0.24.0
+
+# 注意：已移除 chromadb（Windows 不稳定，已替换为 FAISS）
 
 # ========== 开发依赖 ==========
 
