@@ -77,15 +77,14 @@ class ContextManager:
         # 创建统一的 EmbeddingService（单例模式）
         self.embedding_service = EmbeddingService()
         
-        # 临时禁用 ChromaDB 客户端（排查崩溃问题）
-        # TODO: 调试完成后重新启用
-        self.db_client = None  # self._init_chromadb_client()
+        # 初始化 ChromaDB 客户端（用于向量存储）
+        self.db_client = self._init_chromadb_client()
         
-        # 增强型记忆管理器（基于 Mem0 设计，暂时禁用向量检索）
+        # 增强型记忆管理器（基于 Mem0 设计，支持向量检索）
         self.memory = EnhancedMemoryManager(
             user_id=user_id,
             embedding_service=self.embedding_service,
-            db_client=None  # 暂时禁用 ChromaDB
+            db_client=self.db_client
         )
         
         # v0.1 新增：意图引擎（延迟创建，避免与后台预加载冲突）

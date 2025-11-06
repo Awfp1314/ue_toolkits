@@ -140,19 +140,13 @@ class EnhancedMemoryManager:
             # 创建嵌入函数包装器（使用本地定义的类，避免循环依赖）
             embedding_func = BGEEmbeddingFunctionForMemory(self.embedding_service)
             
-            # 获取或创建记忆集合
-            try:
-                # 尝试获取现有集合
-                self._memory_collection = self.db_client.get_collection(name=f"user_memory_{self.user_id}")
-                self.logger.info(f"使用现有记忆集合: user_memory_{self.user_id}")
-            except:
-                # 如果不存在，创建新集合
-                self._memory_collection = self.db_client.create_collection(
-                    name=f"user_memory_{self.user_id}",
-                    metadata={"description": f"User memory for {self.user_id} (bge-small-zh-v1.5)"},
-                    embedding_function=embedding_func
-                )
-                self.logger.info(f"创建新记忆集合: user_memory_{self.user_id}")
+            # 获取或创建记忆集合（使用 get_or_create，让 ChromaDB 处理冲突）
+            self._memory_collection = self.db_client.get_or_create_collection(
+                name=f"user_memory_{self.user_id}",
+                metadata={"description": f"User memory for {self.user_id} (bge-small-zh-v1.5)"},
+                embedding_function=embedding_func
+            )
+            self.logger.info(f"记忆集合已就绪: user_memory_{self.user_id}")
             
             # 尝试获取记忆数量（可能会崩溃，所以要保护）
             try:
