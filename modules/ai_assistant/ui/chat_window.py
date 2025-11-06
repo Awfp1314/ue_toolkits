@@ -800,9 +800,22 @@ class ChatWindow(QWidget):
             # 启动 API 请求
             model = self.input_area.get_selected_model()
             print(f"[DEBUG] 使用模型: {model}")
+            
+            # 获取工具定义（如果工具系统已初始化）
+            tools = None
+            if self.tools_registry:
+                tools = self.tools_registry.openai_tool_schemas()
+                if tools:
+                    print(f"[DEBUG] [工具系统] 已加载 {len(tools)} 个可用工具")
+                else:
+                    print(f"[DEBUG] [工具系统] 工具注册表为空")
+            else:
+                print(f"[DEBUG] [工具系统] 工具注册表未初始化")
+            
             self.current_api_client = APIClient(
                 request_messages,  # 使用临时构建的消息列表
-                model=model
+                model=model,
+                tools=tools  # 传递工具定义给 LLM
             )
             self.current_api_client.chunk_received.connect(self.on_chunk_received)
             self.current_api_client.request_finished.connect(self.on_request_finished)
@@ -859,9 +872,18 @@ class ChatWindow(QWidget):
             # 启动 API 请求（使用支持视觉的模型）
             model = "gemini-2.5-flash"  # Gemini 2.5 Flash 支持图片
             print(f"[DEBUG] 使用模型: {model}")
+            
+            # 获取工具定义（如果工具系统已初始化）
+            tools = None
+            if self.tools_registry:
+                tools = self.tools_registry.openai_tool_schemas()
+                if tools:
+                    print(f"[DEBUG] [工具系统] 已加载 {len(tools)} 个可用工具")
+            
             self.current_api_client = APIClient(
                 self.conversation_history.copy(),
-                model=model
+                model=model,
+                tools=tools  # 传递工具定义给 LLM
             )
             self.current_api_client.chunk_received.connect(self.on_chunk_received)
             self.current_api_client.request_finished.connect(self.on_request_finished)
@@ -1169,9 +1191,18 @@ class ChatWindow(QWidget):
             # 重新发起 API 请求（使用包含上下文的消息列表）
             model = self.input_area.get_selected_model()
             print(f"[DEBUG] 使用模型: {model}，消息数: {len(request_messages)}")
+            
+            # 获取工具定义（如果工具系统已初始化）
+            tools = None
+            if self.tools_registry:
+                tools = self.tools_registry.openai_tool_schemas()
+                if tools:
+                    print(f"[DEBUG] [工具系统] 已加载 {len(tools)} 个可用工具")
+            
             self.current_api_client = APIClient(
                 request_messages,  # 使用包含上下文的请求消息
-                model=model
+                model=model,
+                tools=tools  # 传递工具定义给 LLM
             )
             self.current_api_client.chunk_received.connect(self.on_chunk_received)
             self.current_api_client.request_finished.connect(self.on_request_finished)
