@@ -216,6 +216,27 @@ class FunctionCallingCoordinator(QThread):
                 return {'type': 'tool_calls', 'tool_calls': accumulated_tool_calls, 'content': None}
             else:
                 return {'type': 'content', 'tool_calls': None, 'content': accumulated_content}
+        except Exception as e:
+            # 捕获模型不支持工具的错误
+            error_msg = str(e)
+            if 'does not support tools' in error_msg or 'tools' in error_msg.lower():
+                print(f"[WARNING] [FunctionCalling] 当前模型不支持 Function Calling，降级为普通模式")
+                # 返回空的 tool_calls，让协调器直接生成普通回复
+                try:
+                    # 不带 tools 参数重新调用
+                    return self.llm_client.generate_response_non_streaming(messages, tools=None)
+                except:
+                    # 回退到流式
+                    accumulated_content = ""
+                    for chunk in self.llm_client.generate_response(messages, stream=True, tools=None):
+                        if isinstance(chunk, dict):
+                            accumulated_content += chunk.get('text', '')
+                        else:
+                            accumulated_content += str(chunk)
+                    return {'type': 'content', 'tool_calls': None, 'content': accumulated_content}
+            else:
+                # 其他错误，继续抛出
+                raise
     
     def _stream_final_response(self, messages: List[Dict], tools: List[Dict]):
         """

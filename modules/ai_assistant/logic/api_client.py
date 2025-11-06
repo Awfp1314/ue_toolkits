@@ -102,7 +102,17 @@ class APIClient(QThread):
                     break
                 
                 if chunk:
-                    self.chunk_received.emit(chunk)
+                    # 支持新格式（dict）和旧格式（str）
+                    if isinstance(chunk, dict):
+                        # 新格式：{'type': 'content', 'text': '...'}
+                        if chunk.get('type') == 'content':
+                            text = chunk.get('text', '')
+                            if text:
+                                self.chunk_received.emit(text)
+                        # 忽略 tool_calls 类型（由协调器处理）
+                    else:
+                        # 旧格式：纯字符串
+                        self.chunk_received.emit(chunk)
             
             # 请求完成
             if self.is_running:
