@@ -246,19 +246,42 @@ class FunctionCallingCoordinator(QThread):
             messages: 消息列表
             tools: 工具定义列表
         """
-        for chunk in self.llm_client.generate_response(messages, stream=True, tools=tools):
-            if self._should_stop:
-                break
-            
-            # 只处理文本内容
-            if isinstance(chunk, dict):
-                if chunk.get('type') == 'content':
-                    text = chunk.get('text', '')
-                    if text:
-                        self.chunk_received.emit(text)
+        # 尝试传递 tools，如果失败则降级为无工具模式
+        try:
+            for chunk in self.llm_client.generate_response(messages, stream=True, tools=tools):
+                if self._should_stop:
+                    break
+                
+                # 只处理文本内容
+                if isinstance(chunk, dict):
+                    if chunk.get('type') == 'content':
+                        text = chunk.get('text', '')
+                        if text:
+                            self.chunk_received.emit(text)
+                else:
+                    # 字符串类型（向后兼容）
+                    self.chunk_received.emit(str(chunk))
+        except Exception as e:
+            error_msg = str(e)
+            # 如果是模型不支持工具的错误，尝试不带 tools 参数重新调用
+            if 'does not support tools' in error_msg or 'tools' in error_msg.lower():
+                print(f"[WARNING] [FunctionCalling] 流式输出时检测到模型不支持工具，重试（无工具）")
+                for chunk in self.llm_client.generate_response(messages, stream=True, tools=None):
+                    if self._should_stop:
+                        break
+                    
+                    # 只处理文本内容
+                    if isinstance(chunk, dict):
+                        if chunk.get('type') == 'content':
+                            text = chunk.get('text', '')
+                            if text:
+                                self.chunk_received.emit(text)
+                    else:
+                        # 字符串类型（向后兼容）
+                        self.chunk_received.emit(str(chunk))
             else:
-                # 字符串类型（向后兼容）
-                self.chunk_received.emit(str(chunk))
+                # 其他错误，继续抛出
+                raise
     
     def _execute_tool(self, tool_name: str, tool_args_str: str) -> Dict:
         """
