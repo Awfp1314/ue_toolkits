@@ -60,6 +60,12 @@ class BGEEmbeddingFunction:
         if hasattr(embeddings, 'tolist'):
             return embeddings.tolist()
         return list(embeddings)
+    
+    def embed_query(self, input: str) -> List[float]:
+        """ChromaDB 查询嵌入接口（单个文本）"""
+        # 调用批量接口，取第一个结果
+        result = self.__call__([input])
+        return result[0] if result else []
 
 
 class LocalDocIndex:
