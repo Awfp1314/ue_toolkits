@@ -62,20 +62,15 @@ class APIClient(QThread):
             print(f"[CONFIG] AI 助手配置加载成功，供应商: {config.get('llm_provider', 'unknown')}")
             return config
         except Exception as e:
-            print(f"[WARNING] 加载配置失败，使用默认 API 配置: {e}")
+            print(f"[ERROR] 加载配置失败: {e}")
             import traceback
             traceback.print_exc()
-            # 返回默认 API 配置
-            return {
-                "llm_provider": "api",
-                "api_settings": {
-                    "api_url": "https://api.openai-hk.com/v1/chat/completions",
-                    "api_key": "hk-rf256210000027899536cbcb497417e8dfc70c2960229c22",
-                    "default_model": "gemini-2.5-flash",
-                    "temperature": 0.8,
-                    "timeout": 60
-                }
-            }
+            # 不提供 fallback，强制用户配置
+            raise Exception(
+                "AI 助手配置加载失败。\n\n"
+                "请在设置中配置 API Key 或 Ollama 服务地址。\n\n"
+                f"错误详情: {str(e)}"
+            )
     
     def run(self):
         """执行 LLM 请求（使用策略模式）"""

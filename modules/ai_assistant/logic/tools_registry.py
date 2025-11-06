@@ -37,7 +37,7 @@ class ToolsRegistry:
     v0.3: 扩展支持受控写入工具
     """
     
-    def __init__(self, asset_reader=None, config_reader=None, log_analyzer=None, document_reader=None, controlled_tools=None):
+    def __init__(self, asset_reader=None, config_reader=None, log_analyzer=None, document_reader=None):
         """
         初始化工具注册表
         
@@ -46,24 +46,18 @@ class ToolsRegistry:
             config_reader: 配置读取器
             log_analyzer: 日志分析器
             document_reader: 文档读取器
-            controlled_tools: 受控工具集（v0.3 新增）
         """
         self.logger = logger
         self.asset_reader = asset_reader
         self.config_reader = config_reader
         self.log_analyzer = log_analyzer
         self.document_reader = document_reader
-        self.controlled_tools = controlled_tools  # v0.3 新增
         
         # 工具注册表
         self.tools: Dict[str, ToolDefinition] = {}
         
         # 注册所有只读工具
         self._register_readonly_tools()
-        
-        # v0.3: 注册受控写入工具
-        if self.controlled_tools:
-            self._register_controlled_tools()
         
         self.logger.info(f"工具注册表初始化完成，共注册 {len(self.tools)} 个工具")
     

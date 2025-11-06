@@ -17,13 +17,11 @@ logger = get_logger(__name__)
 try:
     from modules.ai_assistant.logic.runtime_context import RuntimeContextManager
     from modules.ai_assistant.logic.tools_registry import ToolsRegistry
-    from modules.ai_assistant.logic.action_engine import ActionEngine
     V01_V02_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"v0.1/v0.2 功能不可用（缺少依赖）：{e}")
     RuntimeContextManager = None
     ToolsRegistry = None
-    ActionEngine = None
     V01_V02_AVAILABLE = False
 
 
@@ -45,9 +43,8 @@ class AIAssistantModule:
         # v0.1 新增：运行态上下文管理器（全局单例）
         self.runtime_context = RuntimeContextManager() if V01_V02_AVAILABLE and RuntimeContextManager else None
         
-        # v0.2 新增：工具注册表和动作引擎（延迟初始化）
+        # v0.2 新增：工具注册表（延迟初始化）
         self.tools_registry: Optional[ToolsRegistry] = None
-        self.action_engine: Optional[ActionEngine] = None
         
         # 模型加载状态标志（供UI查询）
         self._model_loading = False
@@ -241,23 +238,11 @@ class AIAssistantModule:
                 document_reader=document_reader
             )
             
-            # 创建动作引擎
-            from modules.ai_assistant.logic.api_client import APIClient
-            
-            def api_client_factory(messages, model="gemini-2.5-flash"):
-                return APIClient(messages, model=model)
-            
-            self.action_engine = ActionEngine(
-                tools_registry=self.tools_registry,
-                api_client_factory=api_client_factory
-            )
-            
             logger.info("工具系统初始化完成")
             
         except Exception as e:
             logger.error(f"初始化工具系统失败: {e}", exc_info=True)
             self.tools_registry = None
-            self.action_engine = None
     
     def get_runtime_context(self) -> RuntimeContextManager:
         """获取运行态上下文管理器（供外部访问）
@@ -320,9 +305,9 @@ class AIAssistantModule:
             
             # v0.2 新增：初始化并传递工具系统
             self._init_tools_system()
-            if self.tools_registry and self.action_engine:
+            if self.tools_registry:
                 if hasattr(self.chat_window, 'set_tools_system'):
-                    self.chat_window.set_tools_system(self.tools_registry, self.action_engine)
+                    self.chat_window.set_tools_system(self.tools_registry)
                     logger.info("工具系统已传递给 ChatWindow")
             
             # 传递模型加载状态查询接口

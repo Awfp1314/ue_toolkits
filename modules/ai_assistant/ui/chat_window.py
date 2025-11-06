@@ -14,7 +14,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QEvent, QTimer
 from PyQt6.QtGui import QFont, QTextCursor
 
-from modules.ai_assistant.ui.message_bubble import MessageBubble, StreamingBubble, ErrorBubble
 from modules.ai_assistant.ui.markdown_message import MarkdownMessage, StreamingMarkdownMessage, ErrorMarkdownMessage
 from modules.ai_assistant.logic.api_client import APIClient
 from modules.ai_assistant.ui.chat_composer import ChatGPTComposer
@@ -80,7 +79,6 @@ class ChatWindow(QWidget):
         
         # v0.2 新增：工具系统
         self.tools_registry = None
-        self.action_engine = None
         
         # 模型加载状态检查器
         self.model_status_checker = None
@@ -182,22 +180,21 @@ class ChatWindow(QWidget):
         self.runtime_context = runtime_context
         self._init_context_manager(logger)
     
-    def set_tools_system(self, tools_registry, action_engine):
+    def set_tools_system(self, tools_registry, action_engine=None):
         """设置工具系统（v0.2 新增）
         
         Args:
             tools_registry: ToolsRegistry 实例
-            action_engine: ActionEngine 实例
+            action_engine: ActionEngine 实例（已废弃，保留参数以向后兼容）
         """
         from core.logger import get_logger
         logger = get_logger(__name__)
         
         print("[DEBUG] ===== set_tools_system 被调用 =====")
         print(f"[DEBUG] tools_registry: {tools_registry}")
-        print(f"[DEBUG] action_engine: {action_engine}")
         
         self.tools_registry = tools_registry
-        self.action_engine = action_engine
+        # action_engine 已废弃，不再使用
         logger.info("ChatWindow 工具系统已设置")
     
     def set_model_status_checker(self, ai_module):

@@ -50,21 +50,7 @@ SYSTEM_PROMPT = """你是**虚幻引擎资产管理工具箱**的 AI 助手，�
 - ❌ 不要假装能看到资产库数据（如果上下文中没有）
 - ❌ 不要列出示例资产假装它们存在于用户的库中"""
 
-# 简化版系统提示词（用于本地小模型，约100 tokens）
-SYSTEM_PROMPT_SIMPLE = """你是虚幻引擎（Unreal Engine）工具箱的AI助手。
-
-## 工具箱功能
-- 管理UE资产（蓝图、材质、模型等）
-- 管理UE配置文件（.ini）
-- 查看文档和日志
-
-## 你的任务
-帮助用户使用这个工具箱，回答UE相关问题。
-
-## 重要
-- UE = Unreal Engine（虚幻引擎），不是Unity
-- 友好、简洁、专业
-- 使用Markdown格式"""
+# SYSTEM_PROMPT_SIMPLE 已废弃并删除（统一使用 SYSTEM_PROMPT）
 
 # API 配置（可选）
 API_URL = "https://api.openai-hk.com/v1/chat/completions"
