@@ -148,13 +148,8 @@ class EnhancedMemoryManager:
             )
             self.logger.info(f"记忆集合已就绪: user_memory_{self.user_id}")
             
-            # 尝试获取记忆数量（可能会崩溃，所以要保护）
-            try:
-                count = self._memory_collection.count()
-                self.logger.info(f"ChromaDB 记忆集合初始化成功，记忆数量: {count}")
-            except Exception as count_error:
-                self.logger.warning(f"无法获取记忆数量（非致命）: {count_error}")
-                self.logger.info(f"ChromaDB 记忆集合初始化成功")
+            # 不调用 count()，避免触发崩溃
+            self.logger.info(f"ChromaDB 记忆集合初始化成功: user_memory_{self.user_id}")
             
         except Exception as e:
             self.logger.error(f"初始化 ChromaDB 记忆集合失败: {e}", exc_info=True)

@@ -132,7 +132,8 @@ class LocalDocIndex:
             )
             self.logger.info(f"文档集合已就绪: ue_toolkit_docs")
             
-            self.logger.info(f"Chroma 客户端初始化成功（使用 bge-small-zh-v1.5），文档数量: {self._collection.count()}")
+            # 不调用 count()，避免触发崩溃
+            self.logger.info(f"Chroma 客户端初始化成功（使用 bge-small-zh-v1.5）")
             
         except Exception as e:
             self.logger.error(f"初始化 Chroma 失败: {e}", exc_info=True)
