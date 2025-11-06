@@ -917,7 +917,7 @@ class ChatWindow(QWidget):
         """使用 Function Calling 协调器启动请求"""
         try:
             from modules.ai_assistant.logic.function_calling_coordinator import FunctionCallingCoordinator
-            from modules.ai_assistant.clients import create_llm_client
+            from modules.ai_assistant.clients import create_llm_client, ApiLLMClient
             
             # 加载配置
             from core.config.config_manager import ConfigManager
@@ -926,8 +926,24 @@ class ChatWindow(QWidget):
             config_manager = ConfigManager("ai_assistant", template_path=template_path)
             config = config_manager.get_module_config()
             
-            # 创建 LLM 客户端
-            llm_client = create_llm_client(config)
+            # 🔧 修复：根据 UI 选择的模型判断使用哪个客户端
+            # Ollama 模型格式: "modelname:tag" (包含冒号)
+            # API 模型格式: "gpt-4", "gemini-2.5-flash" (不包含冒号，或者是已知的 API 模型)
+            api_models = ['gpt-4', 'gpt-3.5-turbo', 'gpt-4-turbo', 'gemini-2.5-flash', 
+                         'gemini-pro', 'claude-3', 'claude-3-5-sonnet']
+            
+            is_api_model = (model in api_models) or (':' not in model and '-' in model)
+            
+            if is_api_model:
+                # 使用 API 客户端，覆盖模型设置
+                print(f"[DEBUG] [协调器] 检测到 API 模型: {model}，使用 ApiLLMClient")
+                api_config = config.get('api_settings', {}).copy()
+                api_config['default_model'] = model  # 使用 UI 选择的模型
+                llm_client = ApiLLMClient(config=api_config)
+            else:
+                # 使用配置文件中的设置（可能是 Ollama）
+                print(f"[DEBUG] [协调器] 使用配置文件设置创建客户端")
+                llm_client = create_llm_client(config)
             
             # 创建协调器
             self.current_coordinator = FunctionCallingCoordinator(
