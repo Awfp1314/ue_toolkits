@@ -34,7 +34,7 @@ class BGEEmbeddingFunctionForMemory:
         return "bge-small-zh-v1.5-memory"
     
     def __call__(self, input: List[str]) -> List[List[float]]:
-        """ChromaDB 要求的接口"""
+        """ChromaDB 批量嵌入接口"""
         embeddings = self.embedding_service.encode_text(input, convert_to_numpy=False)
         
         if embeddings is None:
@@ -44,6 +44,12 @@ class BGEEmbeddingFunctionForMemory:
         if hasattr(embeddings, 'tolist'):
             return embeddings.tolist()
         return list(embeddings)
+    
+    def embed_query(self, input: str) -> List[float]:
+        """ChromaDB 查询嵌入接口（单个文本）"""
+        # 调用批量接口，取第一个结果
+        result = self.__call__([input])
+        return result[0] if result else []
 
 
 class MemoryLevel:
