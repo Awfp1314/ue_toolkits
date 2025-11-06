@@ -78,6 +78,7 @@ class ContextManager:
         self.embedding_service = EmbeddingService()
         
         # 初始化 ChromaDB 客户端（用于向量存储）
+        # 注意：避免调用 collection.count()，会导致崩溃
         self.db_client = self._init_chromadb_client()
         
         # 增强型记忆管理器（基于 Mem0 设计，支持向量检索）
@@ -94,9 +95,8 @@ class ContextManager:
         # v0.1 新增：运行态上下文管理器
         self.runtime_context = runtime_context or (RuntimeContextManager() if V01_AVAILABLE and RuntimeContextManager else None)
         
-        # v0.1 新增：本地文档索引（暂时禁用以排查崩溃）
-        # TODO: 调试完成后重新启用
-        self.local_index = None  # LocalDocIndex(embedding_service=self.embedding_service) if V01_AVAILABLE and LocalDocIndex else None
+        # v0.1 新增：本地文档索引（使用统一的嵌入服务）
+        self.local_index = LocalDocIndex(embedding_service=self.embedding_service) if V01_AVAILABLE and LocalDocIndex else None
         
         # v0.1 新增：远程检索器（延迟加载）
         self.remote_retriever = RemoteRetriever() if V01_AVAILABLE and RemoteRetriever else None
