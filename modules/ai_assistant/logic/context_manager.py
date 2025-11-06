@@ -77,15 +77,12 @@ class ContextManager:
         # 创建统一的 EmbeddingService（单例模式）
         self.embedding_service = EmbeddingService()
         
-        # 初始化 ChromaDB 客户端（用于向量存储）
-        # 注意：避免调用 collection.count()，会导致崩溃
-        self.db_client = self._init_chromadb_client()
-        
-        # 增强型记忆管理器（基于 Mem0 设计，支持向量检索）
+        # FAISS 向量存储（已替代 ChromaDB，无需额外客户端）
+        # 增强型记忆管理器（基于 Mem0 设计，使用 FAISS 向量检索）
         self.memory = EnhancedMemoryManager(
             user_id=user_id,
             embedding_service=self.embedding_service,
-            db_client=self.db_client
+            db_client=None  # FAISS 不需要外部客户端
         )
         
         # v0.1 新增：意图引擎（延迟创建，避免与后台预加载冲突）
@@ -113,33 +110,7 @@ class ContextManager:
         
         self.logger.info(f"智能上下文管理器初始化完成（用户: {user_id}，统一嵌入服务: ✓，向量检索: ✓）")
     
-    def _init_chromadb_client(self):
-        """初始化 ChromaDB 客户端"""
-        try:
-            import chromadb
-            from chromadb.config import Settings
-            from core.utils.path_utils import PathUtils
-            
-            # 获取数据库路径
-            path_utils = PathUtils()
-            db_path = path_utils.get_user_data_dir() / "chroma_db"
-            db_path.mkdir(parents=True, exist_ok=True)
-            
-            # 创建持久化客户端
-            client = chromadb.PersistentClient(
-                path=str(db_path),
-                settings=Settings(
-                    anonymized_telemetry=False,
-                    allow_reset=True
-                )
-            )
-            
-            self.logger.info(f"ChromaDB 客户端初始化成功（路径: {db_path}）")
-            return client
-            
-        except Exception as e:
-            self.logger.error(f"初始化 ChromaDB 客户端失败: {e}", exc_info=True)
-            return None
+    # _init_chromadb_client 方法已移除（FAISS 不需要）
     
     @property
     def intent_engine(self):

@@ -26,11 +26,14 @@ requests>=2.28.0
 
 # ========== v0.1 AI Deep Integration 依赖 ==========
 
+# NumPy 版本锁定（FAISS 需要 1.x）
+numpy>=1.24.0,<2.0
+
 # 语义意图解析（IntentEngine）
 sentence-transformers>=2.2.0
 
-# 本地文档向量检索（LocalDocIndex）
-chromadb>=0.4.0
+# 向量存储和检索（FAISS - 主存储，替代 ChromaDB）
+faiss-cpu>=1.7.4
 
 # GitHub 代码搜索（GitHubConnector）
 PyGithub>=1.59.0

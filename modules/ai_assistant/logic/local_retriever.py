@@ -48,18 +48,66 @@ class BGEEmbeddingFunction:
         Returns:
             List[List[float]]: 向量列表
         """
-        # 使用 EmbeddingService 批量编码
-        embeddings = self.embedding_service.encode_text(input, convert_to_numpy=False)
+        import numpy as np
         
-        if embeddings is None:
-            # 如果编码失败，返回零向量
+        try:
+            print(f"[DEBUG] 文档嵌入函数被调用，input: {input}")
+            
+            # 🔧 展平嵌套列表（ChromaDB 有时会传递 [['text']] 而不是 ['text']）
+            if input and isinstance(input[0], list):
+                print(f"[WARN] 检测到嵌套列表，自动展平: {input} -> {input[0]}")
+                input = input[0]
+            
+            # 使用 EmbeddingService 编码（不强制转换为 NumPy，保持原始格式）
+            embeddings = self.embedding_service.encode_text(input, convert_to_numpy=False)
+            
+            print(f"[DEBUG] encode_text 返回类型: {type(embeddings)}")
+            if hasattr(embeddings, 'shape'):
+                print(f"[DEBUG] embeddings.shape: {embeddings.shape}")
+            
+            if embeddings is None:
+                print(f"[WARN] embeddings 为 None，返回零向量")
+                dimension = self.embedding_service.get_embedding_dimension() or 384
+                return [[0.0] * dimension for _ in input]
+            
+            # 转换为 NumPy 数组（无论原始格式是什么）
+            embeddings = np.array(embeddings, dtype=np.float32)
+            print(f"[DEBUG] 转换为 NumPy 后: type={type(embeddings)}, shape={embeddings.shape}, ndim={embeddings.ndim}")
+            
+            # 确保是二维数组
+            if embeddings.ndim == 1:
+                print(f"[DEBUG] 检测到一维数组，reshape 为 (1, -1)")
+                embeddings = embeddings.reshape(1, -1)
+            elif embeddings.ndim == 0:
+                print(f"[ERROR] 检测到标量（0维），返回零向量")
+                dimension = self.embedding_service.get_embedding_dimension() or 384
+                return [[0.0] * dimension for _ in input]
+            
+            print(f"[DEBUG] reshape 后: shape={embeddings.shape}")
+            
+            # 转换为纯 Python 列表
+            result = embeddings.tolist()
+            print(f"[DEBUG] tolist() 后: type={type(result)}, len={len(result)}")
+            if len(result) > 0:
+                print(f"[DEBUG] result[0] type={type(result[0])}, len={len(result[0]) if isinstance(result[0], list) else 'N/A'}")
+            
+            # 验证格式
+            if not isinstance(result, list) or not all(isinstance(r, list) for r in result):
+                raise ValueError(f"嵌入函数返回格式错误: {type(result)}")
+            
+            print(f"[OK] 文档嵌入函数返回成功: {len(result)} 个向量，每个维度 {len(result[0])}")
+            return result
+            
+        except Exception as e:
+            print(f"[ERROR] 文档嵌入函数调用失败: {e}")
+            print(f"[DEBUG] input: {input}")
+            print(f"[DEBUG] embeddings type: {type(embeddings) if 'embeddings' in locals() else 'N/A'}")
+            if 'embeddings' in locals():
+                print(f"[DEBUG] embeddings value: {embeddings if not hasattr(embeddings, 'shape') else f'array with shape {embeddings.shape}'}")
+            import traceback
+            print(traceback.format_exc())
             dimension = self.embedding_service.get_embedding_dimension() or 384
             return [[0.0] * dimension for _ in input]
-        
-        # 转换为列表格式（ChromaDB 需要）
-        if hasattr(embeddings, 'tolist'):
-            return embeddings.tolist()
-        return list(embeddings)
     
     def embed_query(self, input: str) -> List[float]:
         """ChromaDB 查询嵌入接口（单个文本）"""
@@ -103,9 +151,6 @@ class LocalDocIndex:
         # 使用统一的 EmbeddingService（单例模式）
         self.embedding_service = embedding_service or EmbeddingService()
         
-        # 创建适配 ChromaDB 的嵌入函数
-        self._embedding_function = BGEEmbeddingFunction(self.embedding_service)
-        
         # 延迟初始化 Chroma（避免启动时加载）
         self._client = None
         self._collection = None
@@ -130,13 +175,20 @@ class LocalDocIndex:
                 )
             )
             
-            # 获取或创建集合（使用 get_or_create，让 ChromaDB 处理冲突）
-            self._collection = self._client.get_or_create_collection(
-                name="ue_toolkit_docs",
-                metadata={"description": "UE Toolkit local documentation index (bge-small-zh-v1.5)"},
-                embedding_function=self._embedding_function
-            )
-            self.logger.info(f"文档集合已就绪: ue_toolkit_docs")
+            # 尝试加载现有集合（不删除历史）
+            try:
+                self._collection = self._client.get_collection(
+                    name="ue_toolkit_docs",
+                    embedding_function=None  # 手动管理向量
+                )
+                self.logger.info("✅ 成功加载现有文档集合: ue_toolkit_docs")
+            except Exception:
+                # 集合不存在，创建新集合
+                self._collection = self._client.create_collection(
+                    name="ue_toolkit_docs",
+                    metadata={"description": "UE Toolkit local documentation index (manual embedding)"}
+                )
+                self.logger.info("✅ 创建新文档集合: ue_toolkit_docs（手动向量管理模式）")
             
             # 不调用 count()，避免触发崩溃
             self.logger.info(f"Chroma 客户端初始化成功（使用 bge-small-zh-v1.5）")
@@ -202,9 +254,33 @@ class LocalDocIndex:
             
             self.logger.info(f"📚 [文档向量检索] 启动 ChromaDB 文档语义搜索（查询: '{query[:30]}...'）")
             
+            # 手动生成查询向量（完全绕过 ChromaDB 的自动嵌入）
+            import numpy as np
+            from core.ai_services.embedding_service import EmbeddingService
+            
+            embedding_service = EmbeddingService()
+            query_embedding = embedding_service.encode_text([query], convert_to_numpy=True)
+            
+            # 确保格式正确：float32 + 二维列表
+            if query_embedding is None:
+                self.logger.warning("⚠️ [向量生成] 查询向量生成失败，返回空结果")
+                return []
+            
+            if not isinstance(query_embedding, np.ndarray):
+                query_embedding = np.array(query_embedding, dtype=np.float32)
+            else:
+                query_embedding = query_embedding.astype(np.float32)  # 强制 float32
+            
+            if query_embedding.ndim == 1:
+                query_embedding = query_embedding.reshape(1, -1)
+            
+            query_embedding_list = query_embedding.tolist()
+            
+            self.logger.info(f"✅ [向量生成] 查询向量已生成，维度: {query_embedding.shape}")
+            
             # 执行查询
             results = self._collection.query(
-                query_texts=[query],
+                query_embeddings=query_embedding_list,  # 直接传递向量
                 n_results=top_k,
                 where=filter_metadata
             )

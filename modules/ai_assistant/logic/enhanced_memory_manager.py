@@ -3,15 +3,22 @@
 """
 增强型记忆管理器（基于 Mem0 概念）
 提供多级记忆、向量检索和智能上下文管理
+
+升级说明：
+- 使用 FAISS 替代 ChromaDB（更稳定，Windows 兼容性好）
+- FAISS 为主存储，JSON 为备份存储
+- 语义检索性能更优
 """
 
 import json
+import numpy as np
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime
 from collections import deque
 from core.logger import get_logger
 from core.ai_services import EmbeddingService
+from modules.ai_assistant.logic.faiss_memory_store import FaissMemoryStore
 
 # 延迟获取 logger，避免模块导入时卡住
 def _get_logger():
@@ -20,36 +27,7 @@ def _get_logger():
 logger = None  # 延迟初始化
 
 
-class BGEEmbeddingFunctionForMemory:
-    """
-    适配 ChromaDB 的嵌入函数包装器（记忆专用）
-    避免循环导入 local_retriever
-    """
-    
-    def __init__(self, embedding_service):
-        self.embedding_service = embedding_service
-    
-    def name(self) -> str:
-        """ChromaDB 需要的方法（不是属性）"""
-        return "bge-small-zh-v1.5-memory"
-    
-    def __call__(self, input: List[str]) -> List[List[float]]:
-        """ChromaDB 批量嵌入接口"""
-        embeddings = self.embedding_service.encode_text(input, convert_to_numpy=False)
-        
-        if embeddings is None:
-            dimension = self.embedding_service.get_embedding_dimension() or 384
-            return [[0.0] * dimension for _ in input]
-        
-        if hasattr(embeddings, 'tolist'):
-            return embeddings.tolist()
-        return list(embeddings)
-    
-    def embed_query(self, input: str) -> List[float]:
-        """ChromaDB 查询嵌入接口（单个文本）"""
-        # 调用批量接口，取第一个结果
-        result = self.__call__([input])
-        return result[0] if result else []
+# 注意：BGEEmbeddingFunctionForMemory 已移除，FAISS 不需要
 
 
 class MemoryLevel:
@@ -90,7 +68,7 @@ class EnhancedMemoryManager:
             storage_dir: 存储目录（用于持久化）
             memory_compressor: 记忆压缩器实例（可选）
             embedding_service: 嵌入服务实例（用于向量化）
-            db_client: ChromaDB 客户端实例（用于向量存储）
+            db_client: 已废弃（兼容性保留，FAISS 不需要此参数）
         """
         self.user_id = user_id
         self.logger = _get_logger()  # 延迟获取 logger
@@ -108,7 +86,7 @@ class EnhancedMemoryManager:
         self.memory_file = self.storage_dir / f"{user_id}_memory.json"
         
         # 记忆存储
-        self.user_memories: List[Memory] = []      # 用户级（持久化）
+        self.user_memories: List[Memory] = []      # 用户级（持久化）- JSON 备份
         self.session_memories: List[Memory] = []   # 会话级（临时）
         self.context_buffer = deque(maxlen=10)     # 上下文缓冲（最近10轮）
         self.compressed_summary: Optional[str] = None  # 压缩后的历史摘要
@@ -116,50 +94,39 @@ class EnhancedMemoryManager:
         # 记忆压缩器
         self.memory_compressor = memory_compressor
         
-        # 向量检索支持
+        # 向量检索支持（FAISS）
         self.embedding_service = embedding_service or EmbeddingService()
-        self.db_client = db_client
-        self._memory_collection = None
         
-        # 初始化 ChromaDB 集合（如果提供了 db_client）
+        # 初始化 FAISS 向量存储（主存储）
+        self.faiss_store = None
         try:
-            if self.db_client is not None:
-                self._init_memory_collection()
+            self.logger.info("🔧 [FAISS] 正在初始化向量存储...")
+            self.faiss_store = FaissMemoryStore(
+                storage_dir=self.storage_dir,
+                vector_dim=512,  # bge-small-zh-v1.5 维度
+                user_id=user_id
+            )
+            self.logger.info(f"✅ FAISS 向量存储已启用（用户: {user_id}，记忆数: {self.faiss_store.count()}）")
+        except ImportError as e:
+            self.logger.warning(f"⚠️ FAISS 模块未安装，将使用纯 JSON 模式: {e}")
+            self.faiss_store = None
         except Exception as e:
-            self.logger.error(f"初始化 ChromaDB 集合时出错（非致命）: {e}", exc_info=True)
-            self._memory_collection = None
+            self.logger.error(f"❌ FAISS 初始化失败，将使用纯 JSON 模式: {e}", exc_info=True)
+            self.faiss_store = None
         
-        # 加载持久化记忆
+        # 加载持久化记忆（JSON 备份）
         try:
             self._load_user_memories()
         except Exception as e:
             self.logger.error(f"加载用户记忆时出错（非致命）: {e}", exc_info=True)
         
-        self.logger.info(f"增强型记忆管理器初始化完成（用户: {user_id}，向量检索: {'已启用' if self._memory_collection else '未启用'}）")
-    
-    def _init_memory_collection(self):
-        """初始化 ChromaDB 记忆集合"""
-        if self.db_client is None:
-            return
+        # 自动迁移：如果 FAISS 为空但 JSON 有数据，自动迁移
+        if self.faiss_store is not None:
+            self._auto_migrate_json_to_faiss()
         
-        try:
-            # 创建嵌入函数包装器（使用本地定义的类，避免循环依赖）
-            embedding_func = BGEEmbeddingFunctionForMemory(self.embedding_service)
-            
-            # 获取或创建记忆集合（使用 get_or_create，让 ChromaDB 处理冲突）
-            self._memory_collection = self.db_client.get_or_create_collection(
-                name=f"user_memory_{self.user_id}",
-                metadata={"description": f"User memory for {self.user_id} (bge-small-zh-v1.5)"},
-                embedding_function=embedding_func
-            )
-            self.logger.info(f"记忆集合已就绪: user_memory_{self.user_id}")
-            
-            # 不调用 count()，避免触发崩溃
-            self.logger.info(f"ChromaDB 记忆集合初始化成功: user_memory_{self.user_id}")
-            
-        except Exception as e:
-            self.logger.error(f"初始化 ChromaDB 记忆集合失败: {e}", exc_info=True)
-            self._memory_collection = None
+        self.logger.info(f"增强型记忆管理器初始化完成（用户: {user_id}，FAISS向量检索: {'已启用' if self.faiss_store else '未启用'}）")
+    
+    # _init_memory_collection 方法已移除（FAISS 不需要）
     
     def add_memory(self, content: str, level: str = MemoryLevel.SESSION, 
                    metadata: Optional[Dict] = None, auto_evaluate: bool = True):
@@ -180,36 +147,29 @@ class EnhancedMemoryManager:
         # 根据级别添加到对应存储
         if level == MemoryLevel.USER:
             self.user_memories.append(memory)
-            self._save_user_memories()  # 持久化到 JSON（冷备份）
+            self._save_user_memories()  # 备份到 JSON（灾难恢复）
             
-            # 同时存储到 ChromaDB 向量数据库
-            if self._memory_collection is not None:
+            # FAISS 向量存储（主存储）
+            if self.faiss_store is not None:
                 try:
-                    # 生成唯一 ID
-                    memory_id = f"{self.user_id}_{memory.timestamp}_{hash(content) % 100000}"
+                    # 生成向量
+                    vector = self.embedding_service.encode_text([content], convert_to_numpy=True)
                     
-                    # 准备元数据
-                    chroma_metadata = {
-                        'timestamp': memory.timestamp,
-                        'importance': memory.importance,
-                        'level': level,
-                        'user_id': self.user_id
-                    }
-                    # 合并用户提供的元数据
-                    if metadata:
-                        chroma_metadata.update({k: str(v) for k, v in metadata.items()})
-                    
-                    # 存入 ChromaDB（会自动向量化）
-                    self._memory_collection.upsert(
-                        ids=[memory_id],
-                        documents=[content],
-                        metadatas=[chroma_metadata]
-                    )
-                    
-                    self.logger.debug(f"记忆已向量化并存入 ChromaDB: {memory_id}")
-                    
+                    if vector is not None:
+                        # 存入 FAISS
+                        self.faiss_store.add(
+                            content=content,
+                            vector=vector,
+                            metadata=metadata,
+                            importance=memory.importance
+                        )
+                        self.logger.debug(f"✅ [FAISS] 记忆已保存: {content[:50]}...")
+                    else:
+                        self.logger.warning("⚠️ [FAISS] 向量生成失败，已跳过")
+                        
                 except Exception as e:
-                    self.logger.error(f"存储记忆到 ChromaDB 失败: {e}", exc_info=True)
+                    self.logger.warning(f"⚠️ [FAISS] 存储失败（非致命）: {e}")
+                    # FAISS 失败不影响主流程，JSON 已保存
         
         elif level == MemoryLevel.SESSION:
             self.session_memories.append(memory)
@@ -234,23 +194,24 @@ class EnhancedMemoryManager:
         else:
             user_query_text = str(user_query)
         
-        # 添加用户查询
-        metadata_user = {'type': 'user_query'}
-        level = MemoryLevel.CONTEXT  # 默认上下文级
-        
+        # 智能保存：只保存有价值的信息，而不是简单的问答
         if auto_classify:
-            # 智能判断是否值得长期保存
-            if self._is_important_query(user_query_text):
-                level = MemoryLevel.USER
-                metadata_user['tags'] = ['重要查询']
-                self.logger.info(f"[重要查询] 保存到用户级记忆: {user_query_text[:50]}...")
-        
-        self.add_memory(f"用户: {user_query_text}", level, metadata_user)
-        
-        # 添加 AI 回复（精简版）
-        response_summary = assistant_response[:200] + "..." if len(assistant_response) > 200 else assistant_response
-        metadata_assistant = {'type': 'assistant_response'}
-        self.add_memory(f"助手: {response_summary}", MemoryLevel.CONTEXT, metadata_assistant)
+            # 判断用户查询是否包含有价值的信息（陈述句、偏好、身份等）
+            if self._contains_valuable_info(user_query_text):
+                # 保存用户提供的信息到用户级记忆
+                metadata_user = {'type': 'user_info', 'tags': ['偏好', '身份']}
+                self.add_memory(user_query_text, MemoryLevel.USER, metadata_user)
+                self.logger.info(f"✅ [有价值信息] 保存到用户级记忆: {user_query_text[:50]}...")
+            else:
+                # 普通问答，只保存到上下文缓冲
+                metadata_context = {'type': 'dialogue'}
+                dialogue_content = f"Q: {user_query_text[:100]}\nA: {assistant_response[:100]}"
+                self.add_memory(dialogue_content, MemoryLevel.CONTEXT, metadata_context)
+                self.logger.debug(f"[普通对话] 保存到上下文缓冲")
+        else:
+            # 不分类，直接保存到上下文
+            metadata_context = {'type': 'dialogue'}
+            self.add_memory(f"用户: {user_query_text}", MemoryLevel.CONTEXT, metadata_context)
         
         self.logger.info(f"[对话已保存] 用户级:{len(self.user_memories)}, 会话级:{len(self.session_memories)}, 上下文:{len(self.context_buffer)}")
     
@@ -270,46 +231,52 @@ class EnhancedMemoryManager:
         
         results = []
         
-        # 1. 从 ChromaDB 向量检索用户级记忆（语义相似度）
-        if self._memory_collection is not None:
+        # 1. 从 FAISS 向量检索用户级记忆（语义相似度）
+        if self.faiss_store is not None and self.faiss_store.count() > 0:
             try:
-                self.logger.info("🔮 [向量检索] 启动 ChromaDB 语义搜索...")
+                self.logger.info("🔮 [FAISS 检索] 启动语义搜索...")
                 
-                # 使用向量相似度搜索
-                search_results = self._memory_collection.query(
-                    query_texts=[query],
-                    n_results=min(limit, 10),  # 多取一些备选
-                    where={"user_id": self.user_id}  # 过滤当前用户
-                )
+                # 生成查询向量
+                query_vector = self.embedding_service.encode_text([query], convert_to_numpy=True)
                 
-                if search_results['documents'] and len(search_results['documents']) > 0:
-                    for i, content in enumerate(search_results['documents'][0]):
-                        metadata = search_results['metadatas'][0][i] if search_results['metadatas'] else {}
-                        distance = search_results['distances'][0][i] if search_results['distances'] else 1.0
-                        importance = float(metadata.get('importance', 0.5))
-                        
-                        # 过滤低重要性记忆
-                        if importance < min_importance:
-                            continue
-                        
-                        # 向量相似度得分（距离越小越相似）
-                        similarity_score = 1.0 - distance
-                        
-                        results.append((content, similarity_score, 'vector_user'))
-                        
-                    self.logger.info(f"✅ [向量检索] ChromaDB 成功检索到 {len(results)} 条记忆（语义相似度匹配）")
+                if query_vector is not None:
+                    # FAISS 检索
+                    faiss_results = self.faiss_store.search(
+                        query_vector=query_vector,
+                        top_k=limit * 2,
+                        min_importance=min_importance
+                    )
+                    
+                    for content, similarity, metadata in faiss_results:
+                        results.append((content, similarity, 'faiss_vector'))
+                    
+                    self.logger.info(f"✅ [FAISS 检索] 找到 {len(results)} 条记忆（语义相似度匹配）")
                 else:
-                    self.logger.info("⚠️ [向量检索] ChromaDB 未找到匹配记忆")
-            
+                    self.logger.warning("⚠️ [FAISS 检索] 向量生成失败")
+                    
             except Exception as e:
-                self.logger.error(f"❌ [向量检索] ChromaDB 检索失败: {e}", exc_info=True)
+                self.logger.error(f"❌ [FAISS 检索] 检索失败: {e}")
         else:
-            self.logger.warning("⚠️ [向量检索] ChromaDB 未启用，跳过向量检索")
+            self.logger.info("⚠️ [FAISS 检索] 向量存储未启用或为空，使用 JSON 备份检索")
+            
+            # 降级到关键词匹配（FAISS 不可用时）
+            query_lower = query.lower()
+            query_words = set([w for w in query_lower.split() if len(w) > 1])
+            
+            for memory in self.user_memories:
+                if memory.importance < min_importance:
+                    continue
+                
+                content_lower = memory.content.lower()
+                matched_words = sum(1 for word in query_words if word in content_lower)
+                if matched_words > 0:
+                    similarity_score = matched_words / max(len(query_words), 1)
+                    results.append((memory.content, similarity_score, 'json_fallback'))
+            
+            self.logger.info(f"✅ [JSON 备份检索] 找到 {len(results)} 条记忆")
         
         # 2. 从会话级和上下文级记忆中检索（关键词匹配作为补充）
         self.logger.info("🔍 [关键词检索] 扫描会话级和上下文级记忆...")
-        query_lower = query.lower()
-        query_words = [w for w in query_lower.split() if len(w) > 1]
         
         # 会话级记忆
         for memory in self.session_memories:
@@ -537,6 +504,31 @@ class EnhancedMemoryManager:
         
         return any(indicator in query_lower for indicator in important_indicators)
     
+    def _contains_valuable_info(self, text: str) -> bool:
+        """判断文本是否包含有价值的信息（陈述句、偏好、身份等）
+        
+        Args:
+            text: 用户输入文本
+            
+        Returns:
+            bool: 是否包含有价值信息
+        """
+        text_lower = text.lower()
+        
+        # 排除疑问句（通常是提问，不是陈述信息）
+        question_words = ['吗', '呢', '？', '?', '什么', '怎么', '如何', '为什么', '哪', '谁']
+        if any(word in text_lower for word in question_words):
+            return False
+        
+        # 包含偏好、身份、喜好等关键词的陈述句
+        valuable_indicators = [
+            '我喜欢', '我是', '我叫', '我在', '我的', '我想',
+            '我觉得', '我认为', '我需要', '我有', '我用',
+            '喜欢玩', '正在开发', '正在做', '擅长'
+        ]
+        
+        return any(indicator in text_lower for indicator in valuable_indicators)
+    
     def _load_user_memories(self):
         """从文件加载用户级记忆"""
         try:
@@ -583,4 +575,48 @@ class EnhancedMemoryManager:
         
         except Exception as e:
             self.logger.error(f"保存用户记忆失败: {e}")
+    
+    def _auto_migrate_json_to_faiss(self):
+        """自动迁移 JSON 记忆到 FAISS（首次启动或 FAISS 为空时）"""
+        try:
+            # 检查是否需要迁移
+            faiss_count = self.faiss_store.count() if self.faiss_store else 0
+            json_count = len(self.user_memories)
+            
+            # FAISS 为空但 JSON 有数据 -> 需要迁移
+            if faiss_count == 0 and json_count > 0:
+                self.logger.info(f"🔄 [自动迁移] 检测到 {json_count} 条 JSON 记忆，开始迁移到 FAISS...")
+                
+                success_count = 0
+                for memory in self.user_memories:
+                    try:
+                        # 生成向量
+                        vector = self.embedding_service.encode_text([memory.content], convert_to_numpy=True)
+                        
+                        if vector is not None:
+                            # 添加到 FAISS
+                            self.faiss_store.add(
+                                content=memory.content,
+                                vector=vector,
+                                metadata=memory.metadata,
+                                importance=memory.importance
+                            )
+                            success_count += 1
+                        
+                    except Exception as e:
+                        self.logger.warning(f"⚠️ 迁移单条记忆失败: {e}")
+                        continue
+                
+                # 强制保存
+                if success_count > 0:
+                    self.faiss_store._save_to_disk()
+                    self.logger.info(f"✅ [自动迁移] 成功迁移 {success_count}/{json_count} 条记忆到 FAISS")
+                else:
+                    self.logger.warning("⚠️ [自动迁移] 未能迁移任何记忆")
+            
+            elif faiss_count > 0:
+                self.logger.info(f"✅ [FAISS] 已有 {faiss_count} 条记忆，跳过迁移")
+            
+        except Exception as e:
+            self.logger.error(f"❌ [自动迁移] 迁移失败: {e}", exc_info=True)
 
