@@ -267,6 +267,8 @@ class EnhancedMemoryManager:
         # 1. 从 ChromaDB 向量检索用户级记忆（语义相似度）
         if self._memory_collection is not None:
             try:
+                self.logger.info("🔮 [向量检索] 启动 ChromaDB 语义搜索...")
+                
                 # 使用向量相似度搜索
                 search_results = self._memory_collection.query(
                     query_texts=[query],
@@ -289,12 +291,17 @@ class EnhancedMemoryManager:
                         
                         results.append((content, similarity_score, 'vector_user'))
                         
-                    self.logger.info(f"从 ChromaDB 检索到 {len(results)} 条用户级记忆")
+                    self.logger.info(f"✅ [向量检索] ChromaDB 成功检索到 {len(results)} 条记忆（语义相似度匹配）")
+                else:
+                    self.logger.info("⚠️ [向量检索] ChromaDB 未找到匹配记忆")
             
             except Exception as e:
-                self.logger.error(f"ChromaDB 向量检索失败: {e}", exc_info=True)
+                self.logger.error(f"❌ [向量检索] ChromaDB 检索失败: {e}", exc_info=True)
+        else:
+            self.logger.warning("⚠️ [向量检索] ChromaDB 未启用，跳过向量检索")
         
         # 2. 从会话级和上下文级记忆中检索（关键词匹配作为补充）
+        self.logger.info("🔍 [关键词检索] 扫描会话级和上下文级记忆...")
         query_lower = query.lower()
         query_words = [w for w in query_lower.split() if len(w) > 1]
         

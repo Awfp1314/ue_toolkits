@@ -909,9 +909,11 @@ class ContextManager:
             # 1. 优先本地文档检索
             try:
                 if self.local_index:
+                    self.logger.info("📖 [上下文构建] 调用本地文档向量检索...")
                     # Token优化：从 top_k=3 降到 top_k=2
                     local_results = self.local_index.search(query, top_k=2)
                 else:
+                    self.logger.warning("⚠️ [上下文构建] 本地文档索引未启用")
                     local_results = []
                 
                 if local_results:
@@ -925,7 +927,7 @@ class ContextManager:
                         # Token优化：更简洁的格式
                         evidence_parts.append(f"{i}. {content}...")
                     
-                    self.logger.info(f"本地检索到 {len(local_results)} 条结果")
+                    self.logger.info(f"✅ [上下文构建] 本地文档向量检索返回 {len(local_results)} 条结果")
             
             except Exception as e:
                 self.logger.warning(f"本地检索失败: {e}")

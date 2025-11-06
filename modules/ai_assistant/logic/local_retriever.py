@@ -194,6 +194,8 @@ class LocalDocIndex:
         try:
             self._init_chroma()
             
+            self.logger.info(f"📚 [文档向量检索] 启动 ChromaDB 文档语义搜索（查询: '{query[:30]}...'）")
+            
             # 执行查询
             results = self._collection.query(
                 query_texts=[query],
@@ -212,7 +214,11 @@ class LocalDocIndex:
                         'distance': results['distances'][0][i] if results['distances'] else 0.0
                     })
             
-            self.logger.debug(f"搜索到 {len(formatted_results)} 个相关文档")
+            if formatted_results:
+                self.logger.info(f"✅ [文档向量检索] ChromaDB 成功检索到 {len(formatted_results)} 个相关文档片段")
+            else:
+                self.logger.info("⚠️ [文档向量检索] ChromaDB 未找到匹配文档")
+            
             return formatted_results
             
         except Exception as e:
