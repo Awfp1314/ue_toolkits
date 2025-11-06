@@ -612,9 +612,21 @@ class ContextManager:
         if analysis['needs_assets']:
             asset_context = self._build_asset_context(query)
             if asset_context:
-                # Token优化：资产上下文限制到 2000 字符（足够显示完整资产列表）
-                # 之前 600 字符太少，导致AI只能看到部分资产，然后编造剩余部分
-                contexts['domain_assets'] = asset_context[:2000] if len(asset_context) > 2000 else asset_context
+                # 智能限制：检测是否是"列出所有"的查询
+                query_lower = query.lower()
+                is_list_all_query = any(keyword in query_lower for keyword in [
+                    '所有资产', '全部资产', '列出资产', '有哪些资产', '资产列表', 
+                    'list all', 'show all', 'all assets'
+                ])
+                
+                if is_list_all_query:
+                    # 用户要求列出所有资产，不截断！
+                    contexts['domain_assets'] = asset_context
+                    self.logger.info(f"检测到列表查询，不限制资产上下文长度（{len(asset_context)} 字符）")
+                else:
+                    # 其他查询，适度限制
+                    contexts['domain_assets'] = asset_context[:2000] if len(asset_context) > 2000 else asset_context
+                    self.logger.info(f"常规资产查询，限制到 2000 字符")
         
         if analysis['needs_docs']:
             doc_context = self._build_document_context(query)
