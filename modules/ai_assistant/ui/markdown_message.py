@@ -891,6 +891,9 @@ class StreamingMarkdownMessage(QFrame):
         """初始化 UI（流式助手消息：居中，无气泡，宽度 780px）"""
         self.setObjectName("markdown_message")
         
+        # 工具状态标签（初始化为 None，需要时创建）
+        self.tool_status_label = None
+        
         # 外层布局（水平布局，用于居中）
         outer_layout = QHBoxLayout(self)
         outer_layout.setContentsMargins(0, 12, 0, 12)  # 上下间距
@@ -1274,6 +1277,37 @@ class StreamingMarkdownMessage(QFrame):
             
             # 延迟后输出下一个字符（30ms间隔）
             QTimer.singleShot(30, lambda: self._stream_error_text(text, index + 1))
+    
+    def show_tool_status(self, status_text):
+        """
+        显示工具调用状态
+        
+        Args:
+            status_text: 状态文本
+        """
+        from PyQt6.QtWidgets import QLabel
+        
+        if not self.tool_status_label:
+            # 创建状态标签
+            self.tool_status_label = QLabel()
+            self.tool_status_label.setObjectName("tool_status")
+            self.tool_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            # 插入到布局顶部（在 assistant_container 的第一个位置）
+            # 找到 assistant_container
+            outer_layout = self.layout()
+            if outer_layout and outer_layout.count() >= 2:
+                assistant_container = outer_layout.itemAt(1).widget()  # 索引 1 是 assistant_container
+                if assistant_container:
+                    container_layout = assistant_container.layout()
+                    if container_layout:
+                        container_layout.insertWidget(0, self.tool_status_label)
+        
+        # 更新状态文本
+        self.tool_status_label.setText(f"🔧 {status_text}")
+        self.tool_status_label.show()
+        
+        # 3秒后自动隐藏
+        QTimer.singleShot(3000, self.tool_status_label.hide)
 
 
 class ErrorMarkdownMessage(QFrame):

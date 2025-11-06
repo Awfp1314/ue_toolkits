@@ -57,6 +57,7 @@ class ChatWindow(QWidget):
             }
         ]
         self.current_api_client = None
+        self.current_coordinator = None  # Function Calling 协调器
         self.current_streaming_bubble = None
         
         # 从全局主题管理器获取当前主题
@@ -812,16 +813,23 @@ class ChatWindow(QWidget):
             else:
                 print(f"[DEBUG] [工具系统] 工具注册表未初始化")
             
-            self.current_api_client = APIClient(
-                request_messages,  # 使用临时构建的消息列表
-                model=model,
-                tools=tools  # 传递工具定义给 LLM
-            )
-            self.current_api_client.chunk_received.connect(self.on_chunk_received)
-            self.current_api_client.request_finished.connect(self.on_request_finished)
-            self.current_api_client.error_occurred.connect(self.on_error_occurred)
-            print(f"[DEBUG] 启动 API 请求...")
-            self.current_api_client.start()
+            # 检查是否需要使用 Function Calling 协调器
+            if tools and self.tools_registry:
+                # 使用协调器（支持真正的 Function Calling）
+                print(f"[DEBUG] [工具系统] 启用 Function Calling 协调器")
+                self._start_with_coordinator(request_messages, model, tools)
+            else:
+                # 普通模式（无工具）
+                print(f"[DEBUG] 启动普通 API 请求...")
+                self.current_api_client = APIClient(
+                    request_messages,  # 使用临时构建的消息列表
+                    model=model,
+                    tools=tools  # 传递工具定义给 LLM
+                )
+                self.current_api_client.chunk_received.connect(self.on_chunk_received)
+                self.current_api_client.request_finished.connect(self.on_request_finished)
+                self.current_api_client.error_occurred.connect(self.on_error_occurred)
+                self.current_api_client.start()
         except Exception as e:
             safe_print(f"[ERROR] 发送消息时出错: {e}")
             import traceback
@@ -880,16 +888,23 @@ class ChatWindow(QWidget):
                 if tools:
                     print(f"[DEBUG] [工具系统] 已加载 {len(tools)} 个可用工具")
             
-            self.current_api_client = APIClient(
-                self.conversation_history.copy(),
-                model=model,
-                tools=tools  # 传递工具定义给 LLM
-            )
-            self.current_api_client.chunk_received.connect(self.on_chunk_received)
-            self.current_api_client.request_finished.connect(self.on_request_finished)
-            self.current_api_client.error_occurred.connect(self.on_error_occurred)
-            print(f"[DEBUG] 启动 API 请求...")
-            self.current_api_client.start()
+            # 检查是否需要使用 Function Calling 协调器
+            if tools and self.tools_registry:
+                # 使用协调器（支持真正的 Function Calling）
+                print(f"[DEBUG] [工具系统] 启用 Function Calling 协调器（图片消息）")
+                self._start_with_coordinator(self.conversation_history.copy(), model, tools)
+            else:
+                # 普通模式（无工具）
+                self.current_api_client = APIClient(
+                    self.conversation_history.copy(),
+                    model=model,
+                    tools=tools  # 传递工具定义给 LLM
+                )
+                self.current_api_client.chunk_received.connect(self.on_chunk_received)
+                self.current_api_client.request_finished.connect(self.on_request_finished)
+                self.current_api_client.error_occurred.connect(self.on_error_occurred)
+                print(f"[DEBUG] 启动 API 请求...")
+                self.current_api_client.start()
         except Exception as e:
             safe_print(f"[ERROR] 发送消息时出错: {e}")
             import traceback
@@ -898,21 +913,113 @@ class ChatWindow(QWidget):
             self.input_field.unlock()
             self.input_area.set_generating(False)
     
-    def on_chunk_received(self, chunk):
-        """接收流式数据"""
+    def _start_with_coordinator(self, messages, model, tools):
+        """使用 Function Calling 协调器启动请求"""
         try:
-            # 使用 repr 避免 Unicode 编码错误
-            try:
-                print(f"[STREAM] 收到数据块: {chunk[:20]}... (长度: {len(chunk)})")
-            except UnicodeEncodeError:
-                pass  # 忽略 print 的编码错误
+            from modules.ai_assistant.logic.function_calling_coordinator import FunctionCallingCoordinator
+            from modules.ai_assistant.clients import create_llm_client
             
+            # 加载配置
+            from core.config.config_manager import ConfigManager
+            from pathlib import Path
+            template_path = Path(__file__).parent.parent / "config_template.json"
+            config_manager = ConfigManager("ai_assistant", template_path=template_path)
+            config = config_manager.get_module_config()
+            
+            # 创建 LLM 客户端
+            llm_client = create_llm_client(config)
+            
+            # 创建协调器
+            self.current_coordinator = FunctionCallingCoordinator(
+                messages=messages,
+                tools_registry=self.tools_registry,
+                llm_client=llm_client,
+                max_iterations=5
+            )
+            
+            # 连接信号
+            self.current_coordinator.tool_start.connect(self.on_tool_start)
+            self.current_coordinator.tool_complete.connect(self.on_tool_complete)
+            self.current_coordinator.chunk_received.connect(self.on_chunk_received_text)
+            self.current_coordinator.request_finished.connect(self.on_request_finished)
+            self.current_coordinator.error_occurred.connect(self.on_error_occurred)
+            
+            # 启动协调器
+            print(f"[DEBUG] [协调器] 启动 Function Calling 协调器...")
+            self.current_coordinator.start()
+        
+        except Exception as e:
+            safe_print(f"[ERROR] 启动协调器失败: {e}")
+            import traceback
+            safe_print(traceback.format_exc())
+            self.on_error_occurred(f"启动协调器失败: {str(e)}")
+    
+    def on_tool_start(self, tool_name):
+        """工具开始执行回调"""
+        try:
+            print(f"[DEBUG] [工具] 开始执行: {tool_name}")
             if self.current_streaming_bubble:
-                print(f"[STREAM] 正在追加到流式气泡...")
-                self.current_streaming_bubble.append_text(chunk)
+                self.current_streaming_bubble.show_tool_status(f"正在调用工具 [{tool_name}]...")
+        except Exception as e:
+            safe_print(f"[ERROR] 处理工具开始回调时出错: {e}")
+    
+    def on_tool_complete(self, tool_name, result):
+        """工具执行完成回调"""
+        try:
+            success = result.get('success', False)
+            if success:
+                print(f"[DEBUG] [工具] 执行成功: {tool_name}")
+                if self.current_streaming_bubble:
+                    self.current_streaming_bubble.show_tool_status(f"工具 [{tool_name}] 执行成功")
+            else:
+                error = result.get('error', '未知错误')
+                print(f"[DEBUG] [工具] 执行失败: {tool_name} - {error}")
+                if self.current_streaming_bubble:
+                    self.current_streaming_bubble.show_tool_status(f"工具 [{tool_name}] 执行失败: {error}")
+        except Exception as e:
+            safe_print(f"[ERROR] 处理工具完成回调时出错: {e}")
+    
+    def on_chunk_received_text(self, text):
+        """接收文本块（从协调器，文本已经提取）"""
+        try:
+            print(f"[STREAM] 收到文本块: {text[:20]}... (长度: {len(text)})")
+            if self.current_streaming_bubble:
+                self.current_streaming_bubble.append_text(text)
                 self.scroll_to_bottom()
             else:
                 print(f"[WARNING] 流式气泡为空，无法追加文本！")
+        except Exception as e:
+            safe_print(f"[ERROR] 处理文本块时出错: {e}")
+    
+    def on_chunk_received(self, chunk):
+        """接收流式数据（向后兼容，支持字符串和字典）"""
+        try:
+            # 检查 chunk 类型
+            if isinstance(chunk, dict):
+                # 新格式：{'type': 'content', 'text': '...'}
+                if chunk.get('type') == 'content':
+                    text = chunk.get('text', '')
+                    if text:
+                        print(f"[STREAM] 收到内容块: {text[:20]}... (长度: {len(text)})")
+                        if self.current_streaming_bubble:
+                            self.current_streaming_bubble.append_text(text)
+                            self.scroll_to_bottom()
+                # 忽略 tool_calls 类型（由协调器处理）
+                elif chunk.get('type') == 'tool_calls':
+                    print(f"[DEBUG] 收到 tool_calls，由协调器处理")
+            else:
+                # 旧格式：纯字符串
+                try:
+                    print(f"[STREAM] 收到数据块: {chunk[:20]}... (长度: {len(chunk)})")
+                except UnicodeEncodeError:
+                    pass  # 忽略 print 的编码错误
+                
+                if self.current_streaming_bubble:
+                    print(f"[STREAM] 正在追加到流式气泡...")
+                    self.current_streaming_bubble.append_text(chunk)
+                    self.scroll_to_bottom()
+                else:
+                    print(f"[WARNING] 流式气泡为空，无法追加文本！")
         except Exception as e:
             try:
                 safe_print(f"[ERROR] 处理数据块时出错: {e}")
@@ -1199,16 +1306,23 @@ class ChatWindow(QWidget):
                 if tools:
                     print(f"[DEBUG] [工具系统] 已加载 {len(tools)} 个可用工具")
             
-            self.current_api_client = APIClient(
-                request_messages,  # 使用包含上下文的请求消息
-                model=model,
-                tools=tools  # 传递工具定义给 LLM
-            )
-            self.current_api_client.chunk_received.connect(self.on_chunk_received)
-            self.current_api_client.request_finished.connect(self.on_request_finished)
-            self.current_api_client.error_occurred.connect(self.on_error_occurred)
-            print(f"[DEBUG] 重新启动 API 请求...")
-            self.current_api_client.start()
+            # 检查是否需要使用 Function Calling 协调器
+            if tools and self.tools_registry:
+                # 使用协调器（支持真正的 Function Calling）
+                print(f"[DEBUG] [工具系统] 启用 Function Calling 协调器（重新生成）")
+                self._start_with_coordinator(request_messages, model, tools)
+            else:
+                # 普通模式（无工具）
+                self.current_api_client = APIClient(
+                    request_messages,  # 使用包含上下文的请求消息
+                    model=model,
+                    tools=tools  # 传递工具定义给 LLM
+                )
+                self.current_api_client.chunk_received.connect(self.on_chunk_received)
+                self.current_api_client.request_finished.connect(self.on_request_finished)
+                self.current_api_client.error_occurred.connect(self.on_error_occurred)
+                print(f"[DEBUG] 重新启动 API 请求...")
+                self.current_api_client.start()
         except Exception as e:
             safe_print(f"[ERROR] 重新生成回答时出错: {e}")
             import traceback

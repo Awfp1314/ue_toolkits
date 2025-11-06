@@ -46,6 +46,9 @@ class ApiLLMClient(BaseLLMClient):
             "Content-Type": "application/json",
             "Authorization": self.api_key
         }
+        
+        # Tool calls 累积缓冲区
+        self._tool_calls_buffer = []
     
     def generate_response(
         self,
@@ -149,6 +152,25 @@ class ApiLLMClient(BaseLLMClient):
                                 if 'choices' in data and len(data['choices']) > 0:
                                     choice = data['choices'][0]
                                     delta = choice.get('delta', {})
+                                    
+                                    # 检测 tool_calls（优先级更高）
+                                    tool_calls = delta.get('tool_calls')
+                                    if tool_calls:
+                                        # 累积 tool_calls（可能分多个 chunk）
+                                        self._accumulate_tool_calls(tool_calls)
+                                        continue
+                                    
+                                    # 检测 finish_reason
+                                    finish_reason = choice.get('finish_reason')
+                                    if finish_reason == 'tool_calls':
+                                        # 返回完整的 tool_calls
+                                        yield {
+                                            'type': 'tool_calls',
+                                            'tool_calls': self._get_accumulated_tool_calls()
+                                        }
+                                        return
+                                    
+                                    # 正常的文本内容
                                     content = delta.get('content', '')
                                     
                                     # 尝试其他格式
@@ -164,7 +186,7 @@ class ApiLLMClient(BaseLLMClient):
                                         chunk_size = 3
                                         for i in range(0, len(content), chunk_size):
                                             small_chunk = content[i:i+chunk_size]
-                                            yield small_chunk
+                                            yield {'type': 'content', 'text': small_chunk}
                                             time.sleep(0.015)  # 15ms 延迟
                             
                             except json.JSONDecodeError:
@@ -190,4 +212,146 @@ class ApiLLMClient(BaseLLMClient):
     def get_model_name(self) -> str:
         """获取模型名称"""
         return self.default_model
+    
+    def _accumulate_tool_calls(self, tool_calls_delta: List[Dict]):
+        """
+        累积流式返回的 tool_calls
+        
+        Args:
+            tool_calls_delta: tool_calls 增量数据
+        """
+        for tc_delta in tool_calls_delta:
+            index = tc_delta.get('index', 0)
+            
+            # 扩展 buffer
+            while len(self._tool_calls_buffer) <= index:
+                self._tool_calls_buffer.append({
+                    'id': '',
+                    'type': 'function',
+                    'function': {'name': '', 'arguments': ''}
+                })
+            
+            # 累积数据
+            if 'id' in tc_delta:
+                self._tool_calls_buffer[index]['id'] = tc_delta['id']
+            
+            if 'function' in tc_delta:
+                func = tc_delta['function']
+                if 'name' in func:
+                    self._tool_calls_buffer[index]['function']['name'] += func['name']
+                if 'arguments' in func:
+                    self._tool_calls_buffer[index]['function']['arguments'] += func['arguments']
+    
+    def _get_accumulated_tool_calls(self) -> List[Dict]:
+        """
+        获取累积的 tool_calls 并清空缓冲区
+        
+        Returns:
+            List[Dict]: 完整的 tool_calls 列表
+        """
+        result = self._tool_calls_buffer.copy()
+        self._tool_calls_buffer = []
+        return result
+    
+    def generate_response_non_streaming(
+        self,
+        context_messages: List[Dict[str, str]],
+        temperature: float = None,
+        tools: List[Dict] = None
+    ) -> Dict:
+        """
+        生成响应（非流式，用于工具调用检测）
+        
+        Args:
+            context_messages: 消息历史
+            temperature: 温度参数（覆盖配置）
+            tools: Function Calling 工具列表
+            
+        Returns:
+            Dict: {
+                'type': 'tool_calls' | 'content',
+                'tool_calls': [...] | None,
+                'content': str | None
+            }
+        """
+        try:
+            # 清除环境变量中的代理设置（临时）
+            env_backup = {}
+            proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']
+            for var in proxy_vars:
+                if var in os.environ:
+                    env_backup[var] = os.environ[var]
+                    del os.environ[var]
+            
+            try:
+                # 构建请求体
+                payload = {
+                    "model": self.default_model,
+                    "messages": context_messages,
+                    "temperature": temperature if temperature is not None else self.default_temperature,
+                    "stream": False
+                }
+                
+                # 添加 tools 参数（如果提供）
+                if tools:
+                    payload["tools"] = tools
+                
+                # 创建 Session 对象，完全禁用代理
+                session = requests.Session()
+                session.trust_env = False
+                
+                # 发送请求
+                response = session.post(
+                    self.api_url,
+                    headers=self.headers,
+                    json=payload,
+                    timeout=self.timeout,
+                    proxies={'http': None, 'https': None}
+                )
+            finally:
+                # 恢复环境变量
+                for var, value in env_backup.items():
+                    os.environ[var] = value
+            
+            # 检查响应状态
+            if response.status_code != 200:
+                error_text = response.text
+                try:
+                    error_data = json.loads(error_text)
+                    error_msg = error_data.get('error', {}).get('message', error_text)
+                except:
+                    error_msg = error_text
+                raise Exception(f"API 错误 ({response.status_code}): {error_msg}")
+            
+            # 解析响应
+            data = response.json()
+            
+            if 'choices' in data and len(data['choices']) > 0:
+                choice = data['choices'][0]
+                message = choice.get('message', {})
+                
+                # 检查是否有 tool_calls
+                if 'tool_calls' in message and message['tool_calls']:
+                    return {
+                        'type': 'tool_calls',
+                        'tool_calls': message['tool_calls'],
+                        'content': None
+                    }
+                else:
+                    # 返回普通内容
+                    content = message.get('content', '')
+                    return {
+                        'type': 'content',
+                        'tool_calls': None,
+                        'content': content
+                    }
+            else:
+                raise Exception("API 响应格式错误：缺少 choices")
+        
+        except requests.exceptions.Timeout:
+            raise Exception("请求超时，请检查网络连接")
+        except requests.exceptions.ConnectionError:
+            raise Exception("连接失败，请检查网络设置")
+        except Exception as e:
+            raise Exception(f"API 请求失败: {str(e)}")
 

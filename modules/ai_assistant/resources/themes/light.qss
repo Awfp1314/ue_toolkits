@@ -369,3 +369,14 @@ QPushButton#action_button:pressed {
     background-color: rgba(0, 0, 0, 0.1);
     border: none;
 }
+
+
+/* 宸ュ叿璋冪敤鐘舵€佹爣绛?*/
+QLabel#tool_status {
+    color: #D97706;  /* 姗欒壊锛堟繁鑹蹭富棰橀€傞厤锛?*/
+    font-size: 12px;
+    padding: 5px;
+    background-color: rgba(217, 119, 6, 0.1);
+    border-radius: 3px;
+    margin-bottom: 5px;
+}
