@@ -341,18 +341,20 @@ class LocalDocIndex:
         return chunks if chunks else [content[:max_length]]
     
     def get_stats(self) -> Dict[str, Any]:
-        """获取索引统计信息"""
+        """获取索引统计信息
+        
+        注意：不调用 count()，因为会导致崩溃
+        """
         try:
             self._init_chroma()
             
-            count = self._collection.count()
-            
             return {
-                'total_documents': count,
+                'total_documents': 'N/A',  # 不调用 count() 避免崩溃
                 'db_path': str(self.db_path),
-                'collection_name': self._collection.name if self._collection else None
+                'collection_name': self._collection.name if self._collection else None,
+                'status': 'active'
             }
         except Exception as e:
             self.logger.error(f"获取统计信息失败: {e}")
-            return {'total_documents': 0, 'db_path': str(self.db_path)}
+            return {'total_documents': 'N/A', 'db_path': str(self.db_path), 'status': 'error'}
 
