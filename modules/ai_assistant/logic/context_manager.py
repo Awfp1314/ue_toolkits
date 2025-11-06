@@ -612,8 +612,9 @@ class ContextManager:
         if analysis['needs_assets']:
             asset_context = self._build_asset_context(query)
             if asset_context:
-                # Token优化：资产上下文限制到 600 字符
-                contexts['domain_assets'] = asset_context[:600] if len(asset_context) > 600 else asset_context
+                # Token优化：资产上下文限制到 2000 字符（足够显示完整资产列表）
+                # 之前 600 字符太少，导致AI只能看到部分资产，然后编造剩余部分
+                contexts['domain_assets'] = asset_context[:2000] if len(asset_context) > 2000 else asset_context
         
         if analysis['needs_docs']:
             doc_context = self._build_document_context(query)

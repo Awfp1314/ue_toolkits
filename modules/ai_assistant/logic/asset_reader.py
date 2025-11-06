@@ -32,13 +32,24 @@ class AssetReader:
             str: 资产摘要的格式化字符串
         """
         if not self.asset_manager_logic:
-            return "[WARN] 资产管理器未连接，无法读取资产信息。"
+            return """[ASSET] ⚠️ 资产管理器未连接
+
+系统无法访问资产库数据。请告诉用户：资产管理器模块未加载。
+
+❌ 重要：由于无法访问真实数据，不要编造任何资产信息！"""
         
         try:
             assets = self.asset_manager_logic.get_all_assets()
             
             if not assets:
-                return "[ASSET] 当前资产库为空，尚未添加任何资产。"
+                return """[ASSET] ⚠️ 资产库为空
+
+当前资产库中没有任何资产。请告诉用户：
+1. 打开"资产管理器"模块
+2. 点击"添加资产"按钮
+3. 选择 UE 项目中的资产文件夹
+
+❌ 重要：不要列出示例资产，不要编造资产名称！"""
             
             # 按分类统计
             categories = {}
@@ -51,19 +62,18 @@ class AssetReader:
             
             # 生成摘要
             summary_parts = [
-                f"[ASSET] **资产库概览**（共 {len(assets)} 个资产）\n"
+                f"[ASSET] **资产库完整列表**（共 {len(assets)} 个资产）\n",
+                "⚠️ 以下是用户资产库中的所有真实资产，请严格基于此列表回答，不要添加或编造！\n"
             ]
             
             for category, cat_assets in categories.items():
                 summary_parts.append(f"\n**{category}** ({len(cat_assets)} 个):")
-                for asset in cat_assets[:5]:  # 每个分类最多显示 5 个
+                # 显示所有资产（不再限制为 5 个），确保 AI 看到完整列表
+                for asset in cat_assets:
                     # 从 Asset 对象获取属性
                     name = asset.name if hasattr(asset, 'name') else '未命名'
                     asset_type = asset.asset_type.value if hasattr(asset, 'asset_type') else '未知类型'
                     summary_parts.append(f"  - {name} ({asset_type})")
-                
-                if len(cat_assets) > 5:
-                    summary_parts.append(f"  ... 还有 {len(cat_assets) - 5} 个资产")
             
             return "\n".join(summary_parts)
         
