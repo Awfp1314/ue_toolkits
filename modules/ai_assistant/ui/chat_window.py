@@ -4,6 +4,7 @@ ChatGPT 风格的主界面
 """
 
 import os
+import traceback
 from typing import Optional
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -406,7 +407,7 @@ class ChatWindow(QWidget):
             logger.error(f"初始化上下文管理器失败: {e}", exc_info=True)
             self.context_manager = None
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
     
     def init_ui(self):
         """初始化用户界面"""
@@ -598,7 +599,7 @@ class ChatWindow(QWidget):
         except Exception as e:
             safe_print(f"[ERROR] 自动发送问候消息时出错: {e}")
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
     
     def add_streaming_bubble(self, show_regenerate=True):
         """添加流式输出 Markdown 消息
@@ -706,7 +707,7 @@ class ChatWindow(QWidget):
                 except Exception as e:
                     print(f"[WARNING] [ERROR] 构建上下文失败: {e}")
                     import traceback
-                    traceback.print_exc()
+                    safe_print(traceback.format_exc())
             else:
                 print("[DEBUG] [WARN] 上下文管理器未初始化！AI 无法访问资产/文档/日志数据")
             
@@ -805,7 +806,7 @@ class ChatWindow(QWidget):
         except Exception as e:
             safe_print(f"[ERROR] 发送消息时出错: {e}")
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
             # 恢复输入框状态
             self.input_field.unlock()
             self.input_area.set_generating(False)
@@ -864,7 +865,7 @@ class ChatWindow(QWidget):
         except Exception as e:
             safe_print(f"[ERROR] 发送消息时出错: {e}")
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
             # 恢复输入框状态
             self.input_field.unlock()
             self.input_area.set_generating(False)
@@ -890,7 +891,7 @@ class ChatWindow(QWidget):
             except UnicodeEncodeError:
                 pass
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
     
     def on_request_finished(self):
         """请求完成"""
@@ -966,7 +967,7 @@ class ChatWindow(QWidget):
                             except Exception as e:
                                 safe_print(f"[ERROR] 保存记忆失败: {e}")
                                 import traceback
-                                traceback.print_exc()
+                                safe_print(traceback.format_exc())
             
             # 解锁输入框
             print("[DEBUG] 开始解锁输入框...")
@@ -983,7 +984,7 @@ class ChatWindow(QWidget):
         except Exception as e:
             safe_print(f"[ERROR] 请求完成处理时出错: {e}")
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
             # 确保即使异常也要解锁输入框
             try:
                 self.input_field.unlock()
@@ -1014,7 +1015,7 @@ class ChatWindow(QWidget):
         except Exception as e:
             safe_print(f"[ERROR] 错误处理时出错: {e}")
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
     
     def _enable_input_after_error(self):
         """重新启用输入（错误显示后）"""
@@ -1060,7 +1061,7 @@ class ChatWindow(QWidget):
         except Exception as e:
             safe_print(f"[ERROR] 停止生成时出错: {e}")
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
             # 确保恢复正常状态
             self.input_field.unlock()
             self.input_area.set_generating(False)
@@ -1131,7 +1132,7 @@ class ChatWindow(QWidget):
         except Exception as e:
             safe_print(f"[ERROR] 重新生成回答时出错: {e}")
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
     
     def clear_chat(self):
         """清空当前对话"""
@@ -1195,7 +1196,7 @@ class ChatWindow(QWidget):
         except Exception as e:
             safe_print(f"[ERROR] 刷新AI助手主题失败: {e}")
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
     
     def load_theme(self, theme_name):
         """加载主题样式 + 组件样式"""

@@ -1228,7 +1228,7 @@ class StreamingMarkdownMessage(QFrame):
         except Exception as e:
             print(f"[ERROR] finish() 出错: {e}")
             import traceback
-            traceback.print_exc()
+            safe_print(traceback.format_exc())
     
     def get_text(self):
         """获取当前文本"""

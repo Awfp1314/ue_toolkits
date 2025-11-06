@@ -15,6 +15,15 @@ import base64
 from PyQt6.QtCore import QBuffer
 
 
+def safe_print(msg: str):
+    """安全的 print 函数，避免 Windows 控制台编码错误"""
+    try:
+        print(msg, flush=True)
+    except (OSError, UnicodeEncodeError):
+        # 如果 print 失败，忽略（不要让调试输出导致程序崩溃）
+        pass
+
+
 class _GrowTextEdit(QTextEdit):
     """自适应高度的文本编辑框"""
     heightChanged = pyqtSignal(int)
@@ -217,13 +226,13 @@ class ChatGPTComposer(QFrame):
         try:
             if qss_path.exists():
                 qss_content = qss_path.read_text(encoding="utf-8")
-                print(f"[ChatGPTComposer] Loaded QSS from: {qss_path.name}")
+                safe_print(f"[ChatGPTComposer] Loaded QSS from: {qss_path.name}")
                 return qss_content
             else:
-                print(f"[ChatGPTComposer] QSS file not found: {qss_path}")
+                safe_print(f"[ChatGPTComposer] QSS file not found: {qss_path}")
                 return ""
         except Exception as e:
-            print(f"[ChatGPTComposer] Failed to load QSS: {e}")
+            safe_print(f"[ChatGPTComposer] Failed to load QSS: {e}")
             return ""
     
     def _get_current_theme(self) -> str:
@@ -238,7 +247,7 @@ class ChatGPTComposer(QFrame):
             theme = theme_manager.current_theme.value  # 返回 'dark' 或 'light'
             return theme
         except Exception as e:
-            print(f"[ChatGPTComposer] Failed to get theme: {e}, using 'dark'")
+            safe_print(f"[ChatGPTComposer] Failed to get theme: {e}, using 'dark'")
             return "dark"
     
     def _force_style_refresh(self):
@@ -252,10 +261,10 @@ class ChatGPTComposer(QFrame):
         if qss_content:
             # 成功加载外部 QSS，应用到组件
             self.setStyleSheet(qss_content)
-            print(f"[ChatGPTComposer] Applied external QSS (theme: {theme})")
+            safe_print(f"[ChatGPTComposer] Applied external QSS (theme: {theme})")
         else:
             # 加载失败，使用内联兜底样式
-            print(f"[ChatGPTComposer] Using fallback inline styles (theme: {theme})")
+            safe_print(f"[ChatGPTComposer] Using fallback inline styles (theme: {theme})")
             fallback_qss = self._get_fallback_qss(theme)
             self.setStyleSheet(fallback_qss)
         
@@ -417,7 +426,7 @@ class ChatGPTComposer(QFrame):
         Args:
             theme: 主题名称，None 时自动检测
         """
-        print(f"[ChatGPTComposer] Theme refresh requested (theme: {theme or 'auto'})")
+        safe_print(f"[ChatGPTComposer] Theme refresh requested (theme: {theme or 'auto'})")
         # 主题切换时重新加载样式
         self._force_style_refresh()
 
@@ -558,23 +567,23 @@ class ChatGPTComposer(QFrame):
 
     # ---- 对外 API ----
     def set_generating(self, generating: bool):
-        print(f"[DEBUG] set_generating 被调用: {generating}")
+        safe_print(f"[DEBUG] set_generating 被调用: {generating}")
         self._is_generating = generating
         if generating:
             self.btn_send.setEnabled(True)
             self.btn_send.setProperty("state", "stop")
             self.btn_send.setText("■")  # 生成中显示停止图标
-            print("[DEBUG] 按钮设置为 stop 状态，文本: ■")
+            safe_print("[DEBUG] 按钮设置为 stop 状态，文本: ■")
             self.edit.lock()
         else:
             self.btn_send.setProperty("state", "send")
             self.btn_send.setText("↑")  # 恢复发送图标
-            print("[DEBUG] 按钮设置为 send 状态，文本: ↑")
+            safe_print("[DEBUG] 按钮设置为 send 状态，文本: ↑")
             self.edit.unlock()
             self._update_send_enabled()
         self.btn_send.style().unpolish(self.btn_send)
         self.btn_send.style().polish(self.btn_send)
-        print(f"[DEBUG] 按钮状态已更新，enabled: {self.btn_send.isEnabled()}")
+        safe_print(f"[DEBUG] 按钮状态已更新，enabled: {self.btn_send.isEnabled()}")
 
     def restore_message(self, text: str = None):
         """恢复消息（停止生成时）"""
