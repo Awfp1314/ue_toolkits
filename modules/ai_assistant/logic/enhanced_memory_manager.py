@@ -116,13 +116,20 @@ class EnhancedMemoryManager:
         self._memory_collection = None
         
         # 初始化 ChromaDB 集合（如果提供了 db_client）
-        if self.db_client is not None:
-            self._init_memory_collection()
+        try:
+            if self.db_client is not None:
+                self._init_memory_collection()
+        except Exception as e:
+            self.logger.error(f"初始化 ChromaDB 集合时出错（非致命）: {e}", exc_info=True)
+            self._memory_collection = None
         
         # 加载持久化记忆
-        self._load_user_memories()
+        try:
+            self._load_user_memories()
+        except Exception as e:
+            self.logger.error(f"加载用户记忆时出错（非致命）: {e}", exc_info=True)
         
-        self.logger.info(f"增强型记忆管理器初始化完成（用户: {user_id}，向量检索: {'已启用' if self.db_client else '未启用'}）")
+        self.logger.info(f"增强型记忆管理器初始化完成（用户: {user_id}，向量检索: {'已启用' if self._memory_collection else '未启用'}）")
     
     def _init_memory_collection(self):
         """初始化 ChromaDB 记忆集合"""
@@ -147,7 +154,13 @@ class EnhancedMemoryManager:
                 )
                 self.logger.info(f"创建新记忆集合: user_memory_{self.user_id}")
             
-            self.logger.info(f"ChromaDB 记忆集合初始化成功，记忆数量: {self._memory_collection.count()}")
+            # 尝试获取记忆数量（可能会崩溃，所以要保护）
+            try:
+                count = self._memory_collection.count()
+                self.logger.info(f"ChromaDB 记忆集合初始化成功，记忆数量: {count}")
+            except Exception as count_error:
+                self.logger.warning(f"无法获取记忆数量（非致命）: {count_error}")
+                self.logger.info(f"ChromaDB 记忆集合初始化成功")
             
         except Exception as e:
             self.logger.error(f"初始化 ChromaDB 记忆集合失败: {e}", exc_info=True)
