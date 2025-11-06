@@ -371,8 +371,14 @@ class ChatWindow(QWidget):
         
         v0.1 更新：传递 runtime_context
         Token优化：集成 MemoryCompressor
+        v0.3 修复：防止重复创建导致记忆丢失
         """
         try:
+            # 如果已经初始化，则跳过（防止切换模型时重复创建）
+            if self.context_manager is not None:
+                print("[DEBUG] [SKIP] 上下文管理器已存在，跳过重复创建（保留记忆状态）")
+                return
+            
             # 初始化记忆压缩器
             from modules.ai_assistant.logic.memory_compressor import MemoryCompressor
             from modules.ai_assistant.logic.api_client import APIClient
