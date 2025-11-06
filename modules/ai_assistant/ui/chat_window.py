@@ -111,7 +111,15 @@ class ChatWindow(QWidget):
         print(f"[DEBUG] asset_manager_logic 类型: {type(asset_manager_logic)}")
         
         self.asset_manager_logic = asset_manager_logic
-        self._init_context_manager(logger)
+        
+        # 🔧 修复：如果上下文管理器已存在，更新其 asset_reader
+        if self.context_manager is not None and hasattr(self.context_manager, 'asset_reader'):
+            print(f"[DEBUG] [FIX] 上下文管理器已存在，更新 AssetReader 的引用")
+            self.context_manager.asset_reader.asset_manager_logic = asset_manager_logic
+            print(f"[DEBUG] [OK] AssetReader 已更新为新的 asset_manager_logic")
+        else:
+            # 第一次调用，初始化上下文管理器
+            self._init_context_manager(logger)
     
     def set_config_tool_logic(self, config_tool_logic):
         """设置config_tool逻辑层引用
@@ -126,7 +134,15 @@ class ChatWindow(QWidget):
         print(f"[DEBUG] config_tool_logic 类型: {type(config_tool_logic)}")
         
         self.config_tool_logic = config_tool_logic
-        self._init_context_manager(logger)
+        
+        # 🔧 修复：如果上下文管理器已存在，更新其 config_reader
+        if self.context_manager is not None and hasattr(self.context_manager, 'config_reader'):
+            print(f"[DEBUG] [FIX] 上下文管理器已存在，更新 ConfigReader 的引用")
+            self.context_manager.config_reader.config_tool_logic = config_tool_logic
+            print(f"[DEBUG] [OK] ConfigReader 已更新为新的 config_tool_logic")
+        else:
+            # 第一次调用，初始化上下文管理器
+            self._init_context_manager(logger)
     
     def set_site_recommendations_logic(self, site_recommendations_logic):
         """设置site_recommendations逻辑层引用
@@ -141,7 +157,15 @@ class ChatWindow(QWidget):
         print(f"[DEBUG] site_recommendations_logic 类型: {type(site_recommendations_logic)}")
         
         self.site_recommendations_logic = site_recommendations_logic
-        self._init_context_manager(logger)
+        
+        # 🔧 修复：如果上下文管理器已存在，更新其 site_reader
+        if self.context_manager is not None and hasattr(self.context_manager, 'site_reader'):
+            print(f"[DEBUG] [FIX] 上下文管理器已存在，更新 SiteReader 的引用")
+            self.context_manager.site_reader.site_recommendations_logic = site_recommendations_logic
+            print(f"[DEBUG] [OK] SiteReader 已更新为新的 site_recommendations_logic")
+        else:
+            # 第一次调用，初始化上下文管理器
+            self._init_context_manager(logger)
     
     def set_runtime_context(self, runtime_context):
         """设置运行态上下文管理器（v0.1 新增）
