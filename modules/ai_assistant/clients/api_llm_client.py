@@ -34,12 +34,19 @@ class ApiLLMClient(BaseLLMClient):
         """
         super().__init__(config)
         
-        # 从配置读取，空字符串回退到默认值
-        self.api_url = config.get('api_url') or 'https://api.openai-hk.com/v1/chat/completions'
-        self.api_key = config.get('api_key') or 'hk-rf256210000027899536cbcb497417e8dfc70c2960229c22'
-        self.default_model = config.get('default_model') or 'gemini-2.5-flash'
+        # 从配置读取（不使用硬编码的默认值）
+        self.api_url = config.get('api_url', 'https://api.openai-hk.com/v1/chat/completions')
+        self.api_key = config.get('api_key', '')
+        self.default_model = config.get('default_model', 'gemini-2.5-flash')
         self.default_temperature = config.get('temperature', 0.8)
         self.timeout = config.get('timeout', 60)
+        
+        # 验证必需的配置
+        if not self.api_key:
+            raise ValueError(
+                "API Key 未配置！\n\n"
+                "请在 [设置 → AI 助手设置] 中配置 API Key。"
+            )
         
         # 构建请求头
         self.headers = {

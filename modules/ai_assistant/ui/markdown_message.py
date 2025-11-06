@@ -171,25 +171,26 @@ def markdown_to_html(text, theme="dark", compact=False):
             css = """
             <style>
                 body {
-                    font-family: "Inter", "Noto Sans", "Microsoft YaHei UI", 
-                                 "PingFang SC", "Hiragino Sans GB", "Helvetica Neue",
-                                 "Segoe UI", Arial, sans-serif;
-                    font-size: 15px;
-                    font-weight: 400;
-                    line-height: 1.4;
+                    font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", 
+                                 "Source Han Sans CN", "思源黑体", "Hiragino Sans GB",
+                                 "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
+                    font-size: 18px;
+                    font-weight: 500;
+                    line-height: 2.2;
                     color: #ffffff;
                     margin: 0;
                     padding: 0;
                     max-width: 100%;
                     word-wrap: break-word;
                     overflow-wrap: break-word;
-                    letter-spacing: 0.2px;
+                    letter-spacing: 1px;
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
                 }
                 p {
                     margin: 0;
                     padding: 0;
+                    line-height: 2.0;
                 }
             </style>
             """
@@ -197,19 +198,19 @@ def markdown_to_html(text, theme="dark", compact=False):
             css = """
             <style>
                 body {
-                    font-family: "Inter", "Noto Sans", "Microsoft YaHei UI", 
-                                 "PingFang SC", "Hiragino Sans GB", "Helvetica Neue",
-                                 "Segoe UI", Arial, sans-serif;
-                    font-size: 15px;
-                    font-weight: 400;
-                    line-height: 1.7em;
+                    font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", 
+                                 "Source Han Sans CN", "思源黑体", "Hiragino Sans GB",
+                                 "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
+                    font-size: 18px;
+                    font-weight: 500;
+                    line-height: 2.2em;
                     color: #EDEDED;
                     margin: 0;
                     padding: 16px 20px;
                     max-width: 100%;
                     word-wrap: break-word;
                     overflow-wrap: break-word;
-                    letter-spacing: 0.2px;
+                    letter-spacing: 1px;
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
                     text-rendering: optimizeLegibility;
@@ -217,10 +218,10 @@ def markdown_to_html(text, theme="dark", compact=False):
             
             h1, h2, h3, h4, h5, h6 {
                 font-weight: 600;
-                margin-top: 1.2em;
-                margin-bottom: 0.8em;
+                margin-top: 1.5em;
+                margin-bottom: 1.2em;
                 color: #ececf1;
-                line-height: 1.3;
+                line-height: 1.5;
             }
             
             h1 { font-size: 1.8em; }
@@ -228,18 +229,18 @@ def markdown_to_html(text, theme="dark", compact=False):
             h3 { font-size: 1.3em; }
             
             p {
-                margin: 0.8em 0;
-                line-height: 1.7em;
+                margin: 1.2em 0;
+                line-height: 2.2em;
             }
             
             ul, ol {
-                margin: 0.8em 0;
-                padding-left: 24px;
+                margin: 1.2em 0;
+                padding-left: 30px;
             }
             
             li {
-                margin: 0.4em 0;
-                line-height: 1.7em;
+                margin: 0.6em 0;
+                line-height: 2.2em;
             }
             
             code {
@@ -344,25 +345,26 @@ def markdown_to_html(text, theme="dark", compact=False):
             css = """
             <style>
                 body {
-                    font-family: "Inter", "Noto Sans", "Microsoft YaHei UI", 
-                                 "PingFang SC", "Hiragino Sans GB", "Helvetica Neue",
-                                 "Segoe UI", Arial, sans-serif;
-                    font-size: 15px;
-                    font-weight: 400;
-                    line-height: 1.5;
+                    font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", 
+                                 "Source Han Sans CN", "思源黑体", "Hiragino Sans GB",
+                                 "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
+                    font-size: 18px;
+                    font-weight: 500;
+                    line-height: 2.2;
                     color: #2d333a;
                     margin: 0;
                     padding: 0;
                     max-width: 100%;
                     word-wrap: break-word;
                     overflow-wrap: break-word;
-                    letter-spacing: 0.2px;
+                    letter-spacing: 1px;
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
                 }
                 p {
                     margin: 0;
                     padding: 0;
+                    line-height: 2.0;
                 }
             </style>
             """
@@ -370,19 +372,19 @@ def markdown_to_html(text, theme="dark", compact=False):
             css = """
             <style>
                 body {
-                    font-family: "Inter", "Noto Sans", "Microsoft YaHei UI", 
-                                 "PingFang SC", "Hiragino Sans GB", "Helvetica Neue",
-                                 "Segoe UI", Arial, sans-serif;
-                    font-size: 15px;
-                    font-weight: 400;
-                    line-height: 1.7em;
+                    font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", 
+                                 "Source Han Sans CN", "思源黑体", "Hiragino Sans GB",
+                                 "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
+                    font-size: 18px;
+                    font-weight: 500;
+                    line-height: 2.2em;
                     color: #374151;
                     margin: 0;
                     padding: 16px 20px;
                     max-width: 100%;
                     word-wrap: break-word;
                     overflow-wrap: break-word;
-                    letter-spacing: 0.2px;
+                    letter-spacing: 1px;
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
                     text-rendering: optimizeLegibility;
@@ -390,10 +392,10 @@ def markdown_to_html(text, theme="dark", compact=False):
             
             h1, h2, h3, h4, h5, h6 {
                 font-weight: 600;
-                margin-top: 1.2em;
-                margin-bottom: 0.8em;
+                margin-top: 1.5em;
+                margin-bottom: 1.2em;
                 color: #1f2937;
-                line-height: 1.3;
+                line-height: 1.5;
             }
             
             h1 { font-size: 1.8em; }
@@ -401,18 +403,18 @@ def markdown_to_html(text, theme="dark", compact=False):
             h3 { font-size: 1.3em; }
             
             p {
-                margin: 0.8em 0;
-                line-height: 1.7em;
+                margin: 1.2em 0;
+                line-height: 2.2em;
             }
             
             ul, ol {
-                margin: 0.8em 0;
-                padding-left: 24px;
+                margin: 1.2em 0;
+                padding-left: 30px;
             }
             
             li {
-                margin: 0.4em 0;
-                line-height: 1.7em;
+                margin: 0.6em 0;
+                line-height: 2.2em;
             }
             
             code {
@@ -578,17 +580,18 @@ class MarkdownMessage(QFrame):
         # 设置字体以确保清晰度（ChatGPT 风格）
         font = QFont()
         font.setFamilies([
-            "Inter", "Noto Sans", "Microsoft YaHei UI",
-            "PingFang SC", "Hiragino Sans GB", "Helvetica Neue",
-            "Segoe UI", "Arial", "sans-serif"
+            "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC",
+            "Source Han Sans CN", "Hiragino Sans GB",
+            "Segoe UI", "Inter", "Roboto", "Arial", "sans-serif"
         ])
-        font.setPointSize(11)  # 15px ≈ 11pt
-        font.setWeight(QFont.Weight.Normal)
+        font.setPointSize(14)  # 18px ≈ 14pt（更大）
+        font.setWeight(QFont.Weight.DemiBold)  # 稍微加粗
         font.setHintingPreference(QFont.HintingPreference.PreferFullHinting)
         font.setStyleStrategy(
             QFont.StyleStrategy.PreferAntialias | 
             QFont.StyleStrategy.PreferQuality
         )
+        font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.0)  # 字间距1px
         self.text_label.setFont(font)
         
         # 设置最大宽度（约85%，最大800px，避免过早换行）

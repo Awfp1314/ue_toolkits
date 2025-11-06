@@ -38,7 +38,7 @@ class LogAnalyzer:
         """
         try:
             if not self.log_dir.exists():
-                return "⚠️ 日志目录不存在。"
+                return "[警告] 日志目录不存在。"
             
             log_files = []
             cutoff_time = datetime.now() - timedelta(hours=hours)
@@ -54,13 +54,13 @@ class LogAnalyzer:
                     })
             
             if not log_files:
-                return f"📋 最近 {hours} 小时内没有新的日志文件。"
+                return f"[日志] 最近 {hours} 小时内没有新的日志文件。"
             
             # 按修改时间排序
             log_files.sort(key=lambda x: x['mtime'], reverse=True)
             
             # 格式化输出
-            result = [f"📋 **最近 {hours} 小时的日志文件**:\n"]
+            result = [f"[日志] **最近 {hours} 小时的日志文件**:\n"]
             for log in log_files:
                 size_kb = log['size'] / 1024
                 time_str = log['mtime'].strftime('%Y-%m-%d %H:%M:%S')
@@ -70,7 +70,7 @@ class LogAnalyzer:
         
         except Exception as e:
             self.logger.error(f"获取日志列表失败: {e}", exc_info=True)
-            return f"❌ 获取日志列表时出错: {str(e)}"
+            return f"[错误] 获取日志列表时出错: {str(e)}"
     
     def analyze_errors(self, max_lines: int = 100) -> str:
         """分析最新日志文件中的错误
@@ -83,12 +83,12 @@ class LogAnalyzer:
         """
         try:
             if not self.log_dir.exists():
-                return "⚠️ 日志目录不存在。"
+                return "[警告] 日志目录不存在。"
             
             # 获取最新的日志文件
             log_files = list(self.log_dir.glob('*.log'))
             if not log_files:
-                return "📋 没有找到日志文件。"
+                return "[日志] 没有找到日志文件。"
             
             latest_log = max(log_files, key=lambda f: f.stat().st_mtime)
             
@@ -112,19 +112,19 @@ class LogAnalyzer:
             
             # 格式化输出
             if not errors and not warnings:
-                return f"✅ 最近的日志中没有发现错误或警告。\n日志文件: {latest_log.name}"
+                return f"[成功] 最近的日志中没有发现错误或警告。\n日志文件: {latest_log.name}"
             
-            result = [f"📋 **日志分析结果** ({latest_log.name})\n"]
+            result = [f"[日志] **日志分析结果** ({latest_log.name})\n"]
             
             if errors:
-                result.append(f"❌ **发现 {len(errors)} 个错误**:")
+                result.append(f"[错误] **发现 {len(errors)} 个错误**:")
                 for error in errors[:10]:  # 最多显示 10 个
                     result.append(f"  {error}")
                 if len(errors) > 10:
                     result.append(f"  ... 还有 {len(errors) - 10} 个错误")
             
             if warnings:
-                result.append(f"\n⚠️ **发现 {len(warnings)} 个警告**:")
+                result.append(f"\n[警告] **发现 {len(warnings)} 个警告**:")
                 for warning in warnings[:5]:  # 最多显示 5 个
                     result.append(f"  {warning}")
                 if len(warnings) > 5:
@@ -134,7 +134,7 @@ class LogAnalyzer:
         
         except Exception as e:
             self.logger.error(f"分析日志失败: {e}", exc_info=True)
-            return f"❌ 分析日志时出错: {str(e)}"
+            return f"[错误] 分析日志时出错: {str(e)}"
     
     def search_in_logs(self, keyword: str, max_results: int = 20) -> str:
         """在日志中搜索关键词
@@ -148,7 +148,7 @@ class LogAnalyzer:
         """
         try:
             if not self.log_dir.exists():
-                return "⚠️ 日志目录不存在。"
+                return "[警告] 日志目录不存在。"
             
             # 获取最新的日志文件
             log_files = sorted(
@@ -158,7 +158,7 @@ class LogAnalyzer:
             )
             
             if not log_files:
-                return "📋 没有找到日志文件。"
+                return "[日志] 没有找到日志文件。"
             
             # 只搜索最新的日志文件
             latest_log = log_files[0]
@@ -174,11 +174,11 @@ class LogAnalyzer:
             ]
             
             if not matched_lines:
-                return f"🔍 在最新日志中未找到 '{keyword}'。"
+                return f"[搜索] 在最新日志中未找到 '{keyword}'。"
             
             # 格式化输出
             result = [
-                f"🔍 在日志 **{latest_log.name}** 中找到 {len(matched_lines)} 条匹配记录:\n"
+                f"[搜索] 在日志 **{latest_log.name}** 中找到 {len(matched_lines)} 条匹配记录:\n"
             ]
             
             for line in matched_lines[:max_results]:
@@ -191,7 +191,7 @@ class LogAnalyzer:
         
         except Exception as e:
             self.logger.error(f"搜索日志失败: {e}", exc_info=True)
-            return f"❌ 搜索日志时出错: {str(e)}"
+            return f"[错误] 搜索日志时出错: {str(e)}"
     
     def get_log_summary(self) -> str:
         """获取日志摘要统计
@@ -201,11 +201,11 @@ class LogAnalyzer:
         """
         try:
             if not self.log_dir.exists():
-                return "⚠️ 日志目录不存在。"
+                return "[警告] 日志目录不存在。"
             
             log_files = list(self.log_dir.glob('*.log'))
             if not log_files:
-                return "📋 没有找到日志文件。"
+                return "[日志] 没有找到日志文件。"
             
             # 获取最新日志
             latest_log = max(log_files, key=lambda f: f.stat().st_mtime)
@@ -224,22 +224,22 @@ class LogAnalyzer:
             
             # 格式化输出
             result = [
-                f"📊 **日志统计信息** ({latest_log.name})\n",
+                f"[统计] **日志统计信息** ({latest_log.name})\n",
                 f"总行数: {total_lines}",
                 f"最近500行统计:",
-                f"  ℹ️ INFO: {info_count}",
-                f"  ⚠️ WARNING: {warning_count}",
-                f"  ❌ ERROR: {error_count}",
+                f"  [INFO] {info_count}",
+                f"  [WARNING] {warning_count}",
+                f"  [ERROR] {error_count}",
             ]
             
             if error_count > 0:
-                result.append(f"\n💡 提示: 发现 {error_count} 个错误，建议使用 '分析错误' 查看详情。")
+                result.append(f"\n[提示] 发现 {error_count} 个错误，建议使用 '分析错误' 查看详情。")
             
             return "\n".join(result)
         
         except Exception as e:
             self.logger.error(f"获取日志摘要失败: {e}", exc_info=True)
-            return f"❌ 获取日志摘要时出错: {str(e)}"
+            return f"[错误] 获取日志摘要时出错: {str(e)}"
 
 
 

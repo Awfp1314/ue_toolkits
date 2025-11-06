@@ -56,8 +56,15 @@ class APIClient(QThread):
             # 获取模板文件路径
             template_path = Path(__file__).parent.parent / "config_template.json"
             
-            # 创建 ConfigManager 并传入模板路径
-            config_manager = ConfigManager("ai_assistant", template_path=template_path)
+            # 导入配置模式
+            from modules.ai_assistant.config_schema import get_ai_assistant_schema
+            
+            # 创建 ConfigManager 并传入模板路径和配置模式
+            config_manager = ConfigManager(
+                "ai_assistant", 
+                template_path=template_path,
+                config_schema=get_ai_assistant_schema()  # 🔧 修复：添加配置模式
+            )
             config = config_manager.get_module_config()
             print(f"[CONFIG] AI 助手配置加载成功，供应商: {config.get('llm_provider', 'unknown')}")
             return config

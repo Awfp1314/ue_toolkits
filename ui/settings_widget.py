@@ -1199,6 +1199,22 @@ class SettingsWidget(QWidget):
         
         api_settings_layout.addLayout(api_url_layout)
         
+        # 🔥 API 模型名称
+        api_model_label = QLabel("模型名称：")
+        api_settings_layout.addWidget(api_model_label)
+        
+        api_model_layout = QHBoxLayout()
+        api_model_layout.setSpacing(10)
+        
+        self.api_model_input = NoContextMenuLineEdit()
+        self.api_model_input.setPlaceholderText("gemini-2.5-flash")
+        self.api_model_input.setMinimumWidth(300)
+        self.api_model_input.setMaximumWidth(400)
+        api_model_layout.addWidget(self.api_model_input)
+        api_model_layout.addStretch()
+        
+        api_settings_layout.addLayout(api_model_layout)
+        
         self.api_settings_widget.setLayout(api_settings_layout)
         ai_layout.addWidget(self.api_settings_widget)
         
@@ -1236,19 +1252,25 @@ class SettingsWidget(QWidget):
         ollama_model_layout.setSpacing(10)
         
         self.ollama_model_combo = QComboBox()
-        self.ollama_model_combo.setEditable(True)  # 允许手动输入
-        self.ollama_model_combo.setPlaceholderText("选择或输入模型名称...")
-        self.ollama_model_combo.setMaximumWidth(250)
+        self.ollama_model_combo.setEditable(False)  # 🔧 修复：不可编辑，只能选择
+        self.ollama_model_combo.setPlaceholderText("扫描中...")
+        self.ollama_model_combo.setMinimumWidth(350)  # 🔧 调整：增加最小宽度
+        self.ollama_model_combo.setMaximumWidth(450)  # 🔧 调整：增加最大宽度
         ollama_model_layout.addWidget(self.ollama_model_combo)
         
-        refresh_models_btn = QPushButton("🔄 刷新")
-        refresh_models_btn.setFixedWidth(80)
-        refresh_models_btn.setToolTip("扫描 Ollama 中的可用模型")
-        refresh_models_btn.clicked.connect(self._refresh_ollama_models)
-        ollama_model_layout.addWidget(refresh_models_btn)
+        # 🔧 修复：去掉刷新按钮，改为自动扫描
+        # refresh_models_btn = QPushButton("🔄 刷新")
+        # refresh_models_btn.setFixedWidth(80)
+        # refresh_models_btn.setToolTip("扫描 Ollama 中的可用模型")
+        # refresh_models_btn.clicked.connect(self._refresh_ollama_models)
+        # ollama_model_layout.addWidget(refresh_models_btn)
         ollama_model_layout.addStretch()
         
         ollama_settings_layout.addLayout(ollama_model_layout)
+        
+        # 🔥 自动扫描 Ollama 模型
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(200, self._auto_refresh_ollama_models)
         
         # Ollama 状态提示
         self.ollama_status_label = QLabel("")
@@ -1259,17 +1281,25 @@ class SettingsWidget(QWidget):
         self.ollama_settings_widget.setLayout(ollama_settings_layout)
         ai_layout.addWidget(self.ollama_settings_widget)
         
-        # 保存按钮
-        save_layout = QHBoxLayout()
-        save_layout.setSpacing(10)
+        # 保存按钮（隐藏，改为自动保存）
+        # save_layout = QHBoxLayout()
+        # save_layout.setSpacing(10)
+        # 
+        # save_ai_btn = QPushButton("保存 AI 设置")
+        # save_ai_btn.setFixedWidth(150)
+        # save_ai_btn.clicked.connect(self._save_ai_assistant_settings)
+        # save_layout.addWidget(save_ai_btn)
+        # save_layout.addStretch()
+        # 
+        # ai_layout.addLayout(save_layout)
         
-        save_ai_btn = QPushButton("保存 AI 设置")
-        save_ai_btn.setFixedWidth(150)
-        save_ai_btn.clicked.connect(self._save_ai_assistant_settings)
-        save_layout.addWidget(save_ai_btn)
-        save_layout.addStretch()
-        
-        ai_layout.addLayout(save_layout)
+        # 🔥 热切换：连接信号，自动保存
+        self.llm_provider_combo.currentIndexChanged.connect(self._auto_save_ai_settings)
+        self.api_key_input.textChanged.connect(self._auto_save_ai_settings)
+        self.api_url_input.textChanged.connect(self._auto_save_ai_settings)
+        self.api_model_input.textChanged.connect(self._auto_save_ai_settings)  # 🔥 新增：API 模型名称
+        self.ollama_url_input.textChanged.connect(self._auto_save_ai_settings)
+        self.ollama_model_combo.currentTextChanged.connect(self._auto_save_ai_settings)
         
         ai_group.setLayout(ai_layout)
         
@@ -1287,7 +1317,32 @@ class SettingsWidget(QWidget):
         self.api_settings_widget.setVisible(provider == "api")
         self.ollama_settings_widget.setVisible(provider == "ollama")
         
+        # 🔥 如果切换到 ollama，自动扫描模型
+        if provider == "ollama":
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(100, self._auto_refresh_ollama_models)
+        
         logger.info(f"LLM 供应商切换到: {provider}")
+    
+    def _auto_save_ai_settings(self):
+        """自动保存 AI 设置（热切换，防抖）"""
+        # 如果正在加载配置，跳过自动保存
+        if hasattr(self, '_loading_config') and self._loading_config:
+            return
+        
+        # 🔥 如果正在刷新模型列表，跳过自动保存
+        if hasattr(self, '_refreshing_models') and self._refreshing_models:
+            return
+        
+        # 防抖：延迟保存，避免频繁写入
+        if not hasattr(self, '_save_timer'):
+            from PyQt6.QtCore import QTimer
+            self._save_timer = QTimer()
+            self._save_timer.timeout.connect(self._save_ai_assistant_settings_silent)
+            self._save_timer.setSingleShot(True)
+        
+        # 重启计时器（500ms 后保存）
+        self._save_timer.start(500)
     
     def _load_ai_assistant_settings(self):
         """从配置加载 AI 助手设置"""
@@ -1295,11 +1350,21 @@ class SettingsWidget(QWidget):
             from core.config.config_manager import ConfigManager
             from pathlib import Path
             
+            # 🔥 禁用自动保存（避免加载时触发）
+            self._loading_config = True
+            
             # 获取模板文件路径
             template_path = Path(__file__).parent.parent / "modules" / "ai_assistant" / "config_template.json"
             
-            # 创建 ConfigManager 并传入模板路径
-            config_manager = ConfigManager("ai_assistant", template_path=template_path)
+            # 导入配置模式
+            from modules.ai_assistant.config_schema import get_ai_assistant_schema
+            
+            # 创建 ConfigManager 并传入模板路径和配置模式
+            config_manager = ConfigManager(
+                "ai_assistant", 
+                template_path=template_path,
+                config_schema=get_ai_assistant_schema()  # 🔧 修复：添加配置模式
+            )
             config = config_manager.get_module_config()
             
             # 加载 LLM 供应商
@@ -1311,9 +1376,11 @@ class SettingsWidget(QWidget):
             api_settings = config.get("api_settings", {})
             api_key = api_settings.get("api_key", "")
             api_url = api_settings.get("api_url", "")
+            api_model = api_settings.get("default_model", "")  # 🔥 新增：加载模型名称
             
             self.api_key_input.setText(api_key if api_key else "")
             self.api_url_input.setText(api_url if api_url else "https://api.openai-hk.com/v1/chat/completions")
+            self.api_model_input.setText(api_model if api_model else "gemini-2.5-flash")  # 🔥 新增：设置模型名称
             
             # 加载 Ollama 设置（空字符串回退到默认值）
             ollama_settings = config.get("ollama_settings", {})
@@ -1322,25 +1389,20 @@ class SettingsWidget(QWidget):
             
             self.ollama_url_input.setText(ollama_url if ollama_url else "http://localhost:11434")
             
-            # 设置模型选择（如果有保存的值，设置到下拉框）
-            if ollama_model:
-                # 检查下拉框中是否已有此模型
-                index = self.ollama_model_combo.findText(ollama_model)
-                if index >= 0:
-                    self.ollama_model_combo.setCurrentIndex(index)
-                else:
-                    # 如果没有，手动设置文本（因为是可编辑的）
-                    self.ollama_model_combo.setCurrentText(ollama_model)
-            else:
-                self.ollama_model_combo.setCurrentText("llama3")
+            # 🔥 保存要选择的模型名称（等待自动扫描后再设置）
+            self._saved_ollama_model = ollama_model if ollama_model else None
             
-            # 触发显示/隐藏逻辑
+            # 触发显示/隐藏逻辑（会自动触发模型扫描）
             self._on_llm_provider_changed(index)
             
             logger.info(f"已加载 AI 助手设置（供应商: {provider}）")
+            
+            # 🔥 重新启用自动保存
+            self._loading_config = False
         
         except Exception as e:
             logger.error(f"加载 AI 助手设置失败: {e}", exc_info=True)
+            self._loading_config = False  # 确保出错时也启用
     
     def _save_ai_assistant_settings(self):
         """保存 AI 助手设置"""
@@ -1351,8 +1413,15 @@ class SettingsWidget(QWidget):
             # 获取模板文件路径
             template_path = Path(__file__).parent.parent / "modules" / "ai_assistant" / "config_template.json"
             
-            # 创建 ConfigManager 并传入模板路径
-            config_manager = ConfigManager("ai_assistant", template_path=template_path)
+            # 导入配置模式
+            from modules.ai_assistant.config_schema import get_ai_assistant_schema
+            
+            # 创建 ConfigManager 并传入模板路径和配置模式
+            config_manager = ConfigManager(
+                "ai_assistant", 
+                template_path=template_path,
+                config_schema=get_ai_assistant_schema()  # 🔧 修复：添加配置模式
+            )
             
             # 获取当前配置
             config = config_manager.get_module_config()
@@ -1365,16 +1434,15 @@ class SettingsWidget(QWidget):
             if "api_settings" not in config:
                 config["api_settings"] = {}
             
+            # 🔥 修复：强制保存所有 API 设置（即使为空）
             api_key = self.api_key_input.text().strip()
-            if api_key:  # 只有非空时才更新
-                config["api_settings"]["api_key"] = api_key
+            config["api_settings"]["api_key"] = api_key if api_key else ""
             
             api_url = self.api_url_input.text().strip()
-            if api_url:  # 只有非空时才更新
-                config["api_settings"]["api_url"] = api_url
-            elif "api_url" not in config["api_settings"]:
-                # 如果从未设置过，使用默认值
-                config["api_settings"]["api_url"] = "https://api.openai-hk.com/v1/chat/completions"
+            config["api_settings"]["api_url"] = api_url if api_url else "https://api.openai-hk.com/v1/chat/completions"
+            
+            api_model = self.api_model_input.text().strip()
+            config["api_settings"]["default_model"] = api_model if api_model else "gemini-2.5-flash"
             
             # 更新 Ollama 设置（如果输入框为空，保留原值或使用默认值）
             if "ollama_settings" not in config:
@@ -1413,6 +1481,70 @@ class SettingsWidget(QWidget):
                 "保存失败",
                 f"保存 AI 助手设置时出错：\n\n{str(e)}"
             )
+    
+    def _save_ai_assistant_settings_silent(self):
+        """静默保存 AI 助手设置（热切换，不显示弹窗）"""
+        try:
+            from core.config.config_manager import ConfigManager
+            from pathlib import Path
+            
+            # 获取模板文件路径
+            template_path = Path(__file__).parent.parent / "modules" / "ai_assistant" / "config_template.json"
+            
+            # 导入配置模式
+            from modules.ai_assistant.config_schema import get_ai_assistant_schema
+            
+            # 创建 ConfigManager 并传入模板路径和配置模式
+            config_manager = ConfigManager(
+                "ai_assistant", 
+                template_path=template_path,
+                config_schema=get_ai_assistant_schema()
+            )
+            
+            # 获取当前配置
+            config = config_manager.get_module_config()
+            
+            # 更新配置
+            provider = self.llm_provider_combo.currentData()
+            config["llm_provider"] = provider
+            
+            # 更新 API 设置
+            if "api_settings" not in config:
+                config["api_settings"] = {}
+            
+            # 🔥 修复：强制保存所有 API 设置（即使为空）
+            api_key = self.api_key_input.text().strip()
+            config["api_settings"]["api_key"] = api_key if api_key else ""
+            
+            api_url = self.api_url_input.text().strip()
+            config["api_settings"]["api_url"] = api_url if api_url else "https://api.openai-hk.com/v1/chat/completions"
+            
+            api_model = self.api_model_input.text().strip()
+            config["api_settings"]["default_model"] = api_model if api_model else "gemini-2.5-flash"
+            
+            # 更新 Ollama 设置
+            if "ollama_settings" not in config:
+                config["ollama_settings"] = {}
+            
+            ollama_url = self.ollama_url_input.text().strip()
+            if ollama_url:
+                config["ollama_settings"]["base_url"] = ollama_url
+            elif "base_url" not in config["ollama_settings"]:
+                config["ollama_settings"]["base_url"] = "http://localhost:11434"
+            
+            ollama_model = self.ollama_model_combo.currentText().strip()
+            if ollama_model:
+                config["ollama_settings"]["model_name"] = ollama_model
+            elif "model_name" not in config["ollama_settings"]:
+                config["ollama_settings"]["model_name"] = "llama3"
+            
+            # 静默保存配置（不显示弹窗）
+            config_manager.save_user_config(config)
+            
+            logger.info(f"🔥 AI 设置已自动保存（供应商: {provider}）")
+        
+        except Exception as e:
+            logger.error(f"自动保存 AI 助手设置失败: {e}", exc_info=True)
     
     def _test_ollama_connection(self):
         """测试 Ollama 连接"""
@@ -1507,4 +1639,67 @@ class SettingsWidget(QWidget):
             self.ollama_status_label.setText(f"❌ 刷新失败：{str(e)}")
             self.ollama_status_label.setStyleSheet("color: red; font-size: 12px;")
             logger.error(f"刷新 Ollama 模型列表失败: {e}", exc_info=True)
+    
+    def _auto_refresh_ollama_models(self):
+        """自动扫描 Ollama 模型列表（静默，不显示弹窗）"""
+        try:
+            from modules.ai_assistant.clients import OllamaLLMClient
+            
+            # 🔥 暂时禁用自动保存
+            self._refreshing_models = True
+            
+            ollama_config = {
+                "base_url": self.ollama_url_input.text() or "http://localhost:11434",
+                "model_name": "temp"
+            }
+            
+            client = OllamaLLMClient(config=ollama_config)
+            models = client.list_available_models()
+            
+            if models:
+                # 保存当前选择
+                current_model = self.ollama_model_combo.currentText()
+                
+                # 清空并重新填充下拉框
+                self.ollama_model_combo.clear()
+                for model in models:
+                    self.ollama_model_combo.addItem(model)
+                
+                # 🔥 优先使用保存的模型名称
+                target_model = None
+                if hasattr(self, '_saved_ollama_model') and self._saved_ollama_model:
+                    target_model = self._saved_ollama_model
+                    self._saved_ollama_model = None  # 清除标志
+                elif current_model and current_model != "扫描中...":
+                    target_model = current_model
+                
+                # 尝试设置目标模型
+                if target_model:
+                    index = self.ollama_model_combo.findText(target_model)
+                    if index >= 0:
+                        self.ollama_model_combo.setCurrentIndex(index)
+                    else:
+                        # 如果目标模型不在列表中，设置为第一个
+                        self.ollama_model_combo.setCurrentIndex(0)
+                else:
+                    # 如果没有目标模型，设置为第一个
+                    self.ollama_model_combo.setCurrentIndex(0)
+                
+                self.ollama_status_label.setText(f"✅ 已自动扫描到 {len(models)} 个模型")
+                self.ollama_status_label.setStyleSheet("color: green; font-size: 12px;")
+                
+                logger.info(f"🔥 自动扫描 Ollama 模型成功：{len(models)} 个模型")
+            else:
+                self.ollama_status_label.setText("⚠️ 未找到可用模型。请先下载：ollama pull llama3")
+                self.ollama_status_label.setStyleSheet("color: orange; font-size: 12px;")
+                logger.warning("自动扫描 Ollama 模型：未找到可用模型")
+        
+        except Exception as e:
+            self.ollama_status_label.setText(f"⚠️ 无法连接到 Ollama（{str(e)[:30]}...）")
+            self.ollama_status_label.setStyleSheet("color: orange; font-size: 12px;")
+            logger.warning(f"自动扫描 Ollama 模型失败: {e}")
+        
+        finally:
+            # 🔥 重新启用自动保存
+            self._refreshing_models = False
 

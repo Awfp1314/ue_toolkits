@@ -688,6 +688,27 @@ class ChatInputArea(QWidget):
         print("[DEBUG] 所有图片已清空")
     
     def get_selected_model(self):
-        """获取选中的模型（默认）"""
-        return "gemini-2.5-flash"
+        """获取选中的模型（从配置文件读取）"""
+        try:
+            from core.config.config_manager import ConfigManager
+            from pathlib import Path
+            from modules.ai_assistant.config_schema import get_ai_assistant_schema
+            
+            template_path = Path(__file__).parent.parent / "config_template.json"
+            config_manager = ConfigManager(
+                "ai_assistant",
+                template_path=template_path,
+                config_schema=get_ai_assistant_schema()
+            )
+            config = config_manager.get_module_config()
+            
+            # 根据供应商返回对应的模型
+            provider = config.get("llm_provider", "api")
+            if provider == "api":
+                return config.get("api_settings", {}).get("default_model", "gemini-2.5-flash")
+            else:  # ollama
+                return config.get("ollama_settings", {}).get("model_name", "llama3")
+        except Exception as e:
+            print(f"[ERROR] 读取模型配置失败: {e}")
+            return "gemini-2.5-flash"  # fallback
 

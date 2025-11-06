@@ -159,7 +159,7 @@ class ChatWindow(QWidget):
         # 🔧 修复：如果上下文管理器已存在，更新其 site_reader
         if self.context_manager is not None and hasattr(self.context_manager, 'site_reader'):
             print(f"[DEBUG] [FIX] 上下文管理器已存在，更新 SiteReader 的引用")
-            self.context_manager.site_reader.site_recommendations_logic = site_recommendations_logic
+            self.context_manager.site_reader.site_logic = site_recommendations_logic  # 🔧 修复：正确的属性名是 site_logic
             print(f"[DEBUG] [OK] SiteReader 已更新为新的 site_recommendations_logic")
         else:
             # 第一次调用，初始化上下文管理器
@@ -695,12 +695,23 @@ class ChatWindow(QWidget):
             # 添加用户消息
             self.add_message(message, is_user=True)
             
+            # ⚡ 性能优化：立即添加思考动画，避免用户等待
+            # 在耗时的上下文构建之前就显示反馈
+            self.add_streaming_bubble()
+            
+            # 强制刷新 UI 事件循环，确保思考动画立即显示
+            from PyQt6.QtWidgets import QApplication
+            QApplication.processEvents()
+            
             # Token优化：检查并压缩历史对话
+            import time
+            t_start = time.time()
             if self.context_manager and hasattr(self.context_manager, 'memory'):
                 try:
                     compressed = self.context_manager.memory.compress_old_context(self.conversation_history)
                     if compressed:
-                        print(f"[DEBUG] [Token优化] 对话历史已压缩，当前历史长度: {len(self.conversation_history)}")
+                        t_compress = time.time() - t_start
+                        print(f"[DEBUG] [Token优化] 对话历史已压缩，当前历史长度: {len(self.conversation_history)}，耗时: {t_compress:.2f}s")
                 except Exception as e:
                     print(f"[WARNING] 压缩历史失败: {e}")
             
@@ -714,33 +725,32 @@ class ChatWindow(QWidget):
             context_message = None
             if self.context_manager:
                 try:
-                    print("[DEBUG] 正在构建上下文...")
+                    t_context_start = time.time()
+                    safe_print("[DEBUG] 正在构建上下文...")
                     # 只构建领域上下文，不包含系统提示词（系统提示词只在第一次发送）
                     context = self.context_manager.build_context(message, include_system_prompt=False)
+                    t_context = time.time() - t_context_start
+                    safe_print(f"[DEBUG] [PERF] 上下文构建耗时: {t_context:.2f}s")
                     if context:
                         # 将上下文作为单独的system消息发送（不累积到历史）
                         context_message = {
                             "role": "system",
                             "content": f"[当前查询的上下文信息]\n{context}"
                         }
-                        print(f"[DEBUG] [OK] 已构建上下文信息，上下文长度: {len(context)} 字符")
+                        safe_print(f"[DEBUG] [OK] 已构建上下文信息，上下文长度: {len(context)} 字符")
                         try:
-                            print(f"[DEBUG] 上下文预览:\n{context[:500]}...")
-                        except UnicodeEncodeError:
-                            # Windows终端编码问题
-                            safe_preview = context[:500].encode('gbk', errors='ignore').decode('gbk')
-                            print(f"[DEBUG] 上下文预览:\n{safe_preview}...")
+                            safe_print(f"[DEBUG] 上下文预览:\n{context[:500]}...")
+                        except Exception:
+                            # Windows终端编码问题，忽略打印错误
+                            pass
                     else:
-                        print("[DEBUG] [WARN] 上下文管理器返回空内容（可能是简单问候）")
+                        safe_print("[DEBUG] [WARN] 上下文管理器返回空内容（可能是简单问候）")
                 except Exception as e:
-                    print(f"[WARNING] [ERROR] 构建上下文失败: {e}")
+                    safe_print(f"[WARNING] [ERROR] 构建上下文失败: {e}")
                     import traceback
                     safe_print(traceback.format_exc())
             else:
                 print("[DEBUG] [WARN] 上下文管理器未初始化！AI 无法访问资产/文档/日志数据")
-            
-            # 添加流式输出气泡
-            self.add_streaming_bubble()
             
             # 构建本次请求的消息列表（不影响历史记录）
             request_messages = []
@@ -898,8 +908,8 @@ class ChatWindow(QWidget):
             # 添加流式输出气泡
             self.add_streaming_bubble()
             
-            # 启动 API 请求（使用支持视觉的模型）
-            model = "gemini-2.5-flash"  # Gemini 2.5 Flash 支持图片
+            # 启动 API 请求（从配置读取模型）
+            model = self.input_area.get_selected_model()
             print(f"[DEBUG] 使用模型: {model}")
             
             # 获取工具定义（如果工具系统已初始化）
@@ -943,8 +953,14 @@ class ChatWindow(QWidget):
             # 加载配置
             from core.config.config_manager import ConfigManager
             from pathlib import Path
+            from modules.ai_assistant.config_schema import get_ai_assistant_schema
+            
             template_path = Path(__file__).parent.parent / "config_template.json"
-            config_manager = ConfigManager("ai_assistant", template_path=template_path)
+            config_manager = ConfigManager(
+                "ai_assistant", 
+                template_path=template_path,
+                config_schema=get_ai_assistant_schema()  # 🔧 修复：添加配置模式
+            )
             config = config_manager.get_module_config()
             
             # 🔧 修复：根据 UI 选择的模型判断使用哪个客户端
@@ -1019,12 +1035,12 @@ class ChatWindow(QWidget):
     def on_chunk_received_text(self, text):
         """接收文本块（从协调器，文本已经提取）"""
         try:
-            print(f"[STREAM] 收到文本块: {text[:20]}... (长度: {len(text)})")
+            safe_print(f"[STREAM] 收到文本块: {text[:20]}... (长度: {len(text)})")
             if self.current_streaming_bubble:
                 self.current_streaming_bubble.append_text(text)
                 self.scroll_to_bottom()
             else:
-                print(f"[WARNING] 流式气泡为空，无法追加文本！")
+                safe_print(f"[WARNING] 流式气泡为空，无法追加文本！")
         except Exception as e:
             safe_print(f"[ERROR] 处理文本块时出错: {e}")
     

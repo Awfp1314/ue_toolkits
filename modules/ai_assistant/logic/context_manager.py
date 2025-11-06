@@ -220,7 +220,10 @@ class ContextManager:
             
             # Token 优化：彻底精简闲聊模式的上下文
             # 智能检索相关记忆（仅在明确询问记忆时）
-            is_asking_memory = any(keyword in query.lower() for keyword in ['记得', '还记得', '记不记得', '忘了', '说过'])
+            is_asking_memory = any(keyword in query.lower() for keyword in [
+                '记得', '还记得', '记不记得', '忘了', '说过',
+                '知道我', '知不知道我', '了解我', '我喜欢', '我的'
+            ])
             
             if is_asking_memory:
                 # 用户明确询问记忆，检索并返回
