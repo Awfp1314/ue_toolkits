@@ -7,6 +7,16 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, Q
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRectF, pyqtProperty, pyqtSignal, QSize, QUrl
 from PyQt6.QtGui import QFont, QPainter, QColor, QIcon, QPixmap, QPen, QDesktopServices, QPainterPath, QLinearGradient, QBrush
 
+def safe_print(msg: str):
+    """安全的 print 函数，避免 Windows 控制台编码错误"""
+    try:
+        print(msg, flush=True)
+    except (OSError, UnicodeEncodeError):
+        # 如果 print 失败，忽略（不要让调试输出导致程序崩溃）
+        pass
+
+import traceback
+
 try:
     import markdown
     from markdown.extensions.fenced_code import FencedCodeExtension
@@ -15,7 +25,7 @@ try:
     MARKDOWN_AVAILABLE = True
 except ImportError:
     MARKDOWN_AVAILABLE = False
-    print("警告: markdown 库未安装，将使用基础渲染。请运行: pip install markdown")
+    safe_print("警告: markdown 库未安装，将使用基础渲染。请运行: pip install markdown")
 
 
 class RoundedBubble(QWidget):
