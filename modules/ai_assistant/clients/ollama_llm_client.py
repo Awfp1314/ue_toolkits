@@ -41,6 +41,9 @@ class OllamaLLMClient(BaseLLMClient):
         
         # 构建 API 端点
         self.chat_endpoint = f"{self.base_url}/api/chat"
+        
+        # Tool calls 累积缓冲区
+        self._tool_calls_buffer = []
     
     def generate_response(
         self,
@@ -80,12 +83,12 @@ class OllamaLLMClient(BaseLLMClient):
                 payload["tools"] = tools
             
             # 发送请求
-            with httpx.stream(
-                "POST",
-                self.chat_endpoint,
-                json=payload,
-                timeout=self.timeout
-            ) as response:
+            with httpx.Client() as client:
+                response = client.post(
+                    self.chat_endpoint,
+                    json=payload,
+                    timeout=self.timeout
+                )
                 
                 # 检查响应状态
                 if response.status_code != 200:
@@ -107,20 +110,34 @@ class OllamaLLMClient(BaseLLMClient):
                             # Ollama 返回的每一行都是一个 JSON 对象
                             data = json.loads(line)
                             
-                            # 提取内容
+                            # 检测 tool_calls（Ollama 格式）
                             if 'message' in data:
-                                content = data['message'].get('content', '')
+                                message = data['message']
                                 
+                                # 检查是否有 tool_calls
+                                tool_calls = message.get('tool_calls')
+                                if tool_calls:
+                                    self._accumulate_tool_calls(tool_calls)
+                                    continue
+                                
+                                # 提取普通内容
+                                content = message.get('content', '')
                                 if content:
                                     # 切分成小块模拟打字效果
                                     chunk_size = 3
                                     for i in range(0, len(content), chunk_size):
                                         small_chunk = content[i:i+chunk_size]
-                                        yield small_chunk
+                                        yield {'type': 'content', 'text': small_chunk}
                                         time.sleep(0.015)  # 15ms 延迟
                             
                             # 检查是否完成
                             if data.get('done', False):
+                                # 如果累积了 tool_calls，返回
+                                if self._tool_calls_buffer:
+                                    yield {
+                                        'type': 'tool_calls',
+                                        'tool_calls': self._get_accumulated_tool_calls()
+                                    }
                                 return
                         
                         except json.JSONDecodeError:
@@ -131,8 +148,17 @@ class OllamaLLMClient(BaseLLMClient):
                     data = json.loads(response_text)
                     
                     if 'message' in data:
-                        content = data['message'].get('content', '')
-                        yield content
+                        message = data['message']
+                        
+                        # 检查 tool_calls
+                        if 'tool_calls' in message:
+                            yield {
+                                'type': 'tool_calls',
+                                'tool_calls': message['tool_calls']
+                            }
+                        else:
+                            content = message.get('content', '')
+                            yield {'type': 'content', 'text': content}
         
         except httpx.ConnectError:
             raise Exception(f"无法连接到 Ollama 服务 ({self.base_url})，请确保 Ollama 已启动")
@@ -184,4 +210,112 @@ class OllamaLLMClient(BaseLLMClient):
         
         except:
             return False
+    
+    def _accumulate_tool_calls(self, tool_calls_delta: List[Dict]):
+        """
+        累积 tool_calls
+        
+        Args:
+            tool_calls_delta: tool_calls 数据
+        """
+        for tc in tool_calls_delta:
+            self._tool_calls_buffer.append(tc)
+    
+    def _get_accumulated_tool_calls(self) -> List[Dict]:
+        """
+        获取累积的 tool_calls 并清空缓冲区
+        
+        Returns:
+            List[Dict]: 完整的 tool_calls 列表
+        """
+        result = self._tool_calls_buffer.copy()
+        self._tool_calls_buffer = []
+        return result
+    
+    def generate_response_non_streaming(
+        self,
+        context_messages: List[Dict[str, str]],
+        temperature: float = None,
+        tools: List[Dict] = None
+    ) -> Dict:
+        """
+        生成响应（非流式，用于工具调用检测）
+        
+        Args:
+            context_messages: 消息历史
+            temperature: 温度参数
+            tools: Function Calling 工具列表
+            
+        Returns:
+            Dict: {
+                'type': 'tool_calls' | 'content',
+                'tool_calls': [...] | None,
+                'content': str | None
+            }
+        """
+        try:
+            import httpx
+        except ImportError:
+            raise Exception("httpx 库未安装，请运行: pip install httpx")
+        
+        try:
+            # 构建请求体（非流式）
+            payload = {
+                "model": self.model_name,
+                "messages": context_messages,
+                "stream": False,
+                "temperature": temperature if temperature is not None else self.default_temperature
+            }
+            
+            if tools:
+                payload["tools"] = tools
+            
+            # 发送请求
+            with httpx.Client() as client:
+                response = client.post(
+                    self.chat_endpoint,
+                    json=payload,
+                    timeout=self.timeout
+                )
+            
+            # 检查响应状态
+            if response.status_code != 200:
+                error_text = response.text
+                try:
+                    error_data = json.loads(error_text)
+                    error_msg = error_data.get('error', error_text)
+                except:
+                    error_msg = error_text
+                raise Exception(f"Ollama API 错误 ({response.status_code}): {error_msg}")
+            
+            # 解析响应
+            data = response.json()
+            
+            if 'message' in data:
+                message = data['message']
+                
+                # 检查是否有 tool_calls
+                if 'tool_calls' in message and message['tool_calls']:
+                    return {
+                        'type': 'tool_calls',
+                        'tool_calls': message['tool_calls'],
+                        'content': None
+                    }
+                else:
+                    # 返回普通内容
+                    content = message.get('content', '')
+                    return {
+                        'type': 'content',
+                        'tool_calls': None,
+                        'content': content
+                    }
+            else:
+                raise Exception("Ollama 响应格式错误：缺少 message")
+        
+        except httpx.ConnectError:
+            raise Exception(f"无法连接到 Ollama 服务 ({self.base_url})，请确保 Ollama 已启动")
+        except httpx.TimeoutException:
+            raise Exception(f"Ollama 请求超时（{self.timeout}秒），模型可能在加载中")
+        except Exception as e:
+            raise Exception(f"Ollama 请求失败: {str(e)}")
 
