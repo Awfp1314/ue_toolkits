@@ -231,6 +231,10 @@ class EnhancedMemoryManager:
         
         results = []
         
+        # 预处理查询词（用于关键词检索）
+        query_lower = query.lower()
+        query_words = set([w for w in query_lower.split() if len(w) > 1])
+        
         # 1. 从 FAISS 向量检索用户级记忆（语义相似度）
         if self.faiss_store is not None and self.faiss_store.count() > 0:
             try:
@@ -260,9 +264,6 @@ class EnhancedMemoryManager:
             self.logger.info("⚠️ [FAISS 检索] 向量存储未启用或为空，使用 JSON 备份检索")
             
             # 降级到关键词匹配（FAISS 不可用时）
-            query_lower = query.lower()
-            query_words = set([w for w in query_lower.split() if len(w) > 1])
-            
             for memory in self.user_memories:
                 if memory.importance < min_importance:
                     continue

@@ -1,15 +1,22 @@
 # 🔧 模型切换记忆丢失问题 - 修复测试
 
 ## 🐛 问题描述
+
+### 问题 1：切换模型后失忆
 **症状**：在应用运行时切换 AI 模型后，AI 会失去记忆，无法回忆用户之前说过的信息。但重启应用后记忆恢复正常。
 
 **根本原因**：`_init_context_manager()` 方法每次被调用都会无条件创建新的 `ContextManager` 实例，导致内部的 `EnhancedMemoryManager` 和 FAISS 索引被重新创建，虽然会从磁盘重新加载，但可能存在状态不一致。
+
+### 问题 2：重新生成回答时失忆 ⚠️ **新发现**
+**症状**：点击消息下方的"重新生成回答"按钮后，AI 无法回忆之前的记忆信息。
+
+**根本原因**：`on_regenerate_response()` 方法直接使用 `conversation_history`，没有调用 `context_manager.build_context()` 重新获取记忆上下文。
 
 ---
 
 ## ✅ 修复方案
 
-### 代码更改
+### 修复 1：防止切换模型时重复创建上下文管理器
 **文件**：`modules/ai_assistant/ui/chat_window.py`
 
 **修改**：在 `_init_context_manager()` 方法开头添加检查：
@@ -33,6 +40,56 @@ def _init_context_manager(self, logger):
 - ✅ 首次初始化正常创建 `ContextManager`
 - ✅ 后续调用（如切换模型）保留现有实例
 - ✅ FAISS 记忆状态在整个会话中保持一致
+
+---
+
+### 修复 2：重新生成回答时包含记忆上下文
+**文件**：`modules/ai_assistant/ui/chat_window.py`
+
+**修改**：在 `on_regenerate_response()` 方法中添加上下文重建：
+
+```python
+def on_regenerate_response(self):
+    """重新生成回答"""
+    # ... 删除旧消息的代码 ...
+    
+    # 🔧 修复：重新构建上下文（包含记忆）
+    # 获取最后一条用户消息
+    last_user_message = None
+    for msg in reversed(self.conversation_history):
+        if msg.get("role") == "user":
+            last_user_message = msg.get("content", "")
+            break
+    
+    # 构建请求消息列表
+    request_messages = []
+    context_message = None
+    
+    # 如果找到用户消息且上下文管理器存在，重新构建上下文
+    if last_user_message and self.context_manager:
+        context = self.context_manager.build_context(last_user_message, include_system_prompt=False)
+        if context:
+            context_message = {
+                "role": "system",
+                "content": f"[当前查询的上下文信息]\n{context}"
+            }
+    
+    # 复制历史记录并插入上下文
+    for msg in self.conversation_history:
+        request_messages.append(msg)
+    
+    if context_message:
+        # 插入到最后一条用户消息之前
+        request_messages.insert(last_user_idx, context_message)
+    
+    # 使用包含上下文的消息列表发起请求
+    self.current_api_client = APIClient(request_messages, model=model)
+```
+
+**效果**：
+- ✅ 重新生成时会从 FAISS 检索相关记忆
+- ✅ AI 能够在重新生成的回答中正确使用记忆
+- ✅ 与正常发送消息的行为一致
 
 ---
 
@@ -75,12 +132,28 @@ AI 应该确认记住了你的偏好。
 
 **预期结果**：✅ AI 仍然正确回答"原神 + 胡桃"（**修复前会失忆**）
 
-#### 5️⃣ **查看日志验证**
+#### 5️⃣ **测试重新生成按钮** ⚠️ **新增测试**
+在上一步 AI 回答后：
+1. 将鼠标悬停在 AI 消息上
+2. 点击右下角的 🔄 **重新生成回答**按钮
+3. 观察 AI 的新回答
+
+**预期结果**：✅ AI 重新生成的回答中仍然包含"原神 + 胡桃"的记忆（**修复前会失忆**）
+
+#### 6️⃣ **查看日志验证**
 检查控制台或日志文件，应该看到：
+
+**切换模型时**：
 ```
 [DEBUG] [SKIP] 上下文管理器已存在，跳过重复创建（保留记忆状态）
+```
+
+**重新生成时**：
+```
+[DEBUG] [重新生成] 正在为用户消息构建上下文...
 🔮 [FAISS 检索] 启动语义搜索...
 ✅ [FAISS 检索] 找到 X 条记忆（语义相似度匹配）
+[DEBUG] [重新生成] 已构建上下文（长度: XXX）
 ```
 
 ---
@@ -92,6 +165,7 @@ AI 应该确认记住了你的偏好。
 |------|---------|
 | 初次对话 | ✅ 正常 |
 | 切换模型后 | ❌ **失忆** |
+| 重新生成回答 | ❌ **失忆** |
 | 重启应用 | ✅ 恢复 |
 
 ### 修复后 ✅
@@ -99,6 +173,7 @@ AI 应该确认记住了你的偏好。
 |------|---------|
 | 初次对话 | ✅ 正常 |
 | 切换模型后 | ✅ **保持** |
+| 重新生成回答 | ✅ **保持** |
 | 重启应用 | ✅ 正常 |
 
 ---
