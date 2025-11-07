@@ -5,6 +5,7 @@
 定义只读工具的接口和调度逻辑
 """
 
+import json
 from typing import Dict, Any, List, Callable, Optional
 from core.logger import get_logger
 
@@ -65,6 +66,9 @@ class ToolsRegistry:
         
         # 注册测试功能工具
         self._register_experimental_tools()
+        
+        # 注册虚幻引擎蓝图操作工具
+        self._register_ue_tools()
         
         self.logger.info(f"工具注册表初始化完成，共注册 {len(self.tools)} 个工具")
     
@@ -513,4 +517,112 @@ class ToolsRegistry:
             result = self.controlled_tools.batch_rename_preview(pattern, replacement, asset_ids)
             return result.get('preview', '[错误] 无预览')
         return "[错误] 受控工具集未初始化"
+    
+    def _execute_ue_python_tool(self, tool_name: str, **kwargs) -> str:
+        """
+        [模拟执行器] 通过模拟外部进程通信，执行虚幻引擎编辑器内的Python脚本。
+        这是 Function Calling 调用虚幻引擎工具的桥梁。
+        
+        Args:
+            tool_name: UE工具名称
+            **kwargs: 工具参数
+            
+        Returns:
+            str: JSON格式的执行结果
+        """
+        try:
+            # 在实际部署中，这里是 Socket 或 RPC 客户端。现在使用模拟返回。
+            
+            # 警告：由于无法获取真实的 UE 项目路径，这里使用占位符进行模拟。
+            ue_project_path = kwargs.pop('ue_project_path', 'C:/Simulated/UE/Project.uproject')
+            
+            # --- 模拟：获取蓝图摘要 (读取) ---
+            if tool_name == "get_current_blueprint_summary":
+                # 这是 LLM 收到后将用于分析的"事实"
+                return json.dumps({
+                    "status": "success", 
+                    "blueprint_data_summary": {
+                        "blueprint_name": "BP_PlayerCharacter", 
+                        "nodes": [
+                            {"name": "Event BeginPlay", "class": "K2Node_Event", "guid": "A1B2C3"},
+                            {"name": "Delay", "class": "K2Node_CallFunction", "guid": "B4D5E6"},
+                            {"name": "Print String", "class": "K2Node_CallFunction", "guid": "C7F8G9"}
+                        ],
+                        "hint": "数据已简化。请根据此摘要决定下一步修改。",
+                    }
+                }, ensure_ascii=False)
+            
+            # --- 模拟：应用修改 (写入) ---
+            elif tool_name == "apply_blueprint_changes":
+                # 检查是否有 changes_json 参数
+                changes_json = kwargs.get('changes_json')
+                if not changes_json:
+                    return json.dumps({
+                        "status": "error", 
+                        "message": "apply_blueprint_changes 缺少 changes_json 参数。"
+                    }, ensure_ascii=False)
+                
+                # 返回给 LLM 成功的消息
+                return json.dumps({
+                    "status": "success", 
+                    "message": f"成功向UE编辑器发送了蓝图修改指令 ({len(changes_json)} 字节)。请用户检查虚幻编辑器。",
+                }, ensure_ascii=False)
+                
+            else:
+                return json.dumps({
+                    "status": "error", 
+                    "message": f"未知的UE工具: {tool_name}"
+                }, ensure_ascii=False)
+        
+        except Exception as e:
+            self.logger.error(f"UE工具执行失败: {e}", exc_info=True)
+            # 将失败信息包装成 JSON 返回给 LLM
+            return json.dumps({
+                "status": "error", 
+                "message": f"UE工具执行器捕获到错误: {str(e)}"
+            }, ensure_ascii=False)
+    
+    def _register_ue_tools(self):
+        """
+        注册虚幻引擎蓝图操作工具到注册表中。
+        """
+        # 1. 获取蓝图摘要（读取）工具
+        self.register_tool(ToolDefinition(
+            name="get_current_blueprint_summary",
+            description="""
+读取当前在虚幻编辑器中打开的蓝图的主要节点和结构。
+用途：用于理解用户希望修改哪个节点，或获取蓝图的当前状态。
+参数：无需参数。
+            """.strip(),
+            parameters={
+                "type": "object",
+                "properties": {},
+                "required": []
+            },
+            function=lambda **kwargs: self._execute_ue_python_tool("get_current_blueprint_summary", **kwargs),
+            requires_confirmation=False  # 只读工具，无需确认
+        ))
+        
+        # 2. 应用修改（写入）工具
+        self.register_tool(ToolDefinition(
+            name="apply_blueprint_changes",
+            description="""
+向虚幻引擎发送一个蓝图修改指令，以创建、连接或删除节点。
+**此工具通常必须在调用 get_current_blueprint_summary 之后使用。**
+参数：
+- changes_json (str): 包含节点创建/修改指令的JSON字符串。这是 AI 需要生成的。
+            """.strip(),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "changes_json": {
+                        "type": "string",
+                        "description": "包含节点创建/修改指令的JSON字符串"
+                    }
+                },
+                "required": ["changes_json"]
+            },
+            function=lambda changes_json, **kwargs: self._execute_ue_python_tool("apply_blueprint_changes", changes_json=changes_json, **kwargs),
+            requires_confirmation=True  # 写入工具，需要确认
+        ))
 
