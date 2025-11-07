@@ -87,12 +87,8 @@ class ThemeGenerator:
                 # 立即切换到新主题
                 self.theme_manager.set_custom_theme_by_name(imported_name)
                 
-                # 刷新应用程序主题
-                from PyQt6.QtWidgets import QApplication
-                app = QApplication.instance()
-                if app:
-                    self.theme_manager.apply_to_application(app)
-                    self.logger.info("主题已应用到应用程序")
+                # 完整刷新应用程序主题（模仿settings_widget的逻辑）
+                self._apply_theme_to_all_windows()
                 
                 # 生成预览信息
                 preview_info = self._generate_preview_message(theme_name, theme_description, color_variables)
@@ -183,12 +179,8 @@ class ThemeGenerator:
             self.theme_manager.set_theme(Theme.DARK)
             self.logger.info("已切换回深色主题")
             
-            # 刷新应用程序主题
-            from PyQt6.QtWidgets import QApplication
-            app = QApplication.instance()
-            if app:
-                self.theme_manager.apply_to_application(app)
-                self.logger.info("深色主题已应用到应用程序")
+            # 完整刷新应用程序主题
+            self._apply_theme_to_all_windows()
             
             # 删除生成的主题
             self.theme_manager.delete_custom_theme(theme_name)
@@ -345,6 +337,83 @@ class ThemeGenerator:
         ]
         
         return "\n".join(preview)
+    
+    def _apply_theme_to_all_windows(self):
+        """应用主题到所有窗口和组件（完整刷新）
+        
+        模仿settings_widget的_apply_theme_to_app()逻辑
+        """
+        try:
+            # 1. 应用到整个QApplication
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app:
+                self.theme_manager.apply_to_application(app)
+                self.logger.info("主题已应用到QApplication")
+            
+            # 2. 获取主窗口
+            if not app:
+                self.logger.warning("无法获取QApplication实例")
+                return
+            
+            main_window = None
+            for widget in app.topLevelWidgets():
+                if widget.__class__.__name__ == 'MainWindow':
+                    main_window = widget
+                    break
+            
+            if not main_window:
+                self.logger.warning("无法找到主窗口")
+                return
+            
+            # 3. 应用到主窗口
+            self.theme_manager.apply_to_widget(main_window)
+            self.logger.info("主题已应用到主窗口")
+            
+            # 4. 刷新主窗口
+            main_window.update()
+            
+            # 5. 刷新所有模块UI
+            if hasattr(main_window, 'module_ui_map'):
+                for module_name, module_widget in main_window.module_ui_map.items():
+                    if module_widget:
+                        if hasattr(module_widget, 'refresh_theme'):
+                            module_widget.refresh_theme()
+                            self.logger.debug(f"已刷新模块主题: {module_name}")
+                        else:
+                            module_widget.update()
+                            self.logger.debug(f"刷新模块UI: {module_name}")
+            
+            # 6. 刷新标题栏
+            if hasattr(main_window, 'title_bar') and main_window.title_bar:
+                if hasattr(main_window.title_bar, 'refresh_theme'):
+                    main_window.title_bar.refresh_theme()
+                    self.logger.debug("已刷新标题栏主题")
+            
+            # 7. 特别处理资产管理器
+            if hasattr(main_window, 'module_provider'):
+                try:
+                    asset_manager = main_window.module_provider.get_module("asset_manager")
+                    if asset_manager and hasattr(asset_manager, 'ui') and hasattr(asset_manager.ui, 'refresh_theme'):
+                        asset_manager.ui.refresh_theme()
+                        self.logger.info("已刷新资产管理器主题")
+                except Exception as e:
+                    self.logger.warning(f"刷新资产管理器主题失败: {e}")
+                
+                # 8. 特别处理AI助手
+                try:
+                    ai_assistant = main_window.module_provider.get_module("ai_assistant")
+                    if ai_assistant and hasattr(ai_assistant, 'chat_window') and ai_assistant.chat_window:
+                        if hasattr(ai_assistant.chat_window, 'refresh_theme'):
+                            ai_assistant.chat_window.refresh_theme()
+                            self.logger.info("已刷新AI助手主题")
+                except Exception as e:
+                    self.logger.warning(f"刷新AI助手主题失败: {e}")
+            
+            self.logger.info("主题已完整应用到所有窗口和组件")
+            
+        except Exception as e:
+            self.logger.error(f"应用主题到所有窗口失败: {e}", exc_info=True)
     
     def list_available_themes(self) -> str:
         """列出所有可用的主题（内置+自定义）"""
