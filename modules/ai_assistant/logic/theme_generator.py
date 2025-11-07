@@ -79,19 +79,17 @@ class ThemeGenerator:
             
             self.logger.info(f"生成临时主题文件: {self.temp_theme_path}")
             
-            # 导入并应用主题
+            # 导入主题（仅保存，不立即应用，避免崩溃）
             try:
                 imported_name = self.theme_manager.import_theme(self.temp_theme_path)
                 self.last_generated_theme_name = imported_name
+                self.logger.info(f"主题 {imported_name} 已保存")
                 
-                # 立即切换到新主题
-                self.theme_manager.set_custom_theme_by_name(imported_name)
+                # 安全地刷新设置界面的主题下拉框并自动应用
+                auto_applied = self._refresh_settings_theme_combo()
                 
-                # 完整刷新应用程序主题（带完整异常保护）
-                self._apply_theme_to_all_windows()
-                
-                # 生成预览信息
-                preview_info = self._generate_preview_message(theme_name, theme_description, color_variables)
+                # 生成预览信息（根据是否自动应用成功返回不同消息）
+                preview_info = self._generate_preview_message(theme_name, theme_description, color_variables, auto_applied)
                 
                 return {
                     'success': True,
@@ -146,7 +144,7 @@ class ThemeGenerator:
             
             return {
                 'success': True,
-                'message': f'[成功] 主题 "{theme_name}" 已保留并应用！\n\n你可以随时在设置中切换回其他主题。'
+                'message': f'[成功] 太好了！主题 "{theme_name}" 已永久保留。\n\n你可以随时在设置中切换主题，或者让我再生成新的主题哦~'
             }
         
         except Exception as e:
@@ -157,7 +155,7 @@ class ThemeGenerator:
             }
     
     def reject_theme(self) -> Dict[str, Any]:
-        """用户拒绝当前生成的主题，删除并恢复默认主题
+        """用户拒绝当前生成的主题，删除主题文件
         
         Returns:
             Dict: {
@@ -174,14 +172,6 @@ class ThemeGenerator:
             
             theme_name = self.last_generated_theme_name
             
-            # 切换回深色主题
-            from core.utils.theme_manager import Theme
-            self.theme_manager.set_theme(Theme.DARK)
-            self.logger.info("已切换回深色主题")
-            
-            # 完整刷新应用程序主题
-            self._apply_theme_to_all_windows()
-            
             # 删除生成的主题
             self.theme_manager.delete_custom_theme(theme_name)
             self.logger.info(f"已删除主题: {theme_name}")
@@ -197,7 +187,7 @@ class ThemeGenerator:
             
             return {
                 'success': True,
-                'message': f'[成功] 已删除主题 "{theme_name}" 并恢复为深色主题。\n\n如需调整，请告诉我你想要什么样的配色！'
+                'message': f'[成功] 已删除主题 "{theme_name}"。\n\n告诉我你想要什么样的配色，我可以重新生成！比如：\n- 更亮/更暗的配色\n- 不同的主色调（蓝色、绿色、紫色等）\n- 特定角色或风格的主题'
             }
         
         except Exception as e:
@@ -318,10 +308,17 @@ class ThemeGenerator:
         
         return self._rgb_to_hex(r, g, b)
     
-    def _generate_preview_message(self, theme_name: str, description: str, variables: Dict[str, str]) -> str:
-        """生成主题预览信息"""
+    def _generate_preview_message(self, theme_name: str, description: str, variables: Dict[str, str], auto_applied: bool = False) -> str:
+        """生成主题预览信息
+        
+        Args:
+            theme_name: 主题名称
+            description: 主题描述
+            variables: 颜色变量字典
+            auto_applied: 是否已自动应用主题
+        """
         preview = [
-            f"主题预览: {theme_name}",
+            f"[成功] 主题 '{theme_name}' 已生成{'并应用' if auto_applied else '并保存'}！",
             f"说明: {description}",
             "",
             "主要配色:",
@@ -331,69 +328,79 @@ class ThemeGenerator:
             f"  - 次级文本: {variables.get('text_secondary', '未设置')}",
             f"  - 强调色: {variables.get('accent', '未设置')}",
             f"  - 边框: {variables.get('border', '未设置')}",
-            "",
-            "主题已自动应用！",
-            "",
-            "提示: 如果聊天界面文字颜色未更新，请切换到其他功能（如资产管理器）再切回来，即可看到完整效果。",
-            "",
-            "满意吗？"
+            ""
         ]
+        
+        if auto_applied:
+            preview.extend([
+                "[状态] 主题已自动应用到整个程序！",
+                "",
+                "提示：如果AI聊天界面文字颜色未更新，请切换到其他界面（如资产管理器）再切回来查看完整效果。",
+                ""
+            ])
+        else:
+            preview.extend([
+                "[手动应用]",
+                "1. 点击右侧导航栏的【设置】按钮",
+                "2. 在「主题选择」下拉框中找到「自定义: " + theme_name + "」",
+                "3. 选择后即可应用该主题",
+                ""
+            ])
+        
+        preview.append("满意这个配色方案吗？如果不满意我可以重新生成~")
         
         return "\n".join(preview)
     
-    def _apply_theme_to_all_windows(self):
-        """应用主题到所有窗口（极简安全版本）
-        
-        只应用全局样式，避免在对话过程中刷新模块导致崩溃
-        """
+    def _refresh_settings_theme_combo(self):
+        """安全地刷新设置界面的主题下拉框并自动选择新主题"""
         try:
-            # 1. 应用到整个QApplication（全局样式）
             from PyQt6.QtWidgets import QApplication
             app = QApplication.instance()
             if not app:
                 self.logger.warning("无法获取QApplication实例")
-                return
+                return False
             
-            self.theme_manager.apply_to_application(app)
-            self.logger.info("✅ 主题已应用到全局样式")
-            
-            # 2. 找到主窗口并刷新设置界面的下拉框
+            # 查找主窗口
             main_window = None
-            try:
-                for widget in app.topLevelWidgets():
-                    if widget.__class__.__name__ == 'MainWindow' or \
-                       hasattr(widget, 'module_provider'):
-                        main_window = widget
-                        break
-            except Exception as e:
-                self.logger.warning(f"查找主窗口时出错: {e}")
+            for widget in app.topLevelWidgets():
+                if widget.__class__.__name__ == 'MainWindow' or hasattr(widget, 'module_provider'):
+                    main_window = widget
+                    break
             
-            if main_window:
-                # 刷新设置界面的主题下拉框
-                try:
-                    if hasattr(main_window, 'settings_widget') and main_window.settings_widget:
-                        if hasattr(main_window.settings_widget, '_refresh_custom_themes_combo'):
-                            main_window.settings_widget._refresh_custom_themes_combo()
-                            self.logger.info("✅ 已刷新设置界面的主题下拉框")
-                except Exception as e:
-                    self.logger.warning(f"刷新主题下拉框失败: {e}")
+            if not main_window:
+                self.logger.warning("无法找到主窗口，跳过刷新下拉框")
+                return False
             
-            # 3. 强制刷新主窗口样式（如果找到了）
-            if main_window:
-                try:
-                    # 对主窗口重新应用主题
-                    self.theme_manager.apply_to_widget(main_window)
-                    main_window.update()
-                    self.logger.info("✅ 已刷新主窗口样式")
-                except Exception as e:
-                    self.logger.warning(f"刷新主窗口样式失败: {e}")
-            
-            # 4. 提示用户可能需要切换界面才能看到完整效果
-            self.logger.info("💡 提示：切换到其他界面再切回来可查看完整主题效果")
-            
+            # 刷新设置界面的下拉框
+            if hasattr(main_window, 'settings_widget') and main_window.settings_widget:
+                settings_widget = main_window.settings_widget
+                
+                # 刷新下拉框
+                if hasattr(settings_widget, '_refresh_custom_themes_combo'):
+                    settings_widget._refresh_custom_themes_combo()
+                    self.logger.info("已刷新设置界面的主题下拉框")
+                
+                # 自动选择新生成的主题
+                if hasattr(settings_widget, 'theme_combo') and self.last_generated_theme_name:
+                    theme_combo = settings_widget.theme_combo
+                    target_data = f"custom:{self.last_generated_theme_name}"
+                    
+                    # 查找新主题的索引
+                    for i in range(theme_combo.count()):
+                        if theme_combo.itemData(i) == target_data:
+                            theme_combo.setCurrentIndex(i)
+                            self.logger.info(f"已自动选择并应用主题: {self.last_generated_theme_name}")
+                            return True
+                    
+                    self.logger.warning(f"在下拉框中未找到主题: {self.last_generated_theme_name}")
+                    return False
+            else:
+                self.logger.warning("无法访问设置界面")
+                return False
+                
         except Exception as e:
-            self.logger.error(f"应用主题失败: {e}", exc_info=True)
-            # 即使出错也不要让程序崩溃
+            self.logger.warning(f"刷新并选择主题失败（不影响主题保存）: {e}")
+            return False
     
     def list_available_themes(self) -> str:
         """列出所有可用的主题（内置+自定义）"""
