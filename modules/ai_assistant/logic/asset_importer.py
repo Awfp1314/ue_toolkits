@@ -108,7 +108,7 @@ class AssetImporter:
                 available_assets = [a.name for a in assets if hasattr(a, 'name')]
                 return {
                     'success': False,
-                    'message': f'❌ 未找到名为 "{asset_name}" 的资产\n\n可用资产: {", ".join(available_assets[:10])}',
+                    'message': f'[错误] 未找到名为 "{asset_name}" 的资产\n\n可用资产: {", ".join(available_assets[:10])}',
                     'asset_name': asset_name
                 }
             
@@ -116,7 +116,7 @@ class AssetImporter:
             if not hasattr(target_asset, 'path') or not target_asset.path:
                 return {
                     'success': False,
-                    'message': f'❌ 资产 "{asset_name}" 没有有效路径',
+                    'message': f'[错误] 资产 "{asset_name}" 没有有效路径',
                     'asset_name': asset_name
                 }
             
@@ -124,7 +124,7 @@ class AssetImporter:
             if not source_path.exists():
                 return {
                     'success': False,
-                    'message': f'❌ 资产路径不存在: {source_path}',
+                    'message': f'[错误] 资产路径不存在: {source_path}',
                     'asset_name': asset_name,
                     'source_path': str(source_path)
                 }
@@ -136,17 +136,17 @@ class AssetImporter:
                     asset_info = self._get_asset_info(target_asset, source_path)
                     return {
                         'success': False,
-                        'message': f'''❌ **未检测到正在运行的虚幻引擎项目**
+                        'message': f'''[错误] 未检测到正在运行的虚幻引擎项目
 
-📦 已找到资产: {asset_name}
+已找到资产: {asset_name}
 {asset_info}
 
-⚠️ **请先执行以下操作**:
+请先执行以下操作:
 1. 打开虚幻引擎编辑器
 2. 打开你想要导入资产的项目
 3. 保持编辑器运行，然后再次尝试导入
 
-💡 或者你也可以手动指定项目路径（不推荐）''',
+提示: 或者你也可以手动指定项目路径（不推荐）''',
                         'asset_name': asset_name,
                         'source_path': str(source_path),
                         'requires_running_ue': True
@@ -160,7 +160,7 @@ class AssetImporter:
             if not project_path.exists():
                 return {
                     'success': False,
-                    'message': f'❌ 目标项目路径不存在: {project_path}',
+                    'message': f'[错误] 目标项目路径不存在: {project_path}',
                     'asset_name': asset_name,
                     'target_path': str(project_path)
                 }
@@ -175,7 +175,7 @@ class AssetImporter:
                 else:
                     return {
                         'success': False,
-                        'message': f'❌ 目标路径不是有效的UE项目（未找到Content文件夹或.uproject文件）',
+                        'message': f'[错误] 目标路径不是有效的UE项目（未找到Content文件夹或.uproject文件）',
                         'asset_name': asset_name,
                         'target_path': str(project_path)
                     }
@@ -187,7 +187,7 @@ class AssetImporter:
             if target_asset_path.exists():
                 return {
                     'success': False,
-                    'message': f'⚠️ 目标位置已存在同名资产: {target_asset_path}\n\n请先在UE中删除或重命名现有资产',
+                    'message': f'[警告] 目标位置已存在同名资产: {target_asset_path}\n\n请先在UE中删除或重命名现有资产',
                     'asset_name': asset_name,
                     'source_path': str(source_path),
                     'target_path': str(target_asset_path)
@@ -203,23 +203,23 @@ class AssetImporter:
             
             # 检查是否是自动检测的项目
             auto_detected = not target_project_path
-            project_info = f"🎯 **目标项目**: {project_path.name} (自动检测)" if auto_detected else f"🎯 **目标项目**: {project_path.name}"
+            project_info = f"[目标项目]: {project_path.name} (自动检测)" if auto_detected else f"[目标项目]: {project_path.name}"
             
             return {
                 'success': True,
-                'message': f'''✅ **资产导入成功!**
+                'message': f'''[成功] 资产导入成功!
 
-📦 **资产名称**: {asset_name}
+[资产名称]: {asset_name}
 {project_info}
-📁 **源路径**: {source_path}
-🎯 **目标路径**: {target_asset_path}
+[源路径]: {source_path}
+[目标路径]: {target_asset_path}
 
-⚡ **下一步**:
+下一步:
 1. 在虚幻引擎编辑器中，右键点击Content Browser
 2. 选择 "Refresh" 或按 Ctrl+R
 3. 导入的资产将出现在Content根目录下
 
-✨ 导入完成！''',
+导入完成！''',
                 'asset_name': asset_name,
                 'source_path': str(source_path),
                 'target_path': str(target_asset_path),
@@ -230,7 +230,7 @@ class AssetImporter:
             self.logger.error(f"权限错误: {e}", exc_info=True)
             return {
                 'success': False,
-                'message': f'❌ 权限不足，无法复制资产\n\n错误: {str(e)}\n\n请确保:\n1. UE编辑器已关闭该资产\n2. 您有写入目标目录的权限',
+                'message': f'[错误] 权限不足，无法复制资产\n\n错误: {str(e)}\n\n请确保:\n1. UE编辑器已关闭该资产\n2. 您有写入目标目录的权限',
                 'asset_name': asset_name
             }
         
@@ -238,7 +238,7 @@ class AssetImporter:
             self.logger.error(f"导入资产失败: {e}", exc_info=True)
             return {
                 'success': False,
-                'message': f'❌ 导入资产时出错: {str(e)}',
+                'message': f'[错误] 导入资产时出错: {str(e)}',
                 'asset_name': asset_name
             }
     
@@ -273,15 +273,15 @@ class AssetImporter:
             str: 可导入资产列表的格式化字符串
         """
         if not self.asset_manager_logic:
-            return "⚠️ 资产管理器未连接"
+            return "[警告] 资产管理器未连接"
         
         try:
             assets = self.asset_manager_logic.get_all_assets()
             
             if not assets:
-                return "📦 **当前资产库为空**\n\n请先在资产管理器中添加资产"
+                return "[提示] 当前资产库为空\n\n请先在资产管理器中添加资产"
             
-            result = [f"📦 **可导入的资产** (共 {len(assets)} 个)\n"]
+            result = [f"[可导入的资产] (共 {len(assets)} 个)\n"]
             
             # 按分类组织
             categories = {}
@@ -292,20 +292,20 @@ class AssetImporter:
                 categories[category].append(asset)
             
             for category, cat_assets in categories.items():
-                result.append(f"\n**{category}** ({len(cat_assets)} 个):")
+                result.append(f"\n{category} ({len(cat_assets)} 个):")
                 for asset in cat_assets[:10]:  # 每个分类最多显示10个
                     name = asset.name if hasattr(asset, 'name') else '未命名'
                     asset_type = asset.asset_type.value if hasattr(asset, 'asset_type') else '未知'
-                    result.append(f"  • {name} ({asset_type})")
+                    result.append(f"  - {name} ({asset_type})")
                 
                 if len(cat_assets) > 10:
                     result.append(f"  ... 还有 {len(cat_assets) - 10} 个")
             
-            result.append("\n💡 **提示**: 要导入资产，请告诉我资产名称和目标UE项目路径")
+            result.append("\n[提示] 要导入资产，只需告诉我资产名称，系统会自动检测正在运行的UE项目")
             
             return "\n".join(result)
         
         except Exception as e:
             self.logger.error(f"列出资产失败: {e}", exc_info=True)
-            return f"❌ 获取资产列表时出错: {str(e)}"
+            return f"[错误] 获取资产列表时出错: {str(e)}"
 
