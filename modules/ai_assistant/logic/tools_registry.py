@@ -58,6 +58,21 @@ class ToolsRegistry:
         self.asset_importer = asset_importer
         self.theme_generator = theme_generator
         
+        # 初始化UE工具RPC客户端
+        from modules.ai_assistant.clients.ue_tool_client import UEToolClient
+        
+        # 从配置读取UE服务器地址和端口（如果配置不存在则使用默认值）
+        ue_host = "127.0.0.1"
+        ue_port = 9998
+        
+        # TODO: 未来可以从配置管理器读取这些设置
+        # if config_reader:
+        #     ue_host = config_reader.get('ue_server_host', '127.0.0.1')
+        #     ue_port = config_reader.get('ue_server_port', 9998)
+        
+        self.ue_client = UEToolClient(host=ue_host, port=ue_port)
+        self.logger.info(f"UE RPC客户端已初始化 (目标: {ue_host}:{ue_port})")
+        
         # 工具注册表
         self.tools: Dict[str, ToolDefinition] = {}
         
@@ -249,6 +264,15 @@ class ToolsRegistry:
                 "error": str(e),
                 "tool_name": tool_name
             }
+    
+    def cleanup(self):
+        """清理资源，关闭连接"""
+        try:
+            if hasattr(self, 'ue_client') and self.ue_client:
+                self.ue_client.close()
+                self.logger.info("UE RPC客户端连接已关闭")
+        except Exception as e:
+            self.logger.warning(f"清理UE客户端时出错: {e}")
     
     # ========== 工具实现函数 ==========
     
@@ -520,7 +544,7 @@ class ToolsRegistry:
     
     def _execute_ue_python_tool(self, tool_name: str, **kwargs) -> str:
         """
-        [模拟执行器] 通过模拟外部进程通信，执行虚幻引擎编辑器内的Python脚本。
+        通过RPC客户端执行虚幻引擎编辑器内的Python脚本。
         这是 Function Calling 调用虚幻引擎工具的桥梁。
         
         Args:
@@ -531,49 +555,12 @@ class ToolsRegistry:
             str: JSON格式的执行结果
         """
         try:
-            # 在实际部署中，这里是 Socket 或 RPC 客户端。现在使用模拟返回。
+            # 使用UE RPC客户端执行工具
+            result = self.ue_client.execute_tool_rpc(tool_name, **kwargs)
             
-            # 警告：由于无法获取真实的 UE 项目路径，这里使用占位符进行模拟。
-            ue_project_path = kwargs.pop('ue_project_path', 'C:/Simulated/UE/Project.uproject')
+            # 将结果转换为JSON字符串返回给LLM
+            return json.dumps(result, ensure_ascii=False)
             
-            # --- 模拟：获取蓝图摘要 (读取) ---
-            if tool_name == "get_current_blueprint_summary":
-                # 这是 LLM 收到后将用于分析的"事实"
-                return json.dumps({
-                    "status": "success", 
-                    "blueprint_data_summary": {
-                        "blueprint_name": "BP_PlayerCharacter", 
-                        "nodes": [
-                            {"name": "Event BeginPlay", "class": "K2Node_Event", "guid": "A1B2C3"},
-                            {"name": "Delay", "class": "K2Node_CallFunction", "guid": "B4D5E6"},
-                            {"name": "Print String", "class": "K2Node_CallFunction", "guid": "C7F8G9"}
-                        ],
-                        "hint": "数据已简化。请根据此摘要决定下一步修改。",
-                    }
-                }, ensure_ascii=False)
-            
-            # --- 模拟：应用修改 (写入) ---
-            elif tool_name == "apply_blueprint_changes":
-                # 检查是否有 changes_json 参数
-                changes_json = kwargs.get('changes_json')
-                if not changes_json:
-                    return json.dumps({
-                        "status": "error", 
-                        "message": "apply_blueprint_changes 缺少 changes_json 参数。"
-                    }, ensure_ascii=False)
-                
-                # 返回给 LLM 成功的消息
-                return json.dumps({
-                    "status": "success", 
-                    "message": f"成功向UE编辑器发送了蓝图修改指令 ({len(changes_json)} 字节)。请用户检查虚幻编辑器。",
-                }, ensure_ascii=False)
-                
-            else:
-                return json.dumps({
-                    "status": "error", 
-                    "message": f"未知的UE工具: {tool_name}"
-                }, ensure_ascii=False)
-        
         except Exception as e:
             self.logger.error(f"UE工具执行失败: {e}", exc_info=True)
             # 将失败信息包装成 JSON 返回给 LLM
