@@ -6,8 +6,9 @@
 """
 
 import shutil
+import psutil
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -25,16 +26,57 @@ class AssetImporter:
         self.asset_manager_logic = asset_manager_logic
         self.logger = logger
     
+    def _find_running_ue_project(self) -> Optional[Path]:
+        """查找正在运行的UE项目
+        
+        Returns:
+            Optional[Path]: 项目路径，如果未找到则返回None
+        """
+        try:
+            # 查找UE编辑器进程
+            ue_process_names = [
+                'UnrealEditor.exe',
+                'UE4Editor.exe', 
+                'UE5Editor.exe',
+                'UnrealEditor-Win64-Debug.exe',
+                'UnrealEditor-Win64-DebugGame.exe'
+            ]
+            
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    proc_name = proc.info['name']
+                    if proc_name and any(ue_name.lower() in proc_name.lower() for ue_name in ue_process_names):
+                        # 找到UE进程，尝试从命令行参数获取项目路径
+                        cmdline = proc.info.get('cmdline')
+                        if cmdline:
+                            for arg in cmdline:
+                                if arg and arg.endswith('.uproject'):
+                                    project_file = Path(arg)
+                                    if project_file.exists():
+                                        project_dir = project_file.parent
+                                        self.logger.info(f"找到正在运行的UE项目: {project_dir}")
+                                        return project_dir
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    continue
+            
+            self.logger.warning("未找到正在运行的UE项目")
+            return None
+        
+        except Exception as e:
+            self.logger.error(f"查找UE项目失败: {e}", exc_info=True)
+            return None
+    
     def import_asset_to_ue(self, asset_name: str, target_project_path: str = None) -> Dict[str, Any]:
         """将资产导入到UE项目
         
         这是一个测试功能，简化实现：
-        1. 查找资产
-        2. 复制到UE项目的Content目录
+        1. 自动检测正在运行的UE项目
+        2. 查找资产
+        3. 复制到UE项目的Content目录
         
         Args:
             asset_name: 资产名称
-            target_project_path: 目标UE项目路径（可选，如果为None则使用默认路径）
+            target_project_path: 目标UE项目路径（可选，如果为None则自动检测）
             
         Returns:
             Dict: {
@@ -87,30 +129,32 @@ class AssetImporter:
                     'source_path': str(source_path)
                 }
             
-            # 3. 确定目标路径
-            # 如果没有指定目标项目，则只返回资产信息供用户确认
+            # 3. 自动检测正在运行的UE项目（如果未指定路径）
             if not target_project_path:
-                asset_info = self._get_asset_info(target_asset, source_path)
-                return {
-                    'success': True,
-                    'message': f'''📦 **找到资产: {asset_name}**
+                project_path = self._find_running_ue_project()
+                if not project_path:
+                    asset_info = self._get_asset_info(target_asset, source_path)
+                    return {
+                        'success': False,
+                        'message': f'''❌ **未检测到正在运行的虚幻引擎项目**
 
+📦 已找到资产: {asset_name}
 {asset_info}
 
-💡 **提示**: 要将此资产导入到UE项目，请告诉我目标项目的路径。
-例如: "将这个资产导入到 D:/MyUEProject"
+⚠️ **请先执行以下操作**:
+1. 打开虚幻引擎编辑器
+2. 打开你想要导入资产的项目
+3. 保持编辑器运行，然后再次尝试导入
 
-⚠️ **测试功能说明**:
-- 本功能会将资产复制到UE项目的Content目录
-- 需要手动在UE编辑器中刷新才能看到新资产
-- 建议先备份您的项目''',
-                    'asset_name': asset_name,
-                    'source_path': str(source_path),
-                    'requires_project_path': True
-                }
+💡 或者你也可以手动指定项目路径（不推荐）''',
+                        'asset_name': asset_name,
+                        'source_path': str(source_path),
+                        'requires_running_ue': True
+                    }
+            else:
+                project_path = Path(target_project_path)
             
             # 4. 验证目标项目路径
-            project_path = Path(target_project_path)
             content_path = project_path / "Content"
             
             if not project_path.exists():
@@ -157,11 +201,16 @@ class AssetImporter:
                 shutil.copy2(source_path, target_asset_path)
                 self.logger.info(f"已复制资产文件: {source_path} -> {target_asset_path}")
             
+            # 检查是否是自动检测的项目
+            auto_detected = not target_project_path
+            project_info = f"🎯 **目标项目**: {project_path.name} (自动检测)" if auto_detected else f"🎯 **目标项目**: {project_path.name}"
+            
             return {
                 'success': True,
                 'message': f'''✅ **资产导入成功!**
 
 📦 **资产名称**: {asset_name}
+{project_info}
 📁 **源路径**: {source_path}
 🎯 **目标路径**: {target_asset_path}
 
@@ -173,7 +222,8 @@ class AssetImporter:
 ✨ 导入完成！''',
                 'asset_name': asset_name,
                 'source_path': str(source_path),
-                'target_path': str(target_asset_path)
+                'target_path': str(target_asset_path),
+                'auto_detected': auto_detected
             }
         
         except PermissionError as e:

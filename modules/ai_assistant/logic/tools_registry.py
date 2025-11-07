@@ -287,17 +287,13 @@ class ToolsRegistry:
         # 1. 导入资产到UE项目
         self.register_tool(ToolDefinition(
             name="import_asset_to_ue",
-            description="将资产导入到正在运行的虚幻引擎项目（测试功能）",
+            description="将资产自动导入到当前正在运行的虚幻引擎项目（测试功能）。此工具会自动检测正在运行的UE项目，无需用户提供路径。",
             parameters={
                 "type": "object",
                 "properties": {
                     "asset_name": {
                         "type": "string",
                         "description": "要导入的资产名称"
-                    },
-                    "target_project_path": {
-                        "type": "string",
-                        "description": "目标UE项目路径（可选）"
                     }
                 },
                 "required": ["asset_name"]
@@ -318,10 +314,10 @@ class ToolsRegistry:
             requires_confirmation=False
         ))
     
-    def _tool_import_asset(self, asset_name: str, target_project_path: str = None) -> str:
-        """导入资产工具实现"""
+    def _tool_import_asset(self, asset_name: str) -> str:
+        """导入资产工具实现（自动检测正在运行的UE项目）"""
         if self.asset_importer:
-            result = self.asset_importer.import_asset_to_ue(asset_name, target_project_path)
+            result = self.asset_importer.import_asset_to_ue(asset_name)
             return result.get('message', '[错误] 导入失败')
         return "[错误] 资产导入器未初始化"
     
