@@ -87,7 +87,7 @@ class ThemeGenerator:
                 # 立即切换到新主题
                 self.theme_manager.set_custom_theme_by_name(imported_name)
                 
-                # 完整刷新应用程序主题（模仿settings_widget的逻辑）
+                # 完整刷新应用程序主题（带完整异常保护）
                 self._apply_theme_to_all_windows()
                 
                 # 生成预览信息
@@ -332,88 +332,68 @@ class ThemeGenerator:
             f"  - 强调色: {variables.get('accent', '未设置')}",
             f"  - 边框: {variables.get('border', '未设置')}",
             "",
-            "主题已自动应用，请查看界面效果。",
+            "主题已自动应用！",
+            "",
+            "提示: 如果聊天界面文字颜色未更新，请切换到其他功能（如资产管理器）再切回来，即可看到完整效果。",
+            "",
             "满意吗？"
         ]
         
         return "\n".join(preview)
     
     def _apply_theme_to_all_windows(self):
-        """应用主题到所有窗口和组件（完整刷新）
+        """应用主题到所有窗口（极简安全版本）
         
-        模仿settings_widget的_apply_theme_to_app()逻辑
+        只应用全局样式，避免在对话过程中刷新模块导致崩溃
         """
         try:
-            # 1. 应用到整个QApplication
+            # 1. 应用到整个QApplication（全局样式）
             from PyQt6.QtWidgets import QApplication
             app = QApplication.instance()
-            if app:
-                self.theme_manager.apply_to_application(app)
-                self.logger.info("主题已应用到QApplication")
-            
-            # 2. 获取主窗口
             if not app:
                 self.logger.warning("无法获取QApplication实例")
                 return
             
+            self.theme_manager.apply_to_application(app)
+            self.logger.info("✅ 主题已应用到全局样式")
+            
+            # 2. 找到主窗口并刷新设置界面的下拉框
             main_window = None
-            for widget in app.topLevelWidgets():
-                if widget.__class__.__name__ == 'MainWindow':
-                    main_window = widget
-                    break
+            try:
+                for widget in app.topLevelWidgets():
+                    if widget.__class__.__name__ == 'MainWindow' or \
+                       hasattr(widget, 'module_provider'):
+                        main_window = widget
+                        break
+            except Exception as e:
+                self.logger.warning(f"查找主窗口时出错: {e}")
             
-            if not main_window:
-                self.logger.warning("无法找到主窗口")
-                return
-            
-            # 3. 应用到主窗口
-            self.theme_manager.apply_to_widget(main_window)
-            self.logger.info("主题已应用到主窗口")
-            
-            # 4. 刷新主窗口
-            main_window.update()
-            
-            # 5. 刷新所有模块UI
-            if hasattr(main_window, 'module_ui_map'):
-                for module_name, module_widget in main_window.module_ui_map.items():
-                    if module_widget:
-                        if hasattr(module_widget, 'refresh_theme'):
-                            module_widget.refresh_theme()
-                            self.logger.debug(f"已刷新模块主题: {module_name}")
-                        else:
-                            module_widget.update()
-                            self.logger.debug(f"刷新模块UI: {module_name}")
-            
-            # 6. 刷新标题栏
-            if hasattr(main_window, 'title_bar') and main_window.title_bar:
-                if hasattr(main_window.title_bar, 'refresh_theme'):
-                    main_window.title_bar.refresh_theme()
-                    self.logger.debug("已刷新标题栏主题")
-            
-            # 7. 特别处理资产管理器
-            if hasattr(main_window, 'module_provider'):
+            if main_window:
+                # 刷新设置界面的主题下拉框
                 try:
-                    asset_manager = main_window.module_provider.get_module("asset_manager")
-                    if asset_manager and hasattr(asset_manager, 'ui') and hasattr(asset_manager.ui, 'refresh_theme'):
-                        asset_manager.ui.refresh_theme()
-                        self.logger.info("已刷新资产管理器主题")
+                    if hasattr(main_window, 'settings_widget') and main_window.settings_widget:
+                        if hasattr(main_window.settings_widget, '_refresh_custom_themes_combo'):
+                            main_window.settings_widget._refresh_custom_themes_combo()
+                            self.logger.info("✅ 已刷新设置界面的主题下拉框")
                 except Exception as e:
-                    self.logger.warning(f"刷新资产管理器主题失败: {e}")
-                
-                # 8. 特别处理AI助手
-                try:
-                    ai_assistant = main_window.module_provider.get_module("ai_assistant")
-                    if ai_assistant and hasattr(ai_assistant, 'chat_window') and ai_assistant.chat_window:
-                        if hasattr(ai_assistant.chat_window, 'refresh_theme'):
-                            ai_assistant.chat_window.refresh_theme()
-                            self.logger.info("已刷新AI助手主题")
-                except Exception as e:
-                    self.logger.warning(f"刷新AI助手主题失败: {e}")
+                    self.logger.warning(f"刷新主题下拉框失败: {e}")
             
-            self.logger.info("主题已完整应用到所有窗口和组件")
+            # 3. 强制刷新主窗口样式（如果找到了）
+            if main_window:
+                try:
+                    # 对主窗口重新应用主题
+                    self.theme_manager.apply_to_widget(main_window)
+                    main_window.update()
+                    self.logger.info("✅ 已刷新主窗口样式")
+                except Exception as e:
+                    self.logger.warning(f"刷新主窗口样式失败: {e}")
+            
+            # 4. 提示用户可能需要切换界面才能看到完整效果
+            self.logger.info("💡 提示：切换到其他界面再切回来可查看完整主题效果")
             
         except Exception as e:
-            self.logger.error(f"应用主题到所有窗口失败: {e}", exc_info=True)
+            self.logger.error(f"应用主题失败: {e}", exc_info=True)
+            # 即使出错也不要让程序崩溃
     
     def list_available_themes(self) -> str:
         """列出所有可用的主题（内置+自定义）"""
