@@ -61,6 +61,9 @@ class ThemeGenerator:
                     'theme_name': theme_name
                 }
             
+            # 自动补全缺失的字段（使用基于主色的智能推导）
+            color_variables = self._complete_theme_variables(color_variables)
+            
             # 创建临时主题文件
             temp_dir = Path(tempfile.gettempdir())
             self.temp_theme_path = temp_dir / f"ue_toolkit_temp_theme_{theme_name}.json"
@@ -197,6 +200,117 @@ class ThemeGenerator:
                 'success': False,
                 'message': f'[错误] 删除主题时出错: {str(e)}'
             }
+    
+    def _complete_theme_variables(self, variables: Dict[str, str]) -> Dict[str, str]:
+        """自动补全缺失的主题变量
+        
+        基于提供的基础颜色智能推导其他颜色
+        """
+        completed = variables.copy()
+        
+        # 定义所有必需的变量及其默认推导逻辑
+        bg_primary = variables.get('bg_primary', '#2b2b2b')
+        bg_secondary = variables.get('bg_secondary', '#1e1e1e')
+        text_primary = variables.get('text_primary', '#ffffff')
+        text_secondary = variables.get('text_secondary', '#b0b0b0')
+        accent = variables.get('accent', '#4CAF50')
+        border = variables.get('border', '#3d3d3d')
+        
+        # 背景色系列
+        if 'bg_tertiary' not in completed:
+            completed['bg_tertiary'] = self._adjust_brightness(bg_primary, 1.15)
+        if 'bg_hover' not in completed:
+            completed['bg_hover'] = self._adjust_brightness(bg_primary, 1.3)
+        if 'bg_pressed' not in completed:
+            completed['bg_pressed'] = self._adjust_brightness(bg_secondary, 1.2)
+        if 'bg_primary_alpha' not in completed:
+            rgb = self._hex_to_rgb(bg_primary)
+            completed['bg_primary_alpha'] = f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.9)'
+        if 'bg_secondary_alpha' not in completed:
+            rgb = self._hex_to_rgb(bg_secondary)
+            completed['bg_secondary_alpha'] = f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.85)'
+        
+        # 文本色系列
+        if 'text_tertiary' not in completed:
+            completed['text_tertiary'] = self._adjust_brightness(text_secondary, 0.8)
+        if 'text_disabled' not in completed:
+            completed['text_disabled'] = self._adjust_brightness(text_secondary, 0.6)
+        
+        # 强调色系列
+        if 'accent_hover' not in completed:
+            completed['accent_hover'] = self._adjust_brightness(accent, 1.2)
+        if 'accent_pressed' not in completed:
+            completed['accent_pressed'] = self._adjust_brightness(accent, 0.8)
+        if 'accent_alpha' not in completed:
+            rgb = self._hex_to_rgb(accent)
+            completed['accent_alpha'] = f'rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, 0.8)'
+        
+        # 边框色系列
+        if 'border_hover' not in completed:
+            completed['border_hover'] = accent
+        if 'border_focus' not in completed:
+            completed['border_focus'] = completed.get('accent_hover', accent)
+        
+        # 状态色（使用通用默认值）
+        if 'success' not in completed:
+            completed['success'] = '#66BB6A'
+        if 'warning' not in completed:
+            completed['warning'] = '#FFB74D'
+        if 'error' not in completed:
+            completed['error'] = '#EF5350'
+        if 'info' not in completed:
+            completed['info'] = '#42A5F5'
+        if 'danger' not in completed:
+            completed['danger'] = completed.get('error', '#EF5350')
+        if 'danger_hover' not in completed:
+            completed['danger_hover'] = self._adjust_brightness(completed['danger'], 1.1)
+        
+        # 按钮色系列
+        if 'button_bg' not in completed:
+            completed['button_bg'] = completed.get('bg_tertiary', bg_primary)
+        if 'button_text' not in completed:
+            completed['button_text'] = text_primary
+        if 'button_hover' not in completed:
+            completed['button_hover'] = completed.get('bg_hover', bg_primary)
+        if 'button_pressed' not in completed:
+            completed['button_pressed'] = completed.get('bg_pressed', bg_secondary)
+        
+        # 滚动条色系列
+        if 'scrollbar_track' not in completed:
+            completed['scrollbar_track'] = self._adjust_brightness(bg_secondary, 0.8)
+        if 'scrollbar_handle' not in completed:
+            completed['scrollbar_handle'] = self._adjust_brightness(bg_primary, 1.5)
+        if 'scrollbar_handle_hover' not in completed:
+            completed['scrollbar_handle_hover'] = self._adjust_brightness(completed['scrollbar_handle'], 1.2)
+        if 'scrollbar_handle_pressed' not in completed:
+            completed['scrollbar_handle_pressed'] = self._adjust_brightness(completed['scrollbar_handle'], 1.4)
+        
+        return completed
+    
+    def _hex_to_rgb(self, hex_color: str) -> tuple:
+        """将十六进制颜色转换为RGB"""
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    
+    def _rgb_to_hex(self, r: int, g: int, b: int) -> str:
+        """将RGB颜色转换为十六进制"""
+        return f'#{r:02x}{g:02x}{b:02x}'
+    
+    def _adjust_brightness(self, hex_color: str, factor: float) -> str:
+        """调整颜色亮度
+        
+        Args:
+            hex_color: 十六进制颜色
+            factor: 亮度因子（>1变亮，<1变暗）
+        """
+        r, g, b = self._hex_to_rgb(hex_color)
+        
+        # 调整亮度
+        r = max(0, min(255, int(r * factor)))
+        g = max(0, min(255, int(g * factor)))
+        b = max(0, min(255, int(b * factor)))
+        
+        return self._rgb_to_hex(r, g, b)
     
     def _generate_preview_message(self, theme_name: str, description: str, variables: Dict[str, str]) -> str:
         """生成主题预览信息"""
