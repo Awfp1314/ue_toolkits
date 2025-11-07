@@ -85,7 +85,14 @@ class ThemeGenerator:
                 self.last_generated_theme_name = imported_name
                 
                 # 立即切换到新主题
-                self.theme_manager.set_custom_theme(imported_name)
+                self.theme_manager.set_custom_theme_by_name(imported_name)
+                
+                # 刷新应用程序主题
+                from PyQt6.QtWidgets import QApplication
+                app = QApplication.instance()
+                if app:
+                    self.theme_manager.apply_to_application(app)
+                    self.logger.info("主题已应用到应用程序")
                 
                 # 生成预览信息
                 preview_info = self._generate_preview_message(theme_name, theme_description, color_variables)
@@ -175,6 +182,13 @@ class ThemeGenerator:
             from core.utils.theme_manager import Theme
             self.theme_manager.set_theme(Theme.DARK)
             self.logger.info("已切换回深色主题")
+            
+            # 刷新应用程序主题
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app:
+                self.theme_manager.apply_to_application(app)
+                self.logger.info("深色主题已应用到应用程序")
             
             # 删除生成的主题
             self.theme_manager.delete_custom_theme(theme_name)
