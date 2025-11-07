@@ -237,23 +237,29 @@ class AssetManagerUI(QWidget):
             /* 滚动区域 */
             #assetManagerScrollArea {{
                 border: none;
-                background-color: transparent;
+                background-color: {tm.get_variable('bg_primary')};
             }}
             #assetManagerScrollArea > QWidget {{
-                background-color: transparent;
+                background-color: {tm.get_variable('bg_primary')};
+            }}
+            #assetManagerScrollArea QWidget#qt_scrollarea_viewport {{
+                background-color: {tm.get_variable('bg_primary')};
             }}
             #assetManagerScrollArea QScrollBar:vertical {{
-                background-color: {tm.get_variable('bg_secondary')};
+                background-color: {tm.get_variable('scrollbar_track')};
                 width: 12px;
                 border-radius: 6px;
             }}
             #assetManagerScrollArea QScrollBar::handle:vertical {{
-                background-color: {tm.get_variable('bg_tertiary')};
+                background-color: {tm.get_variable('scrollbar_handle')};
                 border-radius: 6px;
                 min-height: 20px;
             }}
             #assetManagerScrollArea QScrollBar::handle:vertical:hover {{
-                background-color: {tm.get_variable('bg_hover')};
+                background-color: {tm.get_variable('scrollbar_handle_hover')};
+            }}
+            #assetManagerScrollArea QScrollBar::handle:vertical:pressed {{
+                background-color: {tm.get_variable('scrollbar_handle_pressed')};
             }}
             
             /* 资产容器 */
@@ -1572,5 +1578,8 @@ class AssetManagerUI(QWidget):
             logger.info("资产管理器主题已刷新")
             
         except Exception as e:
+            logger.error(f"刷新资产管理器主题失败: {e}", exc_info=True)
+
+
             logger.error(f"刷新资产管理器主题失败: {e}", exc_info=True)
 

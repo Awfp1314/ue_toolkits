@@ -61,6 +61,7 @@ class SiteRecommendationsUI(QWidget):
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setObjectName("scrollArea")
+        # 不使用内联样式，让全局QSS生效
         
         # 站点容器
         self.sites_container = QWidget()
@@ -225,3 +226,4 @@ class SiteRecommendationsUI(QWidget):
             
         except Exception as e:
             logger.error(f"刷新站点推荐主题失败: {e}", exc_info=True)
+

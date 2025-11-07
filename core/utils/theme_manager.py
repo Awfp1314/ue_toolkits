@@ -112,6 +112,12 @@ class ThemeManager:
                 'danger': '#F44336',
                 'danger_hover': '#E53935',
                 
+                # 滚动条（高对比度）
+                'scrollbar_track': '#1a1a1a',      # 轨道：比背景更暗
+                'scrollbar_handle': '#505050',     # 手柄：明显灰色
+                'scrollbar_handle_hover': '#606060',   # 悬停：更亮
+                'scrollbar_handle_pressed': '#707070', # 按下：最亮
+                
                 # 透明度变体
                 'bg_primary_alpha': 'rgba(33, 33, 33, 0.85)',
                 'bg_secondary_alpha': 'rgba(43, 43, 43, 0.8)',
@@ -154,6 +160,12 @@ class ThemeManager:
                 # 危险操作
                 'danger': '#F44336',
                 'danger_hover': '#E53935',
+                
+                # 滚动条（高对比度）
+                'scrollbar_track': '#d0d0d0',      # 轨道：较深灰
+                'scrollbar_handle': '#909090',     # 手柄：深灰色
+                'scrollbar_handle_hover': '#808080',   # 悬停：更深
+                'scrollbar_handle_pressed': '#707070', # 按下：最深
                 
                 # 透明度变体
                 'bg_primary_alpha': 'rgba(255, 255, 255, 0.95)',
@@ -530,6 +542,18 @@ class ThemeManager:
 
 # 全局实例
 _global_theme_manager: Optional[ThemeManager] = None
+
+
+def get_theme_manager() -> ThemeManager:
+    """获取全局主题管理器实例
+    
+    Returns:
+        ThemeManager: 全局主题管理器
+    """
+    global _global_theme_manager
+    if _global_theme_manager is None:
+        _global_theme_manager = ThemeManager()
+    return _global_theme_manager
 
 
 def get_theme_manager() -> ThemeManager:

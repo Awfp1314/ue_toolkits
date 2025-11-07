@@ -9,27 +9,27 @@
  */
 
 /* ========================================
- * 垂直滚动条
+ * 垂直滚动条（统一为资产管理风格，高对比度，关联主题）
  * ======================================== */
 QScrollBar:vertical {
-    background: rgba(43, 43, 43, 0.8);
-    width: 15px;
-    border-radius: 4px;
+    background: ${scrollbar_track};
+    width: 12px;
+    border-radius: 6px;
     margin: 0px;
 }
 
 QScrollBar::handle:vertical {
-    background: rgba(68, 68, 68, 0.8);
-    border-radius: 4px;
+    background: ${scrollbar_handle};
+    border-radius: 6px;
     min-height: 20px;
 }
 
 QScrollBar::handle:vertical:hover {
-    background: rgba(85, 85, 85, 0.9);
+    background: ${scrollbar_handle_hover};
 }
 
 QScrollBar::handle:vertical:pressed {
-    background: rgba(102, 102, 102, 1.0);
+    background: ${scrollbar_handle_pressed};
 }
 
 QScrollBar::add-line:vertical,
@@ -45,27 +45,27 @@ QScrollBar::sub-page:vertical {
 }
 
 /* ========================================
- * 水平滚动条
+ * 水平滚动条（统一为资产管理风格，高对比度，关联主题）
  * ======================================== */
 QScrollBar:horizontal {
-    background: rgba(43, 43, 43, 0.8);
-    height: 15px;
-    border-radius: 4px;
+    background: ${scrollbar_track};
+    height: 12px;
+    border-radius: 6px;
     margin: 0px;
 }
 
 QScrollBar::handle:horizontal {
-    background: rgba(68, 68, 68, 0.8);
-    border-radius: 4px;
+    background: ${scrollbar_handle};
+    border-radius: 6px;
     min-width: 20px;
 }
 
 QScrollBar::handle:horizontal:hover {
-    background: rgba(85, 85, 85, 0.9);
+    background: ${scrollbar_handle_hover};
 }
 
 QScrollBar::handle:horizontal:pressed {
-    background: rgba(102, 102, 102, 1.0);
+    background: ${scrollbar_handle_pressed};
 }
 
 QScrollBar::add-line:horizontal,
@@ -83,8 +83,6 @@ QScrollBar::sub-page:horizontal {
 /* ========================================
  * 滚动区域容器
  * ======================================== */
-QScrollArea {
-    border: none;
-    background-color: transparent;
-}
+/* 注意：QScrollArea 的背景色由主题文件（dark.qss/light.qss）控制 */
+/* 这里只定义滚动条样式，不设置背景，避免覆盖主题设置 */
 

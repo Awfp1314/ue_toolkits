@@ -68,17 +68,21 @@ class RoundedBubble(QWidget):
 
 class CircleWidget(QWidget):
     """圆形绘制 widget"""
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, theme="dark"):
         super().__init__(parent)
         self.setFixedSize(20, 30)
         self._scale = 1.0
         self.parent_indicator = parent
+        self.theme = theme
     
     def paintEvent(self, event):
         """绘制圆形"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor("#E0E0E0"))
+        
+        # 根据主题选择颜色：深色主题用浅色，浅色主题用深色
+        color = "#E0E0E0" if self.theme == "dark" else "#565869"
+        painter.setBrush(QColor(color))
         painter.setPen(Qt.PenStyle.NoPen)
         
         # 从父对象获取缩放值
@@ -95,9 +99,10 @@ class CircleWidget(QWidget):
 class ThinkingIndicator(QWidget):
     """思考中动画指示器（呼吸式圆形 + "正在思考"文字）"""
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, theme="dark"):
         super().__init__(parent)
         self._scale = 1.0
+        self.theme = theme
         
         # 创建水平布局（圆形 + 文字）
         layout = QHBoxLayout(self)
@@ -105,32 +110,52 @@ class ThinkingIndicator(QWidget):
         layout.setSpacing(8)
         layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         
-        # 圆形容器
-        self.circle_widget = CircleWidget(self)
+        # 圆形容器（传递主题）
+        self.circle_widget = CircleWidget(self, theme=theme)
         layout.addWidget(self.circle_widget, 0, Qt.AlignmentFlag.AlignVCenter)
         
         # 设置圆形的透明度效果
         self.opacity_effect = QGraphicsOpacityEffect(self.circle_widget)
         self.circle_widget.setGraphicsEffect(self.opacity_effect)
         
-        # 文字标签（初始隐藏，ChatGPT风格）
+        # 文字标签（初始隐藏，每个字符独立动画）
         self.text_container = QWidget()
         self.text_container.setVisible(False)
         text_layout = QHBoxLayout(self.text_container)
         text_layout.setContentsMargins(0, 0, 0, 0)
-        text_layout.setSpacing(0)
+        text_layout.setSpacing(2)  # 字符间距
         
-        # 创建"正在思考..."标签（整体动画，更优雅）
-        self.thinking_label = QLabel("正在思考...")
-        self.thinking_label.setStyleSheet("font-size: 14px; color: #E0E0E0;")
-        self.thinking_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        # 根据主题选择颜色：深色主题用浅色，浅色主题用深色
+        text_color = "#E0E0E0" if theme == "dark" else "#565869"
         
-        # 为整个标签设置透明度效果（初始透明）
-        self.text_opacity_effect = QGraphicsOpacityEffect(self.thinking_label)
-        self.text_opacity_effect.setOpacity(0.3)  # 初始半透明
-        self.thinking_label.setGraphicsEffect(self.text_opacity_effect)
+        # 创建单独的字符标签（"正在思考"）
+        self.char_labels = []
+        self.char_opacity_effects = []
+        self.char_animations = []
         
-        text_layout.addWidget(self.thinking_label)
+        characters = ["正", "在", "思", "考"]
+        for char in characters:
+            label = QLabel(char)
+            # 使用和AI回答相同的字体样式
+            label.setStyleSheet(f"""
+                font-family: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", 
+                             "Source Han Sans CN", "思源黑体", "Hiragino Sans GB",
+                             "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
+                font-size: 18px;
+                font-weight: 500;
+                color: {text_color};
+            """)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            # 为每个字符创建透明度效果
+            opacity_effect = QGraphicsOpacityEffect(label)
+            opacity_effect.setOpacity(0.3)  # 初始半透明
+            label.setGraphicsEffect(opacity_effect)
+            
+            self.char_labels.append(label)
+            self.char_opacity_effects.append(opacity_effect)
+            text_layout.addWidget(label)
+        
         layout.addWidget(self.text_container, 0, Qt.AlignmentFlag.AlignVCenter)
         
         # 4秒后显示文字的定时器
@@ -138,10 +163,6 @@ class ThinkingIndicator(QWidget):
         self.show_text_timer.setSingleShot(True)
         self.show_text_timer.timeout.connect(self._show_thinking_text)
         self.show_text_timer.start(4000)  # 4秒后触发
-        
-        # 文字呼吸动画（ChatGPT风格）
-        self.text_fade_in = None
-        self.text_fade_out = None
         
         # 缩放动画（使用定时器实现循环）
         self.scale_anim_forward = QPropertyAnimation(self, b"scale")
@@ -187,27 +208,42 @@ class ThinkingIndicator(QWidget):
         self._start_text_animation()
     
     def _start_text_animation(self):
-        """启动文字呼吸动画（ChatGPT风格：整体柔和的透明度变化）"""
-        # 渐入动画（0.3 -> 1.0）
-        self.text_fade_in = QPropertyAnimation(self.text_opacity_effect, b"opacity")
-        self.text_fade_in.setStartValue(0.3)
-        self.text_fade_in.setEndValue(1.0)
-        self.text_fade_in.setDuration(1200)  # 1.2秒
-        self.text_fade_in.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        """启动文字动画：每个字符依次淡入淡出（从左到右波浪式）"""
+        # 为每个字符创建动画
+        stagger_delay = 250  # 每个字符之间的延迟（毫秒）
+        fade_duration = 500  # 单个字符淡入淡出的持续时间（毫秒）
         
-        # 渐出动画（1.0 -> 0.3）
-        self.text_fade_out = QPropertyAnimation(self.text_opacity_effect, b"opacity")
-        self.text_fade_out.setStartValue(1.0)
-        self.text_fade_out.setEndValue(0.3)
-        self.text_fade_out.setDuration(1200)  # 1.2秒
-        self.text_fade_out.setEasingCurve(QEasingCurve.Type.InOutQuad)
-        
-        # 连接动画完成信号，实现循环（柔和的呼吸效果）
-        self.text_fade_in.finished.connect(self.text_fade_out.start)
-        self.text_fade_out.finished.connect(self.text_fade_in.start)
-        
-        # 启动动画
-        self.text_fade_in.start()
+        for i, opacity_effect in enumerate(self.char_opacity_effects):
+            # 创建淡入动画（0.3 -> 1.0）
+            fade_in = QPropertyAnimation(opacity_effect, b"opacity")
+            fade_in.setStartValue(0.3)
+            fade_in.setEndValue(1.0)
+            fade_in.setDuration(fade_duration)
+            fade_in.setEasingCurve(QEasingCurve.Type.InOutSine)
+            
+            # 创建淡出动画（1.0 -> 0.3）
+            fade_out = QPropertyAnimation(opacity_effect, b"opacity")
+            fade_out.setStartValue(1.0)
+            fade_out.setEndValue(0.3)
+            fade_out.setDuration(fade_duration)
+            fade_out.setEasingCurve(QEasingCurve.Type.InOutSine)
+            
+            # 使用定时器实现延迟和循环
+            def create_animation_loop(fade_in_anim, fade_out_anim, delay):
+                """为每个字符创建循环动画"""
+                # 连接淡入和淡出
+                fade_in_anim.finished.connect(fade_out_anim.start)
+                fade_out_anim.finished.connect(fade_in_anim.start)
+                
+                # 延迟启动
+                QTimer.singleShot(delay, fade_in_anim.start)
+            
+            # 计算每个字符的延迟时间
+            delay = i * stagger_delay
+            create_animation_loop(fade_in, fade_out, delay)
+            
+            # 保存动画引用，防止被垃圾回收
+            self.char_animations.append((fade_in, fade_out))
     
     def get_scale(self):
         """获取缩放值"""
@@ -232,11 +268,10 @@ class ThinkingIndicator(QWidget):
         if self.show_text_timer and self.show_text_timer.isActive():
             self.show_text_timer.stop()
         
-        # 停止文字呼吸动画（ChatGPT风格）
-        if self.text_fade_in:
-            self.text_fade_in.stop()
-        if self.text_fade_out:
-            self.text_fade_out.stop()
+        # 停止所有字符动画
+        for fade_in, fade_out in self.char_animations:
+            fade_in.stop()
+            fade_out.stop()
 
 
 def markdown_to_html(text, theme="dark", compact=False):
@@ -1202,8 +1237,8 @@ class StreamingMarkdownMessage(QFrame):
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
         
-        # 思考动画指示器（初始显示）
-        self.thinking_indicator = ThinkingIndicator()
+        # 思考动画指示器（初始显示，传递主题）
+        self.thinking_indicator = ThinkingIndicator(theme=self.theme)
         container_layout.addWidget(self.thinking_indicator)
         
         # Markdown 内容渲染器（初始隐藏）
@@ -1480,6 +1515,13 @@ class StreamingMarkdownMessage(QFrame):
         if hasattr(self, 'markdown_browser') and self.current_text:
             html_content = markdown_to_html(self.current_text, self.theme)
             self.markdown_browser.setHtml(html_content)
+    
+    def showEvent(self, event):
+        """组件显示事件 - 切换回来时重新调整高度"""
+        super().showEvent(event)
+        # 强制重新调整高度，避免切换界面后内容被裁剪
+        if hasattr(self, 'markdown_browser') and self.markdown_browser.isVisible():
+            QTimer.singleShot(50, self.adjust_height)  # 延迟50ms确保布局完成
     
     def adjust_height(self):
         """自动调整高度"""

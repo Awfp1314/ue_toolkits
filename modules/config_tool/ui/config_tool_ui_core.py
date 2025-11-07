@@ -146,22 +146,32 @@ class ConfigToolUI(QWidget):
             
             QScrollArea#configScrollArea {{
                 border: none;
-                background-color: transparent;
+                background-color: {tm.get_variable('bg_primary')};
+            }}
+            
+            QScrollArea#configScrollArea > QWidget,
+            QScrollArea#configScrollArea QWidget#qt_scrollarea_viewport {{
+                background-color: {tm.get_variable('bg_primary')};
             }}
             
             QScrollArea#configScrollArea QScrollBar:vertical {{
-                background: {tm.get_variable('bg_secondary')};
-                width: 15px;
-                border-radius: 4px;
+                background: {tm.get_variable('scrollbar_track')};
+                width: 12px;
+                border-radius: 6px;
             }}
             
             QScrollArea#configScrollArea QScrollBar::handle:vertical {{
-                background: {tm.get_variable('bg_tertiary')};
-                border-radius: 4px;
+                background: {tm.get_variable('scrollbar_handle')};
+                border-radius: 6px;
+                min-height: 20px;
             }}
             
             QScrollArea#configScrollArea QScrollBar::handle:vertical:hover {{
-                background: {tm.get_variable('bg_hover')};
+                background: {tm.get_variable('scrollbar_handle_hover')};
+            }}
+            
+            QScrollArea#configScrollArea QScrollBar::handle:vertical:pressed {{
+                background: {tm.get_variable('scrollbar_handle_pressed')};
             }}
             
             QWidget#configContentContainer {{
@@ -183,6 +193,11 @@ class ConfigToolUI(QWidget):
     
     def refresh_config_list(self):
         """刷新配置列表"""
+        if self.logic:
+            self.config_templates = self.logic.get_templates()
+            self.update_config_buttons()
+
+
         if self.logic:
             self.config_templates = self.logic.get_templates()
             self.update_config_buttons()

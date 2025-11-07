@@ -49,10 +49,12 @@ class SettingsWidget(QWidget):
         
         # 创建滚动区域
         scroll_area = QScrollArea()
+        scroll_area.setObjectName("settingsScrollArea")
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # 不使用内联样式，让全局QSS生效
         
         # 创建内容容器
         content_widget = QWidget()
@@ -324,6 +326,49 @@ class SettingsWidget(QWidget):
             }}
             QPushButton#SaveButton:pressed {{
                 background-color: {tm.get_variable('accent_pressed')};
+            }}
+            
+            /* 滚动条样式 */
+            QScrollArea#settingsScrollArea {{
+                background-color: transparent;
+                border: none;
+            }}
+            
+            QScrollArea#settingsScrollArea > QWidget,
+            QScrollArea#settingsScrollArea QWidget#qt_scrollarea_viewport {{
+                background-color: transparent;
+            }}
+            
+            QScrollArea#settingsScrollArea QScrollBar:vertical {{
+                background: {tm.get_variable('scrollbar_track')};
+                width: 12px;
+                border-radius: 6px;
+            }}
+            
+            QScrollArea#settingsScrollArea QScrollBar::handle:vertical {{
+                background: {tm.get_variable('scrollbar_handle')};
+                border-radius: 6px;
+                min-height: 20px;
+            }}
+            
+            QScrollArea#settingsScrollArea QScrollBar::handle:vertical:hover {{
+                background: {tm.get_variable('scrollbar_handle_hover')};
+            }}
+            
+            QScrollArea#settingsScrollArea QScrollBar::handle:vertical:pressed {{
+                background: {tm.get_variable('scrollbar_handle_pressed')};
+            }}
+            
+            QScrollArea#settingsScrollArea QScrollBar::add-line:vertical,
+            QScrollArea#settingsScrollArea QScrollBar::sub-line:vertical {{
+                border: none;
+                background: none;
+                height: 0px;
+            }}
+            
+            QScrollArea#settingsScrollArea QScrollBar::add-page:vertical,
+            QScrollArea#settingsScrollArea QScrollBar::sub-page:vertical {{
+                background: none;
             }}
         """
         
@@ -904,9 +949,17 @@ class SettingsWidget(QWidget):
     def _apply_theme_to_app(self):
         """应用主题到整个应用"""
         try:
+            # 首先应用到整个 QApplication（重新加载全局 QSS，包括滚动条样式）
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app:
+                self.theme_manager.apply_to_application(app)
+                logger.info("主题已应用到整个应用")
+            
             main_window = self.window()
             
             if main_window:
+                # 然后应用到主窗口（对于特定样式）
                 self.theme_manager.apply_to_widget(main_window)
                 logger.info("主题已应用到主窗口")
                 
@@ -945,6 +998,16 @@ class SettingsWidget(QWidget):
                             logger.info("已刷新资产管理器主题")
                     except Exception as e:
                         logger.warning(f"刷新资产管理器主题失败: {e}")
+                    
+                    # 特别处理AI助手
+                    try:
+                        ai_assistant = main_window.module_provider.get_module("ai_assistant")
+                        if ai_assistant and hasattr(ai_assistant, 'chat_window') and ai_assistant.chat_window:
+                            if hasattr(ai_assistant.chat_window, 'refresh_theme'):
+                                ai_assistant.chat_window.refresh_theme()
+                                logger.info("已刷新AI助手主题")
+                    except Exception as e:
+                        logger.warning(f"刷新AI助手主题失败: {e}")
                 
         except Exception as e:
             logger.error(f"应用主题失败: {e}", exc_info=True)

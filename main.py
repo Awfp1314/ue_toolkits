@@ -133,12 +133,31 @@ def main():
                 except Exception as e:
                     logger.warning(f"加载主题设置失败，使用默认主题: {e}")
                 
+                # ========== 应用主题到应用程序 ==========
+                try:
+                    logger.info("正在应用主题样式到应用程序...")
+                    
+                    # 清除 ThemeManager 的样式缓存
+                    theme_manager.style_loader.clear_cache()
+                    logger.info("[ThemeManager] 已清除主题样式缓存")
+                    
+                    theme_manager.apply_to_application(app)
+                    logger.info(f"[OK] 主题样式已应用: {theme_manager.get_theme().value}")
+                    print(f"[ThemeManager] [OK] Applied theme: {theme_manager.get_theme().value}")
+                except Exception as e:
+                    logger.error(f"[ERROR] 应用主题失败: {e}", exc_info=True)
+                    print(f"[ThemeManager] [ERROR] Failed to apply theme: {e}")
+                
                 # ========== 加载 StyleLoader 组件样式 ==========
                 try:
                     from core.utils.style_loader import StyleLoader
                     
                     logger.info("正在加载全局 QSS 组件样式...")
                     style_loader = StyleLoader()
+                    
+                    # 清除样式缓存，确保加载最新的 QSS
+                    style_loader.clear_cache()
+                    logger.info("[StyleLoader] 已清除样式缓存")
                     
                     # 加载所有组件 QSS（自动替换变量）
                     component_qss = style_loader.load_all_components(replace_vars=True)
