@@ -37,7 +37,7 @@ class ToolsRegistry:
     v0.3: 扩展支持受控写入工具
     """
     
-    def __init__(self, asset_reader=None, config_reader=None, log_analyzer=None, document_reader=None):
+    def __init__(self, asset_reader=None, config_reader=None, log_analyzer=None, document_reader=None, asset_importer=None):
         """
         初始化工具注册表
         
@@ -46,18 +46,23 @@ class ToolsRegistry:
             config_reader: 配置读取器
             log_analyzer: 日志分析器
             document_reader: 文档读取器
+            asset_importer: 资产导入器（测试功能）
         """
         self.logger = logger
         self.asset_reader = asset_reader
         self.config_reader = config_reader
         self.log_analyzer = log_analyzer
         self.document_reader = document_reader
+        self.asset_importer = asset_importer
         
         # 工具注册表
         self.tools: Dict[str, ToolDefinition] = {}
         
         # 注册所有只读工具
         self._register_readonly_tools()
+        
+        # 注册测试功能工具
+        self._register_experimental_tools()
         
         self.logger.info(f"工具注册表初始化完成，共注册 {len(self.tools)} 个工具")
     
@@ -275,6 +280,56 @@ class ToolsRegistry:
         if self.document_reader:
             return self.document_reader.search_in_documents(keyword)
         return "[错误] 文档读取器未初始化"
+    
+    def _register_experimental_tools(self):
+        """注册实验性功能工具（测试版）"""
+        
+        # 1. 导入资产到UE项目
+        self.register_tool(ToolDefinition(
+            name="import_asset_to_ue",
+            description="将资产导入到正在运行的虚幻引擎项目（测试功能）",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "asset_name": {
+                        "type": "string",
+                        "description": "要导入的资产名称"
+                    },
+                    "target_project_path": {
+                        "type": "string",
+                        "description": "目标UE项目路径（可选）"
+                    }
+                },
+                "required": ["asset_name"]
+            },
+            function=self._tool_import_asset,
+            requires_confirmation=False  # 测试功能，简化流程
+        ))
+        
+        # 2. 列出可导入的资产
+        self.register_tool(ToolDefinition(
+            name="list_importable_assets",
+            description="列出所有可以导入到UE项目的资产",
+            parameters={
+                "type": "object",
+                "properties": {}
+            },
+            function=self._tool_list_importable_assets,
+            requires_confirmation=False
+        ))
+    
+    def _tool_import_asset(self, asset_name: str, target_project_path: str = None) -> str:
+        """导入资产工具实现"""
+        if self.asset_importer:
+            result = self.asset_importer.import_asset_to_ue(asset_name, target_project_path)
+            return result.get('message', '[错误] 导入失败')
+        return "[错误] 资产导入器未初始化"
+    
+    def _tool_list_importable_assets(self) -> str:
+        """列出可导入资产工具实现"""
+        if self.asset_importer:
+            return self.asset_importer.list_importable_assets()
+        return "[错误] 资产导入器未初始化"
     
     def _register_controlled_tools(self):
         """

@@ -224,18 +224,21 @@ class AIAssistantModule:
             from modules.ai_assistant.logic.config_reader import ConfigReader
             from modules.ai_assistant.logic.log_analyzer import LogAnalyzer
             from modules.ai_assistant.logic.document_reader import DocumentReader
+            from modules.ai_assistant.logic.asset_importer import AssetImporter
             
             asset_reader = AssetReader(self.asset_manager_logic)
             config_reader = ConfigReader(self.config_tool_logic)
             log_analyzer = LogAnalyzer()
             document_reader = DocumentReader()
+            asset_importer = AssetImporter(self.asset_manager_logic)  # 测试功能
             
             # 创建工具注册表
             self.tools_registry = ToolsRegistry(
                 asset_reader=asset_reader,
                 config_reader=config_reader,
                 log_analyzer=log_analyzer,
-                document_reader=document_reader
+                document_reader=document_reader,
+                asset_importer=asset_importer
             )
             
             logger.info("工具系统初始化完成")
