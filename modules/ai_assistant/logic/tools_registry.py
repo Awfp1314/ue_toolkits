@@ -37,7 +37,7 @@ class ToolsRegistry:
     v0.3: 扩展支持受控写入工具
     """
     
-    def __init__(self, asset_reader=None, config_reader=None, log_analyzer=None, document_reader=None, asset_importer=None):
+    def __init__(self, asset_reader=None, config_reader=None, log_analyzer=None, document_reader=None, asset_importer=None, theme_generator=None):
         """
         初始化工具注册表
         
@@ -47,6 +47,7 @@ class ToolsRegistry:
             log_analyzer: 日志分析器
             document_reader: 文档读取器
             asset_importer: 资产导入器（测试功能）
+            theme_generator: 主题生成器（测试功能）
         """
         self.logger = logger
         self.asset_reader = asset_reader
@@ -54,6 +55,7 @@ class ToolsRegistry:
         self.log_analyzer = log_analyzer
         self.document_reader = document_reader
         self.asset_importer = asset_importer
+        self.theme_generator = theme_generator
         
         # 工具注册表
         self.tools: Dict[str, ToolDefinition] = {}
@@ -313,6 +315,93 @@ class ToolsRegistry:
             function=self._tool_list_importable_assets,
             requires_confirmation=False
         ))
+        
+        # 3. 生成并应用主题
+        self.register_tool(ToolDefinition(
+            name="generate_and_apply_theme",
+            description="根据用户描述生成自定义主题并立即应用。生成后需要询问用户是否满意。",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "theme_name": {
+                        "type": "string",
+                        "description": "主题名称，建议使用英文"
+                    },
+                    "theme_description": {
+                        "type": "string",
+                        "description": "主题描述，用于向用户说明设计理念"
+                    },
+                    "color_variables": {
+                        "type": "object",
+                        "description": "颜色变量对象，必须包含bg_primary, bg_secondary, text_primary, text_secondary, accent, border等必需变量",
+                        "properties": {
+                            "bg_primary": {"type": "string"},
+                            "bg_secondary": {"type": "string"},
+                            "bg_tertiary": {"type": "string"},
+                            "bg_hover": {"type": "string"},
+                            "bg_pressed": {"type": "string"},
+                            "text_primary": {"type": "string"},
+                            "text_secondary": {"type": "string"},
+                            "text_tertiary": {"type": "string"},
+                            "text_disabled": {"type": "string"},
+                            "accent": {"type": "string"},
+                            "accent_hover": {"type": "string"},
+                            "accent_pressed": {"type": "string"},
+                            "border": {"type": "string"},
+                            "border_hover": {"type": "string"},
+                            "border_focus": {"type": "string"},
+                            "success": {"type": "string"},
+                            "warning": {"type": "string"},
+                            "error": {"type": "string"},
+                            "info": {"type": "string"},
+                            "bg_primary_alpha": {"type": "string"},
+                            "bg_secondary_alpha": {"type": "string"},
+                            "accent_alpha": {"type": "string"}
+                        },
+                        "required": ["bg_primary", "bg_secondary", "text_primary", "text_secondary", "accent", "border"]
+                    }
+                },
+                "required": ["theme_name", "theme_description", "color_variables"]
+            },
+            function=self._tool_generate_theme,
+            requires_confirmation=False
+        ))
+        
+        # 4. 确认保留主题
+        self.register_tool(ToolDefinition(
+            name="confirm_theme",
+            description="用户确认满意当前生成的主题，保留该主题",
+            parameters={
+                "type": "object",
+                "properties": {}
+            },
+            function=self._tool_confirm_theme,
+            requires_confirmation=False
+        ))
+        
+        # 5. 拒绝并删除主题
+        self.register_tool(ToolDefinition(
+            name="reject_theme",
+            description="用户不满意当前生成的主题，删除该主题并恢复默认主题",
+            parameters={
+                "type": "object",
+                "properties": {}
+            },
+            function=self._tool_reject_theme,
+            requires_confirmation=False
+        ))
+        
+        # 6. 列出所有可用主题
+        self.register_tool(ToolDefinition(
+            name="list_themes",
+            description="列出所有可用的主题（包括内置和自定义主题）",
+            parameters={
+                "type": "object",
+                "properties": {}
+            },
+            function=self._tool_list_themes,
+            requires_confirmation=False
+        ))
     
     def _tool_import_asset(self, asset_name: str) -> str:
         """导入资产工具实现（自动检测正在运行的UE项目）"""
@@ -326,6 +415,35 @@ class ToolsRegistry:
         if self.asset_importer:
             return self.asset_importer.list_importable_assets()
         return "[错误] 资产导入器未初始化"
+    
+    def _tool_generate_theme(self, theme_name: str, theme_description: str, color_variables: dict) -> str:
+        """生成主题工具实现"""
+        if self.theme_generator:
+            result = self.theme_generator.generate_and_apply_theme(theme_name, theme_description, color_variables)
+            if result.get('success'):
+                return result.get('preview_message', '[成功] 主题已生成并应用')
+            return result.get('message', '[错误] 生成主题失败')
+        return "[错误] 主题生成器未初始化"
+    
+    def _tool_confirm_theme(self) -> str:
+        """确认主题工具实现"""
+        if self.theme_generator:
+            result = self.theme_generator.confirm_theme()
+            return result.get('message', '[错误] 确认失败')
+        return "[错误] 主题生成器未初始化"
+    
+    def _tool_reject_theme(self) -> str:
+        """拒绝主题工具实现"""
+        if self.theme_generator:
+            result = self.theme_generator.reject_theme()
+            return result.get('message', '[错误] 删除失败')
+        return "[错误] 主题生成器未初始化"
+    
+    def _tool_list_themes(self) -> str:
+        """列出主题工具实现"""
+        if self.theme_generator:
+            return self.theme_generator.list_available_themes()
+        return "[错误] 主题生成器未初始化"
     
     def _register_controlled_tools(self):
         """

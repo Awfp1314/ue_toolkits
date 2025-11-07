@@ -538,6 +538,35 @@ class ThemeManager:
         except Exception as e:
             logger.error(f"导入主题失败: {e}", exc_info=True)
             raise
+    
+    def delete_custom_theme(self, theme_name: str):
+        """删除自定义主题
+        
+        Args:
+            theme_name: 要删除的主题名称
+            
+        Raises:
+            ValueError: 如果主题不存在
+        """
+        try:
+            if theme_name not in self._custom_themes:
+                raise ValueError(f"主题 '{theme_name}' 不存在")
+            
+            # 删除主题
+            del self._custom_themes[theme_name]
+            
+            # 保存到配置文件
+            self._save_custom_themes()
+            
+            # 如果当前正在使用这个主题，切换回深色主题
+            if self.current_custom_theme_name == theme_name:
+                self.set_theme(Theme.DARK)
+            
+            logger.info(f"主题删除成功: {theme_name}")
+            
+        except Exception as e:
+            logger.error(f"删除主题失败: {e}", exc_info=True)
+            raise
 
 
 # 全局实例
