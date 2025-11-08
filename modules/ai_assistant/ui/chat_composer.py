@@ -580,15 +580,12 @@ class ChatGPTComposer(QFrame):
 
     # ---- 对外 API ----
     def set_generating(self, generating: bool):
-        safe_print(f"[DEBUG] set_generating 被调用: {generating}")
+        # ⚡ 关键修复：防止重复设置相同状态
+        if self._is_generating == generating:
+            safe_print(f"[DEBUG] set_generating 跳过：状态已经是 {generating}")
+            return
         
-        # 添加调用栈追踪（只在设置为True时）
-        if generating:
-            import traceback
-            safe_print("[DEBUG] ===== 调用栈追踪 =====")
-            for line in traceback.format_stack()[:-1]:  # 排除当前行
-                safe_print(line.strip())
-            safe_print("[DEBUG] ========================")
+        safe_print(f"[DEBUG] set_generating 被调用: {generating}")
         
         self._is_generating = generating
         if generating:
@@ -652,7 +649,10 @@ class ChatGPTComposer(QFrame):
             return "gemini-2.5-flash"  # fallback
 
     def save_and_clear_message(self):
-        """兼容旧代码"""
+        """兼容旧代码
+        
+        注意：此方法不再调用 set_generating(True)，因为调用者应该在调用此方法之前设置状态
+        """
         self._last_message = self.edit.toPlainText().strip()
         self._last_images = self._images_base64.copy()
         self.edit.clear()
@@ -668,7 +668,7 @@ class ChatGPTComposer(QFrame):
         self.edit.setFixedHeight(self.edit._min_h)                       # 直接重置为最小高度 (36px)
         self.shell.setMinimumHeight(self.edit._min_h + 8)               # 同步更新外壳高度
         self.height_changed.emit()                                        # 发射高度变化信号
-        self.set_generating(True)
+        # ⚡ 修复：不再在这里调用 set_generating(True)，因为 _on_send_clicked 已经调用了
 
     # ---- 诊断与自检 ----
     def run_diagnostics(self) -> dict:
