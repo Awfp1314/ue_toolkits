@@ -15,20 +15,80 @@ from PyQt6.QtCore import QThread, pyqtSignal
 
 
 class IntentClassifier:
-    """意图分类器（基于规则）"""
+    """意图分类器（基于语义模型）"""
     
-    # 意图关键词
-    INTENT_KEYWORDS = {
-        'greeting': ['你好', '早上好', '下午好', '晚上好', '您好', 'hi', 'hello', '嗨', '哈喽'],
-        'thanks': ['谢谢', '多谢', '感谢', 'thanks', 'thank you', '谢了'],
-        'farewell': ['再见', '拜拜', '晚安', 'bye', 'goodbye', '88'],
-        'affirmation': ['好的', '好', '嗯', '行', 'ok', 'okay', '可以', '没问题']
+    # 各意图的标准示例（用于计算语义相似度）
+    INTENT_EXAMPLES = {
+        'greeting': [
+            '你好', '早上好', '下午好', '晚上好', '您好', 
+            'hi', 'hello', '嗨', '哈喽', '早啊', '嗨喽'
+        ],
+        'thanks': [
+            '谢谢', '多谢', '感谢', 'thanks', 'thank you', 
+            '谢了', '非常感谢', '太感谢了'
+        ],
+        'farewell': [
+            '再见', '拜拜', '晚安', 'bye', 'goodbye', 
+            '88', '回见', '下次见'
+        ],
+        'affirmation': [
+            '好的', '嗯嗯', '嗯', '行', 'ok', 'okay', 
+            '没问题', '收到', '明白了', '知道了'
+        ]
     }
     
-    @staticmethod
-    def classify(message: str) -> Optional[str]:
+    # 工具调用相关的示例（用于排除）
+    TOOL_CALL_EXAMPLES = [
+        '查看资产', '帮我找文件', '列出所有', '显示配置',
+        '搜索一下', '打开文件', '创建项目', '删除资产',
+        '你能帮我', '可以帮我', '麻烦帮我', '我想看看'
+    ]
+    
+    def __init__(self):
+        """初始化分类器（延迟加载embedding服务）"""
+        self._embedding_service = None
+        self._intent_embeddings = None
+        self._tool_embeddings = None
+    
+    def _get_embedding_service(self):
+        """延迟获取embedding服务"""
+        if self._embedding_service is None:
+            try:
+                from .embedding_service import EmbeddingService
+                self._embedding_service = EmbeddingService()
+            except Exception as e:
+                print(f"[WARNING] [NLU] 无法加载embedding服务: {e}")
+                return None
+        return self._embedding_service
+    
+    def _compute_intent_embeddings(self):
+        """预计算所有意图示例的embeddings"""
+        if self._intent_embeddings is not None:
+            return
+        
+        service = self._get_embedding_service()
+        if not service:
+            return
+        
+        try:
+            self._intent_embeddings = {}
+            for intent, examples in self.INTENT_EXAMPLES.items():
+                # 为每个意图计算所有示例的平均embedding
+                embeddings = [service.get_embedding(ex) for ex in examples]
+                # 计算平均值
+                import numpy as np
+                avg_embedding = np.mean(embeddings, axis=0)
+                self._intent_embeddings[intent] = avg_embedding
+            
+            # 计算工具调用示例的平均embedding
+            tool_embeddings = [service.get_embedding(ex) for ex in self.TOOL_CALL_EXAMPLES]
+            self._tool_embeddings = np.mean(tool_embeddings, axis=0)
+        except Exception as e:
+            print(f"[WARNING] [NLU] 计算意图embeddings失败: {e}")
+    
+    def classify(self, message: str) -> Optional[str]:
         """
-        分类用户意图
+        基于语义相似度分类用户意图
         
         Args:
             message: 用户消息
@@ -36,23 +96,65 @@ class IntentClassifier:
         Returns:
             意图类型或None（不适合本地处理）
         """
-        message = message.strip().lower()
+        message = message.strip()
         
-        # 规则1：长度检查（超过20字符不处理）
-        if len(message) > 20:
+        # 规则1：长度检查（超过30字符不处理）
+        if len(message) > 30:
             return None
         
-        # 规则2：包含疑问词（需要大模型处理）
-        question_words = ['什么', '怎么', '为什么', '如何', '哪里', '怎样', '为何', '谁', '?', '？']
+        # 规则2：包含明显的疑问词（快速排除）
+        question_words = ['什么', '怎么', '为什么', '如何', '哪里', '哪', '哪些', '怎样', '为何', '谁', '?', '？']
         if any(qw in message for qw in question_words):
             return None
         
-        # 规则3：关键词匹配
-        for intent, keywords in IntentClassifier.INTENT_KEYWORDS.items():
-            if any(kw in message for kw in keywords):
-                return intent
+        # 使用语义模型判断
+        service = self._get_embedding_service()
+        if not service:
+            # 如果embedding服务不可用，回退到None（交给LLM处理）
+            return None
         
-        return None
+        try:
+            # 确保意图embeddings已计算
+            self._compute_intent_embeddings()
+            if not self._intent_embeddings:
+                return None
+            
+            # 计算用户输入的embedding
+            message_embedding = service.get_embedding(message)
+            
+            # 计算与工具调用的相似度
+            import numpy as np
+            if self._tool_embeddings is not None:
+                tool_similarity = np.dot(message_embedding, self._tool_embeddings) / (
+                    np.linalg.norm(message_embedding) * np.linalg.norm(self._tool_embeddings)
+                )
+                # 如果与工具调用相似度较高，不处理
+                if tool_similarity > 0.6:
+                    return None
+            
+            # 计算与各意图的相似度
+            best_intent = None
+            best_score = 0.0
+            
+            for intent, intent_embedding in self._intent_embeddings.items():
+                similarity = np.dot(message_embedding, intent_embedding) / (
+                    np.linalg.norm(message_embedding) * np.linalg.norm(intent_embedding)
+                )
+                if similarity > best_score:
+                    best_score = similarity
+                    best_intent = intent
+            
+            # 只有相似度足够高（>0.7）才返回意图
+            if best_score > 0.7:
+                print(f"[DEBUG] [NLU-语义] 消息: '{message}' -> 意图: {best_intent}, 相似度: {best_score:.3f}")
+                return best_intent
+            else:
+                print(f"[DEBUG] [NLU-语义] 消息: '{message}' -> 相似度不足 ({best_score:.3f})，交给LLM")
+                return None
+                
+        except Exception as e:
+            print(f"[WARNING] [NLU] 语义分类失败: {e}")
+            return None
 
 
 class TemplateCache:
