@@ -82,6 +82,16 @@ class APIClient(QThread):
     
     def run(self):
         """执行 LLM 请求（使用策略模式）"""
+        # ⚠️ 关键调试：追踪APIClient启动
+        import traceback
+        call_stack = ''.join(traceback.format_stack())
+        print(f"\n{'='*80}")
+        print(f"[API_CLIENT] ⚠️ APIClient.run() 被调用！")
+        print(f"[API_CLIENT] 消息数量: {len(self.messages)}")
+        print(f"[API_CLIENT] 工具数量: {len(self.tools) if self.tools else 0}")
+        print(f"[API_CLIENT] 调用堆栈:\n{call_stack}")
+        print(f"{'='*80}\n")
+        
         try:
             # 创建策略客户端
             from modules.ai_assistant.clients import create_llm_client

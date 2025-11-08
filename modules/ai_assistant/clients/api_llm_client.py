@@ -76,6 +76,16 @@ class ApiLLMClient(BaseLLMClient):
         Yields:
             str: 响应的 token 块
         """
+        # ⚠️ 关键调试：追踪API调用来源
+        import traceback
+        call_stack = ''.join(traceback.format_stack())
+        print(f"\n{'='*80}")
+        print(f"[API_CALL] ⚠️ generate_response 被调用！")
+        print(f"[API_CALL] 消息数量: {len(context_messages)}")
+        print(f"[API_CALL] 工具数量: {len(tools) if tools else 0}")
+        print(f"[API_CALL] 调用堆栈:\n{call_stack}")
+        print(f"{'='*80}\n")
+        
         try:
             # 清除环境变量中的代理设置（临时）
             env_backup = {}
