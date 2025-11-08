@@ -575,21 +575,20 @@ class ChatGPTComposer(QFrame):
                 w.setParent(None)
         self._preview_holder.setVisible(False)
         
-        try:
-            # 发射信号，使用保存的消息和图片
-            safe_print(f"[DEBUG] 准备发射信号，消息: {self._last_message[:20] if len(self._last_message) > 20 else self._last_message}")
-            if self._last_images:
-                # 如果有图片，只发射 submitted_detail
-                safe_print("[DEBUG] 发射 submitted_detail 信号（带图片）")
-                self.submitted_detail.emit(self._last_message, self._last_images.copy())
-            else:
-                # 如果没有图片，只发射 submitted
-                safe_print("[DEBUG] 发射 submitted 信号（无图片）")
-                self.submitted.emit(self._last_message)
-            safe_print("[DEBUG] 信号发射完成")
-        finally:
-            # ⚡ 重置处理标志，允许下次发送
-            self._processing_send = False
+        # 发射信号，使用保存的消息和图片
+        safe_print(f"[DEBUG] 准备发射信号，消息: {self._last_message[:20] if len(self._last_message) > 20 else self._last_message}")
+        if self._last_images:
+            # 如果有图片，只发射 submitted_detail
+            safe_print("[DEBUG] 发射 submitted_detail 信号（带图片）")
+            self.submitted_detail.emit(self._last_message, self._last_images.copy())
+        else:
+            # 如果没有图片，只发射 submitted
+            safe_print("[DEBUG] 发射 submitted 信号（无图片）")
+            self.submitted.emit(self._last_message)
+        safe_print("[DEBUG] 信号发射完成")
+        
+        # ⚡ 注意：不要在这里重置 _processing_send，因为信号处理可能还在进行中
+        # 会在 set_generating(False) 时自动重置
 
     # ---- 对外 API ----
     def set_generating(self, generating: bool):
@@ -617,6 +616,9 @@ class ChatGPTComposer(QFrame):
             self.shell.setProperty("hasText", "true" if self.edit.toPlainText().strip() else "false")
             self.shell.style().unpolish(self.shell)
             self.shell.style().polish(self.shell)
+            # ⚡ 重置发送处理标志，允许下次发送
+            self._processing_send = False
+            safe_print("[DEBUG] 已重置 _processing_send 标志")
         self.btn_send.style().unpolish(self.btn_send)
         self.btn_send.style().polish(self.btn_send)
         safe_print(f"[DEBUG] 按钮状态已更新，enabled: {self.btn_send.isEnabled()}")
