@@ -553,6 +553,10 @@ class ChatGPTComposer(QFrame):
         if not text and not self._images:
             return
 
+        # ⚡ 关键修复：立即设置生成状态，防止重复点击
+        # 在清空输入框和发射信号之前就设置，避免在 processEvents 时重复触发
+        self.set_generating(True)
+
         # 保存消息
         self._last_message = text
         self._last_images = self._images_base64.copy()
@@ -573,7 +577,6 @@ class ChatGPTComposer(QFrame):
             if w:
                 w.setParent(None)
         self._preview_holder.setVisible(False)
-        self.set_generating(True)
 
     # ---- 对外 API ----
     def set_generating(self, generating: bool):
