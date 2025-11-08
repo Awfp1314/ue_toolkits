@@ -20,6 +20,12 @@ from modules.ai_assistant.ui.chat_composer import ChatGPTComposer
 from modules.ai_assistant.logic.config import SYSTEM_PROMPT
 from modules.ai_assistant.logic.context_manager import ContextManager
 
+# 7.0 模块导入（延迟导入，避免启动卡顿）
+_prompt_cache_manager = None
+_local_nlu = None
+_query_rewriter = None
+_smart_prefetcher = None
+
 
 def safe_print(msg: str):
     """安全的 print 函数，避免 Windows 控制台编码错误"""
@@ -133,8 +139,50 @@ class ChatWindow(QWidget):
         self._status_check_timer = None  # 状态检查定时器
         self._connection_check_thread = None  # 后台连接检查线程（避免阻塞主线程）
         
+        # 7.0组件（延迟初始化，避免启动卡顿）
+        self._7_0_initialized = False
+        
         self.init_ui()
         self.load_theme(self.current_theme)
+    
+    def _init_7_0_components(self):
+        """延迟初始化7.0组件（首次发送消息时调用）"""
+        global _prompt_cache_manager, _local_nlu, _query_rewriter, _smart_prefetcher
+        
+        if self._7_0_initialized:
+            return
+        
+        try:
+            print("[DEBUG] [7.0] 开始延迟初始化7.0组件...")
+            
+            # 导入并初始化PromptCacheManager
+            from modules.ai_assistant.logic.prompt_cache import PromptCacheManager
+            _prompt_cache_manager = PromptCacheManager(max_cache_size=50)
+            print("[DEBUG] [7.0-P6] PromptCacheManager 已初始化")
+            
+            # 导入并初始化LocalNLU
+            from modules.ai_assistant.logic.local_nlu import LocalNLU
+            _local_nlu = LocalNLU()
+            print("[DEBUG] [7.0-P10] LocalNLU 已初始化")
+            
+            # 导入并初始化QueryRewriter
+            from modules.ai_assistant.logic.query_rewriter import QueryRewriter
+            _query_rewriter = QueryRewriter()
+            print("[DEBUG] [7.0-P7] QueryRewriter 已初始化")
+            
+            # SmartPrefetcher延迟到有context_manager时初始化
+            _smart_prefetcher = None
+            print("[DEBUG] [7.0-P9] SmartPrefetcher 将在context_manager就绪后初始化")
+            
+            self._7_0_initialized = True
+            print("[DEBUG] [7.0] 所有7.0组件初始化完成！")
+            
+        except Exception as e:
+            print(f"[ERROR] [7.0] 初始化7.0组件失败: {e}")
+            import traceback
+            traceback.print_exc()
+            # 即使失败也标记为已初始化，避免重复尝试
+            self._7_0_initialized = True
     
     def _get_system_prompt(self) -> str:
         """获取系统提示词（统一使用完整版）"""
@@ -957,6 +1005,80 @@ class ChatWindow(QWidget):
             
             # 添加用户消息
             self.add_message(message, is_user=True)
+            
+            # ========================================
+            # 7.0-P10: 本地NLU检查（带流式效果）
+            # ========================================
+            self._init_7_0_components()  # 延迟初始化
+            
+            global _local_nlu
+            if _local_nlu:
+                intent = _local_nlu.can_handle_locally(message)
+                if intent:
+                    # 获取当前AI身份
+                    current_identity = ""
+                    if self.context_manager and hasattr(self.context_manager, 'memory'):
+                        current_identity = self.context_manager.memory.get_user_identity() or ""
+                    
+                    # 生成本地响应（基于当前身份）
+                    local_response = _local_nlu.get_local_response(intent, current_identity)
+                    
+                    print(f"[DEBUG] [7.0-P10] ===== 本地NLU处理 =====")
+                    print(f"  意图: {intent}")
+                    print(f"  响应: {local_response}")
+                    print(f"  统计: {_local_nlu.get_stats()}")
+                    print(f"  Token消耗: 0")
+                    print(f"[DEBUG] [7.0-P10] ============================")
+                    
+                    # 添加流式输出气泡
+                    self.add_streaming_bubble()
+                    
+                    # 模拟流式输出效果（匹配真实AI的打字速度）
+                    import time
+                    from PyQt6.QtWidgets import QApplication
+                    
+                    for i, char in enumerate(local_response):
+                        self._text_buffer += char
+                        # 每个字符刷新一次（更自然）
+                        if (i + 1) % 1 == 0:
+                            self._flush_text_buffer()
+                            QApplication.processEvents()
+                            time.sleep(0.05)  # 50ms延迟，匹配真实AI速度
+                    
+                    # 刷新剩余内容
+                    if self._text_buffer:
+                        self._flush_text_buffer()
+                    
+                    # 停止更新定时器（如果在运行）
+                    if self._update_timer.isActive():
+                        self._update_timer.stop()
+                    
+                    # 完成流式输出
+                    if self.current_streaming_bubble:
+                        self.current_streaming_bubble.finish()
+                        self.current_streaming_bubble = None
+                    
+                    # 添加到对话历史
+                    self.conversation_history.append({"role": "user", "content": message})
+                    self.conversation_history.append({"role": "assistant", "content": local_response})
+                    
+                    # 更新token显示为0
+                    self.update_token_count(0)
+                    
+                    # 解锁输入框（确保完全恢复状态）
+                    self.input_field.unlock()
+                    self.input_field.setFocus()  # 设置焦点到输入框
+                    
+                    # 恢复发送按钮状态（关键！）
+                    self.input_area.set_generating(False)
+                    
+                    # 清空缓冲区
+                    self._text_buffer = ""
+                    
+                    print(f"[DEBUG] [7.0-P10] 本地NLU处理完成，输入框已解锁")
+                    
+                    # 本地NLU处理完成，不调用API
+                    return
             
             # Token优化：检查并压缩历史对话
             if self.context_manager and hasattr(self.context_manager, 'memory'):
