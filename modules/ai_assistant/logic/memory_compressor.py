@@ -184,7 +184,9 @@ class MemoryCompressor:
             timeout_timer.timeout.connect(loop.quit)
             timeout_timer.start(30000)
             
-            loop.exec()
+            # ⚡ 关键修复：排除用户输入事件，防止在压缩期间处理键盘/鼠标事件
+            # 这样可以避免用户点击按钮时事件积压导致重复触发
+            loop.exec(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
             
             # 检查错误
             if error_message:

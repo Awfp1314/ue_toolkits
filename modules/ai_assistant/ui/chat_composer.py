@@ -546,6 +546,10 @@ class ChatGPTComposer(QFrame):
 
     # ---- 发送/停止 ----
     def _on_send_clicked(self):
+        # ⚡ 重入保护：防止在 processEvents 嵌套事件循环时重复触发
+        if hasattr(self, '_processing_send') and self._processing_send:
+            return
+            
         if self._is_generating:
             self.stop_requested.emit()
             return
@@ -555,6 +559,7 @@ class ChatGPTComposer(QFrame):
 
         # ⚡ 关键修复：立即设置生成状态，防止重复点击
         # 在清空输入框和发射信号之前就设置，避免在 processEvents 时重复触发
+        self._processing_send = True  # 标记正在处理
         self.set_generating(True)
 
         # 保存消息
@@ -562,12 +567,16 @@ class ChatGPTComposer(QFrame):
         self._last_images = self._images_base64.copy()
 
         # 只发射一个信号，避免重复处理
-        if self._images_base64:
-            # 如果有图片，只发射 submitted_detail
-            self.submitted_detail.emit(text, self._images_base64.copy())
-        else:
-            # 如果没有图片，只发射 submitted
-            self.submitted.emit(text)
+        try:
+            if self._images_base64:
+                # 如果有图片，只发射 submitted_detail
+                self.submitted_detail.emit(text, self._images_base64.copy())
+            else:
+                # 如果没有图片，只发射 submitted
+                self.submitted.emit(text)
+        finally:
+            # ⚡ 重置处理标志，允许下次发送
+            self._processing_send = False
         
         self.edit.clear()
         self._images.clear()
@@ -582,11 +591,9 @@ class ChatGPTComposer(QFrame):
     def set_generating(self, generating: bool):
         # ⚡ 关键修复：防止重复设置相同状态
         if self._is_generating == generating:
-            safe_print(f"[DEBUG] set_generating 跳过：状态已经是 {generating}")
             return
         
         safe_print(f"[DEBUG] set_generating 被调用: {generating}")
-        
         self._is_generating = generating
         if generating:
             self.btn_send.setEnabled(True)
