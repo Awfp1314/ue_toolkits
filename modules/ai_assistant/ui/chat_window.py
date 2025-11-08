@@ -160,10 +160,10 @@ class ChatWindow(QWidget):
             _prompt_cache_manager = PromptCacheManager(max_cache_size=50)
             print("[DEBUG] [7.0-P6] PromptCacheManager 已初始化")
             
-            # 导入并初始化LocalNLU
-            from modules.ai_assistant.logic.local_nlu import LocalNLU
-            _local_nlu = LocalNLU()
-            print("[DEBUG] [7.0-P10] LocalNLU 已初始化")
+            # ⚠️ 本地NLU已禁用：模板回复过于生硬，直接使用LLM保证用户体验
+            # from modules.ai_assistant.logic.local_nlu import LocalNLU
+            # _local_nlu = LocalNLU()
+            # print("[DEBUG] [7.0-P10] LocalNLU 已初始化")
             
             # 导入并初始化QueryRewriter
             from modules.ai_assistant.logic.query_rewriter import QueryRewriter
@@ -1087,88 +1087,11 @@ class ChatWindow(QWidget):
             # 添加用户消息
             self.add_message(message, is_user=True)
             
-            # ========================================
-            # 7.0-P10: 本地NLU检查（异步模板生成）
-            # ========================================
-            self._init_7_0_components()  # 延迟初始化
+            # ⚠️ 本地NLU已禁用：为了保证自然流畅的用户体验，所有消息都使用LLM处理
+            # 未来可以考虑使用本地小模型（如Ollama）来优化Token消耗
             
-            global _local_nlu
-            if _local_nlu:
-                intent = _local_nlu.can_handle_locally(message)
-                if intent:
-                    # 获取当前AI身份
-                    current_identity = ""
-                    if self.context_manager and hasattr(self.context_manager, 'memory'):
-                        current_identity = self.context_manager.memory.get_user_identity() or ""
-                    
-                    print(f"[DEBUG] [7.0-P10] 检测到本地意图: {intent}")
-                    
-                    # 检查是否需要生成模板
-                    needs_generation = _local_nlu.needs_template_generation(current_identity)
-                    
-                    if needs_generation:
-                        # ====================================
-                        # 异步生成模板流程
-                        # ====================================
-                        print(f"[DEBUG] [7.0-P10] 缓存未命中，启动异步模板生成...")
-                        
-                        # 显示思考动画
-                        self.add_streaming_bubble()
-                        self._render_thinking_message("正在为您生成个性化回复...")
-                        
-                        # 创建异步生成线程
-                        from modules.ai_assistant.logic.local_nlu import AsyncTemplateGeneratorThread
-                        self._template_generator_thread = AsyncTemplateGeneratorThread(current_identity)
-                        
-                        # 连接成功信号
-                        def on_generation_success(templates):
-                            print(f"[DEBUG] [7.0-P10] 模板生成成功！")
-                            
-                            # 保存到缓存
-                            _local_nlu.save_generated_templates(current_identity, templates)
-                            
-                            # 从模板获取响应
-                            local_response = _local_nlu.get_cached_response(intent, current_identity)
-                            if not local_response:
-                                local_response = "你好！很高兴见到你。"  # 默认回复
-                            
-                            # 显示实际回复（带流式效果）
-                            self._show_nlu_response(message, intent, local_response)
-                        
-                        # 连接失败信号
-                        def on_generation_failed(error_msg):
-                            print(f"[WARNING] [7.0-P10] 模板生成失败: {error_msg}，使用中性模板")
-                            
-                            # 使用中性模板作为后备
-                            local_response = _local_nlu.get_cached_response(intent, None)
-                            if not local_response:
-                                local_response = "你好！很高兴见到你。"
-                            
-                            # 显示回复
-                            self._show_nlu_response(message, intent, local_response)
-                        
-                        self._template_generator_thread.generation_finished.connect(on_generation_success)
-                        self._template_generator_thread.generation_failed.connect(on_generation_failed)
-                        
-                        # 启动生成
-                        self._template_generator_thread.start()
-                        
-                        # 注意：此时不返回，因为异步操作会在回调中完成
-                        return
-                    
-                    else:
-                        # ====================================
-                        # 直接从缓存获取响应（同步流程）
-                        # ====================================
-                        print(f"[DEBUG] [7.0-P10] 缓存命中或使用中性模板")
-                        
-                        local_response = _local_nlu.get_cached_response(intent, current_identity)
-                        if not local_response:
-                            local_response = "你好！很高兴见到你。"
-                        
-                        # 显示回复（带流式效果）
-                        self._show_nlu_response(message, intent, local_response)
-                        return
+            # 延迟初始化7.0组件
+            self._init_7_0_components()
             
             # Token优化：检查并压缩历史对话
             if self.context_manager and hasattr(self.context_manager, 'memory'):
