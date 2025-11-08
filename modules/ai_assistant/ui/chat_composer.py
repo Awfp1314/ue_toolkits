@@ -540,21 +540,28 @@ class ChatGPTComposer(QFrame):
                     self.edit.textCursor().insertText("\n")
                     return True
                 elif ke.modifiers() == Qt.KeyboardModifier.NoModifier:
+                    safe_print("[DEBUG] eventFilter 捕获到 Enter 键，调用 _on_send_clicked")
                     self._on_send_clicked()
+                    safe_print("[DEBUG] eventFilter 处理完成，返回 True 阻止事件传播")
                     return True
         return super().eventFilter(obj, ev)
 
     # ---- 发送/停止 ----
     def _on_send_clicked(self):
+        safe_print(f"[DEBUG] ⚠️ _on_send_clicked 被调用，_processing_send={getattr(self, '_processing_send', False)}")
+        
         # ⚡ 重入保护：防止在 processEvents 嵌套事件循环时重复触发
         if hasattr(self, '_processing_send') and self._processing_send:
+            safe_print("[DEBUG] ⛔ 重入保护触发，拒绝重复调用")
             return
             
         if self._is_generating:
+            safe_print("[DEBUG] 当前正在生成，发送停止信号")
             self.stop_requested.emit()
             return
         text = self.edit.toPlainText().strip()
         if not text and not self._images:
+            safe_print("[DEBUG] 消息为空且无图片，取消发送")
             return
 
         # ⚡ 关键修复：保存消息和图片，在信号处理完成后再清空
