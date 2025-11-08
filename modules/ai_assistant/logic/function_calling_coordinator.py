@@ -166,9 +166,9 @@ class FunctionCallingCoordinator(QThread):
                 elif response_data['type'] == 'content':
                     # LLM 返回最终文本（第一次非流式调用已获取）
                     print(f"[DEBUG] [FunctionCalling] LLM 返回最终回复（无需工具调用）")
-                    print(f"[DEBUG] [FunctionCalling] ⚡ 使用第一次调用的结果，避免重复API请求")
+                    print(f"[DEBUG] [FunctionCalling] [OPTIMIZATION] 使用第一次调用的结果，避免重复API请求")
                     
-                    # ⚡ 关键修复：直接使用第一次调用的content，避免第二次API调用
+                    # [OPTIMIZATION] 关键修复：直接使用第一次调用的content，避免第二次API调用
                     content = response_data.get('content', '')
                     usage = response_data.get('usage')  # 获取token使用统计
                     
