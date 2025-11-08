@@ -294,8 +294,12 @@ class FunctionCallingCoordinator(QThread):
             print(f"[DEBUG] [FunctionCalling] 捕获到异常: {error_msg}")
             # 如果是模型不支持工具的错误，尝试不带 tools 参数重新调用
             if 'does not support tools' in error_msg or 'tools' in error_msg.lower():
-                print(f"[WARNING] [FunctionCalling] 流式输出时检测到模型不支持工具，重试（无工具）")
-                print(f"[WARNING] [FunctionCalling] ⚠️ 即将进行第二次API调用！")
+                print(f"\n{'='*80}")
+                print(f"[RETRY_DETECTED] !!! 检测到重试逻辑被触发！")
+                print(f"[RETRY_DETECTED] 原始错误: {error_msg}")
+                print(f"[RETRY_DETECTED] 即将进行第二次API调用（无tools参数）")
+                print(f"[RETRY_DETECTED] 消息数量: {len(messages)}")
+                print(f"{'='*80}\n")
                 for chunk in self.llm_client.generate_response(messages, stream=True, tools=None):
                     if self._should_stop:
                         break

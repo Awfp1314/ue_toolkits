@@ -548,11 +548,11 @@ class ChatGPTComposer(QFrame):
 
     # ---- 发送/停止 ----
     def _on_send_clicked(self):
-        safe_print(f"[DEBUG] ⚠️ _on_send_clicked 被调用，_processing_send={getattr(self, '_processing_send', False)}")
+        safe_print(f"[DEBUG] !!! _on_send_clicked 被调用，_processing_send={getattr(self, '_processing_send', False)}")
         
         # ⚡ 重入保护：防止在 processEvents 嵌套事件循环时重复触发
         if hasattr(self, '_processing_send') and self._processing_send:
-            safe_print("[DEBUG] ⛔ 重入保护触发，拒绝重复调用")
+            safe_print("[DEBUG] [BLOCKED] 重入保护触发，拒绝重复调用")
             return
             
         if self._is_generating:
