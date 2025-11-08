@@ -173,15 +173,26 @@ class FunctionCallingCoordinator(QThread):
                     usage = response_data.get('usage')  # 获取token使用统计
                     
                     if content:
-                        # 模拟流式输出（逐字发送给UI，提供流畅体验）
+                        # 模拟自然的流式输出（模仿真实AI打字节奏）
                         import time
+                        import random
                         buffer = ""
                         for i, char in enumerate(content):
                             buffer += char
-                            # 每1个字符发送一次，打字机效果
+                            # 每1个字符发送一次
                             self.chunk_received.emit(buffer)
                             buffer = ""
-                            time.sleep(0.02)  # 20毫秒延迟，快速但仍有打字机效果
+                            
+                            # 自然的延迟：基础延迟 + 随机波动
+                            base_delay = 0.015  # 15ms基础延迟
+                            random_variation = random.uniform(-0.005, 0.01)  # ±5~10ms随机波动
+                            delay = base_delay + random_variation
+                            
+                            # 在标点符号后增加额外停顿（更自然）
+                            if char in '，。！？；：、,.:;!?\n':
+                                delay += random.uniform(0.05, 0.1)  # 标点后停顿50-100ms
+                            
+                            time.sleep(max(0.001, delay))  # 确保延迟不为负数
                     
                     # ⚡ 发送token使用统计（如果有）
                     if usage:
