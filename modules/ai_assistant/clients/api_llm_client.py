@@ -157,8 +157,8 @@ class ApiLLMClient(BaseLLMClient):
                                 data = json.loads(data_str)
                                 
                                 # ⚡ 提取 token 使用量（在响应中可能出现）
-                                if 'usage' in data:
-                                    usage = data['usage']
+                                usage = data.get('usage')
+                                if usage and isinstance(usage, dict):
                                     yield {
                                         'type': 'token_usage',
                                         'usage': {
