@@ -184,13 +184,13 @@ class FunctionCallingCoordinator(QThread):
                             buffer = ""
                             
                             # 自然的延迟：基础延迟 + 随机波动
-                            base_delay = 0.015  # 15ms基础延迟
-                            random_variation = random.uniform(-0.005, 0.01)  # ±5~10ms随机波动
+                            base_delay = 0.008  # 8ms基础延迟（更快）
+                            random_variation = random.uniform(-0.002, 0.005)  # ±2~5ms随机波动
                             delay = base_delay + random_variation
                             
                             # 在标点符号后增加额外停顿（更自然）
                             if char in '，。！？；：、,.:;!?\n':
-                                delay += random.uniform(0.05, 0.1)  # 标点后停顿50-100ms
+                                delay += random.uniform(0.02, 0.04)  # 标点后停顿20-40ms
                             
                             time.sleep(max(0.001, delay))  # 确保延迟不为负数
                     

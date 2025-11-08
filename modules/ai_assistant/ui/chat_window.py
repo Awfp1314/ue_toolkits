@@ -1063,15 +1063,22 @@ class ChatWindow(QWidget):
             message: 可选的消息内容。如果未提供，则从输入框读取
         """
         try:
+            # ⚠️ 调试：追踪调用堆栈
+            import traceback
+            call_stack = ''.join(traceback.format_stack()[-4:-1])  # 显示最近3层调用
+            safe_print(f"[DEBUG] ===== send_message 被调用 =====")
+            safe_print(f"[DEBUG] 调用堆栈:\n{call_stack}")
+            
             # 如果没有传入消息，则从输入框读取
             message_from_param = message is not None
             if message is None:
                 message = self.input_field.toPlainText().strip()
             
             if not message:
+                safe_print("[DEBUG] 消息为空，取消发送")
                 return
             
-            safe_print("[DEBUG] 准备发送消息...")
+            safe_print(f"[DEBUG] 准备发送消息: {message[:20] if len(message) > 20 else message}")
             safe_print(f"[DEBUG] 上下文管理器状态: {self.context_manager is not None}")
             
             # 只有在从输入框读取消息时才需要保存并清空
@@ -1157,10 +1164,14 @@ class ChatWindow(QWidget):
                     # 将身份融入系统提示词
                     system_prompt = f"""{SYSTEM_PROMPT}
 
-## 🎭 特殊角色设定
+## 🎭 你的角色身份（最高优先级）
 {user_identity}
 
-⚠️ 重要：请始终保持这个身份设定，在每次回答中都要展现这个角色特征。"""
+⚠️ **关键要求**：
+1. **你就是这个角色本人**，而不是扮演或模仿
+2. 说话、思考、行动都要完全符合这个角色的身份和性格
+3. 绝对不要自称"AI助手"、"我是AI"、"作为AI"等，要用角色身份说话
+4. 即使讨论技术问题，也要保持角色身份和说话方式"""
                     print(f"[DEBUG] [身份设定] 已融入系统提示词: {user_identity[:50]}...")
                 else:
                     print(f"[WARNING] [身份设定] get_user_identity() 返回空值，未添加身份设定")
