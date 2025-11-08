@@ -577,12 +577,16 @@ class ChatGPTComposer(QFrame):
         
         try:
             # 发射信号，使用保存的消息和图片
+            safe_print(f"[DEBUG] 准备发射信号，消息: {self._last_message[:20] if len(self._last_message) > 20 else self._last_message}")
             if self._last_images:
                 # 如果有图片，只发射 submitted_detail
+                safe_print("[DEBUG] 发射 submitted_detail 信号（带图片）")
                 self.submitted_detail.emit(self._last_message, self._last_images.copy())
             else:
                 # 如果没有图片，只发射 submitted
+                safe_print("[DEBUG] 发射 submitted 信号（无图片）")
                 self.submitted.emit(self._last_message)
+            safe_print("[DEBUG] 信号发射完成")
         finally:
             # ⚡ 重置处理标志，允许下次发送
             self._processing_send = False
