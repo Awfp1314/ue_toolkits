@@ -353,6 +353,9 @@ class ApiLLMClient(BaseLLMClient):
             # 解析响应
             data = response.json()
             
+            # ⚡ 提取token使用统计
+            usage = data.get('usage', {})
+            
             if 'choices' in data and len(data['choices']) > 0:
                 choice = data['choices'][0]
                 message = choice.get('message', {})
@@ -362,7 +365,8 @@ class ApiLLMClient(BaseLLMClient):
                     return {
                         'type': 'tool_calls',
                         'tool_calls': message['tool_calls'],
-                        'content': None
+                        'content': None,
+                        'usage': usage  # ⚡ 添加token统计
                     }
                 else:
                     # 返回普通内容
@@ -370,7 +374,8 @@ class ApiLLMClient(BaseLLMClient):
                     return {
                         'type': 'content',
                         'tool_calls': None,
-                        'content': content
+                        'content': content,
+                        'usage': usage  # ⚡ 添加token统计
                     }
             else:
                 raise Exception("API 响应格式错误：缺少 choices")

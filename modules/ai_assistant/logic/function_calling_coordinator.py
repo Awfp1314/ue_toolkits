@@ -164,11 +164,33 @@ class FunctionCallingCoordinator(QThread):
                     iteration += 1
                     
                 elif response_data['type'] == 'content':
-                    # LLM 返回最终文本，流式输出
-                    print(f"[DEBUG] [FunctionCalling] LLM 返回最终回复，开始流式输出")
+                    # LLM 返回最终文本（第一次非流式调用已获取）
+                    print(f"[DEBUG] [FunctionCalling] LLM 返回最终回复（无需工具调用）")
+                    print(f"[DEBUG] [FunctionCalling] ⚡ 使用第一次调用的结果，避免重复API请求")
                     
-                    # 使用流式调用获取最终响应
-                    self._stream_final_response(self.messages, tools)
+                    # ⚡ 关键修复：直接使用第一次调用的content，避免第二次API调用
+                    content = response_data.get('content', '')
+                    usage = response_data.get('usage')  # 获取token使用统计
+                    
+                    if content:
+                        # 模拟流式输出（逐字发送给UI，提供流畅体验）
+                        import time
+                        buffer = ""
+                        for char in content:
+                            buffer += char
+                            # 每10个字符发送一次，模拟流式效果
+                            if len(buffer) >= 10:
+                                self.chunk_received.emit(buffer)
+                                buffer = ""
+                                time.sleep(0.01)  # 短暂延迟，模拟网络传输
+                        
+                        # 发送剩余内容
+                        if buffer:
+                            self.chunk_received.emit(buffer)
+                    
+                    # ⚡ 发送token使用统计（如果有）
+                    if usage:
+                        self.token_usage.emit(usage)
                     
                     # 完成
                     self.request_finished.emit()
