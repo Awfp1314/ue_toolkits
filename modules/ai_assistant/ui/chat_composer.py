@@ -557,28 +557,26 @@ class ChatGPTComposer(QFrame):
         if not text and not self._images:
             return
 
-        # ⚡ 关键修复：立即设置生成状态，防止重复点击
-        # 在清空输入框和发射信号之前就设置，避免在 processEvents 时重复触发
-        self._processing_send = True  # 标记正在处理
-        self.set_generating(True)
-
-        # 保存消息
+        # ⚡ 关键修复：保存消息和图片，在信号处理完成后再清空
         self._last_message = text
         self._last_images = self._images_base64.copy()
-
+        
+        # ⚡ 立即设置生成状态并清空输入框，防止重复点击
+        self._processing_send = True  # 标记正在处理
+        self.set_generating(True)
+        
+        # 立即清空输入框，防止用户再次按Enter
+        self.edit.clear()
+        self._images.clear()
+        self._images_base64.clear()
+        for i in reversed(range(self._preview_holder.layout().count())):
+            w = self._preview_holder.layout().itemAt(i).widget()
+            if w:
+                w.setParent(None)
+        self._preview_holder.setVisible(False)
+        
         try:
-            # ⚡ 关键修复：在发射信号之前清空输入框，防止重复发送
-            # 先清空UI，确保即使有Enter事件也不会重复发送
-            self.edit.clear()
-            self._images.clear()
-            self._images_base64.clear()
-            for i in reversed(range(self._preview_holder.layout().count())):
-                w = self._preview_holder.layout().itemAt(i).widget()
-                if w:
-                    w.setParent(None)
-            self._preview_holder.setVisible(False)
-            
-            # 只发射一个信号，避免重复处理
+            # 发射信号，使用保存的消息和图片
             if self._last_images:
                 # 如果有图片，只发射 submitted_detail
                 self.submitted_detail.emit(self._last_message, self._last_images.copy())
