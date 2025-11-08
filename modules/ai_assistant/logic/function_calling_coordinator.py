@@ -89,11 +89,11 @@ class FunctionCallingCoordinator(QThread):
         3. 如果有，执行工具并将结果追加到消息
         4. 重复步骤 1-3，直到 LLM 返回最终文本或达到最大迭代次数
         """
-        # ⚠️ 关键调试：追踪协调器启动
+        # 关键调试：追踪协调器启动
         import traceback
         call_stack = ''.join(traceback.format_stack())
         print(f"\n{'='*80}")
-        print(f"[COORDINATOR] ⚠️ FunctionCallingCoordinator.run() 被调用！")
+        print(f"[COORDINATOR] !!! FunctionCallingCoordinator.run() 被调用！")
         print(f"[COORDINATOR] 消息数量: {len(self.messages)}")
         tools_count = len(self.tools_registry.openai_tool_schemas()) if self.tools_registry else 0
         print(f"[COORDINATOR] 工具数量: {tools_count}")
