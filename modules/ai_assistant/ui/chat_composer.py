@@ -566,26 +566,28 @@ class ChatGPTComposer(QFrame):
         self._last_message = text
         self._last_images = self._images_base64.copy()
 
-        # 只发射一个信号，避免重复处理
         try:
-            if self._images_base64:
+            # ⚡ 关键修复：在发射信号之前清空输入框，防止重复发送
+            # 先清空UI，确保即使有Enter事件也不会重复发送
+            self.edit.clear()
+            self._images.clear()
+            self._images_base64.clear()
+            for i in reversed(range(self._preview_holder.layout().count())):
+                w = self._preview_holder.layout().itemAt(i).widget()
+                if w:
+                    w.setParent(None)
+            self._preview_holder.setVisible(False)
+            
+            # 只发射一个信号，避免重复处理
+            if self._last_images:
                 # 如果有图片，只发射 submitted_detail
-                self.submitted_detail.emit(text, self._images_base64.copy())
+                self.submitted_detail.emit(self._last_message, self._last_images.copy())
             else:
                 # 如果没有图片，只发射 submitted
-                self.submitted.emit(text)
+                self.submitted.emit(self._last_message)
         finally:
             # ⚡ 重置处理标志，允许下次发送
             self._processing_send = False
-        
-        self.edit.clear()
-        self._images.clear()
-        self._images_base64.clear()
-        for i in reversed(range(self._preview_holder.layout().count())):
-            w = self._preview_holder.layout().itemAt(i).widget()
-            if w:
-                w.setParent(None)
-        self._preview_holder.setVisible(False)
 
     # ---- 对外 API ----
     def set_generating(self, generating: bool):
