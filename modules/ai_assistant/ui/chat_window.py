@@ -807,7 +807,7 @@ class ChatWindow(QWidget):
     def on_message_sent(self, message):
         """处理发送的消息"""
         print(f"[DEBUG] on_message_sent 接收到消息: {message[:50] if len(message) > 50 else message}")
-        self.send_message(user_message=message)
+        self.send_message(message=message)
     
     def on_message_with_images_sent(self, message, images):
         """处理带图片的消息"""
@@ -1063,10 +1063,17 @@ class ChatWindow(QWidget):
             pass
     
     
-    def send_message(self):
-        """发送消息"""
+    def send_message(self, message=None):
+        """发送消息
+        
+        Args:
+            message: 可选的消息内容。如果未提供，则从输入框读取
+        """
         try:
-            message = self.input_field.toPlainText().strip()
+            # 如果没有传入消息，则从输入框读取
+            message_from_param = message is not None
+            if message is None:
+                message = self.input_field.toPlainText().strip()
             
             if not message:
                 return
@@ -1074,8 +1081,10 @@ class ChatWindow(QWidget):
             safe_print("[DEBUG] 准备发送消息...")
             safe_print(f"[DEBUG] 上下文管理器状态: {self.context_manager is not None}")
             
-            # 保存消息并清空输入框（切换为暂停按钮）
-            self.input_area.save_and_clear_message()
+            # 只有在从输入框读取消息时才需要保存并清空
+            # 如果消息是从参数传入的，输入框已经在composer中被清空了
+            if not message_from_param:
+                self.input_area.save_and_clear_message()
             
             # 清零 token 显示和计数器（开始新的问答）
             self.current_round_token_count = 0
