@@ -924,6 +924,78 @@ class ChatWindow(QWidget):
         self._auto_scroll_enabled = True
         self.scroll_to_bottom()
     
+    def _render_thinking_message(self, message: str):
+        """在当前思考气泡中渲染消息（用于异步模板生成）"""
+        if self.current_streaming_bubble:
+            self.current_streaming_bubble.append_text(message)
+            self.scroll_to_bottom()
+    
+    def _show_nlu_response(self, user_message: str, intent: str, response: str):
+        """显示本地NLU响应（带流式效果和UI恢复）
+        
+        Args:
+            user_message: 用户原始消息
+            intent: 检测到的意图
+            response: 本地响应文本
+        """
+        print(f"[DEBUG] [7.0-P10] ===== 显示本地NLU响应 =====")
+        print(f"  意图: {intent}")
+        print(f"  响应: {response}")
+        print(f"  Token消耗: 0")
+        print(f"[DEBUG] [7.0-P10] ============================")
+        
+        # 清空之前的思考消息（如果有）
+        if self.current_streaming_bubble:
+            # 清空内容，准备显示实际回复
+            self._text_buffer = ""
+        else:
+            # 如果没有思考气泡，创建一个
+            self.add_streaming_bubble()
+        
+        # 模拟流式输出效果（匹配真实AI的打字速度）
+        import time
+        from PyQt6.QtWidgets import QApplication
+        
+        for i, char in enumerate(response):
+            self._text_buffer += char
+            # 每个字符刷新一次（更自然）
+            if (i + 1) % 1 == 0:
+                self._flush_text_buffer()
+                QApplication.processEvents()
+                time.sleep(0.05)  # 50ms延迟，匹配真实AI速度
+        
+        # 刷新剩余内容
+        if self._text_buffer:
+            self._flush_text_buffer()
+        
+        # 停止更新定时器（如果在运行）
+        if self._update_timer.isActive():
+            self._update_timer.stop()
+        
+        # 完成流式输出
+        if self.current_streaming_bubble:
+            self.current_streaming_bubble.finish()
+            self.current_streaming_bubble = None
+        
+        # 添加到对话历史
+        self.conversation_history.append({"role": "user", "content": user_message})
+        self.conversation_history.append({"role": "assistant", "content": response})
+        
+        # 更新token显示为0
+        self.update_token_count(0)
+        
+        # 解锁输入框（确保完全恢复状态）
+        self.input_field.unlock()
+        self.input_field.setFocus()  # 设置焦点到输入框
+        
+        # 恢复发送按钮状态（关键！）
+        self.input_area.set_generating(False)
+        
+        # 清空缓冲区
+        self._text_buffer = ""
+        
+        print(f"[DEBUG] [7.0-P10] 本地NLU处理完成，UI已恢复")
+    
     def add_error_bubble(self, error_message):
         """添加错误提示"""
         error_msg = ErrorMarkdownMessage(error_message)
@@ -1007,7 +1079,7 @@ class ChatWindow(QWidget):
             self.add_message(message, is_user=True)
             
             # ========================================
-            # 7.0-P10: 本地NLU检查（带流式效果）
+            # 7.0-P10: 本地NLU检查（异步模板生成）
             # ========================================
             self._init_7_0_components()  # 延迟初始化
             
@@ -1020,65 +1092,74 @@ class ChatWindow(QWidget):
                     if self.context_manager and hasattr(self.context_manager, 'memory'):
                         current_identity = self.context_manager.memory.get_user_identity() or ""
                     
-                    # 生成本地响应（基于当前身份）
-                    local_response = _local_nlu.get_local_response(intent, current_identity)
+                    print(f"[DEBUG] [7.0-P10] 检测到本地意图: {intent}")
                     
-                    print(f"[DEBUG] [7.0-P10] ===== 本地NLU处理 =====")
-                    print(f"  意图: {intent}")
-                    print(f"  响应: {local_response}")
-                    print(f"  统计: {_local_nlu.get_stats()}")
-                    print(f"  Token消耗: 0")
-                    print(f"[DEBUG] [7.0-P10] ============================")
+                    # 检查是否需要生成模板
+                    needs_generation = _local_nlu.needs_template_generation(current_identity)
                     
-                    # 添加流式输出气泡
-                    self.add_streaming_bubble()
+                    if needs_generation:
+                        # ====================================
+                        # 异步生成模板流程
+                        # ====================================
+                        print(f"[DEBUG] [7.0-P10] 缓存未命中，启动异步模板生成...")
+                        
+                        # 显示思考动画
+                        self.add_streaming_bubble()
+                        self._render_thinking_message("正在为您生成个性化回复...")
+                        
+                        # 创建异步生成线程
+                        from modules.ai_assistant.logic.local_nlu import AsyncTemplateGeneratorThread
+                        self._template_generator_thread = AsyncTemplateGeneratorThread(current_identity)
+                        
+                        # 连接成功信号
+                        def on_generation_success(templates):
+                            print(f"[DEBUG] [7.0-P10] 模板生成成功！")
+                            
+                            # 保存到缓存
+                            _local_nlu.save_generated_templates(current_identity, templates)
+                            
+                            # 从模板获取响应
+                            local_response = _local_nlu.get_cached_response(intent, current_identity)
+                            if not local_response:
+                                local_response = "你好！很高兴见到你。"  # 默认回复
+                            
+                            # 显示实际回复（带流式效果）
+                            self._show_nlu_response(message, intent, local_response)
+                        
+                        # 连接失败信号
+                        def on_generation_failed(error_msg):
+                            print(f"[WARNING] [7.0-P10] 模板生成失败: {error_msg}，使用中性模板")
+                            
+                            # 使用中性模板作为后备
+                            local_response = _local_nlu.get_cached_response(intent, None)
+                            if not local_response:
+                                local_response = "你好！很高兴见到你。"
+                            
+                            # 显示回复
+                            self._show_nlu_response(message, intent, local_response)
+                        
+                        self._template_generator_thread.generation_finished.connect(on_generation_success)
+                        self._template_generator_thread.generation_failed.connect(on_generation_failed)
+                        
+                        # 启动生成
+                        self._template_generator_thread.start()
+                        
+                        # 注意：此时不返回，因为异步操作会在回调中完成
+                        return
                     
-                    # 模拟流式输出效果（匹配真实AI的打字速度）
-                    import time
-                    from PyQt6.QtWidgets import QApplication
-                    
-                    for i, char in enumerate(local_response):
-                        self._text_buffer += char
-                        # 每个字符刷新一次（更自然）
-                        if (i + 1) % 1 == 0:
-                            self._flush_text_buffer()
-                            QApplication.processEvents()
-                            time.sleep(0.05)  # 50ms延迟，匹配真实AI速度
-                    
-                    # 刷新剩余内容
-                    if self._text_buffer:
-                        self._flush_text_buffer()
-                    
-                    # 停止更新定时器（如果在运行）
-                    if self._update_timer.isActive():
-                        self._update_timer.stop()
-                    
-                    # 完成流式输出
-                    if self.current_streaming_bubble:
-                        self.current_streaming_bubble.finish()
-                        self.current_streaming_bubble = None
-                    
-                    # 添加到对话历史
-                    self.conversation_history.append({"role": "user", "content": message})
-                    self.conversation_history.append({"role": "assistant", "content": local_response})
-                    
-                    # 更新token显示为0
-                    self.update_token_count(0)
-                    
-                    # 解锁输入框（确保完全恢复状态）
-                    self.input_field.unlock()
-                    self.input_field.setFocus()  # 设置焦点到输入框
-                    
-                    # 恢复发送按钮状态（关键！）
-                    self.input_area.set_generating(False)
-                    
-                    # 清空缓冲区
-                    self._text_buffer = ""
-                    
-                    print(f"[DEBUG] [7.0-P10] 本地NLU处理完成，输入框已解锁")
-                    
-                    # 本地NLU处理完成，不调用API
-                    return
+                    else:
+                        # ====================================
+                        # 直接从缓存获取响应（同步流程）
+                        # ====================================
+                        print(f"[DEBUG] [7.0-P10] 缓存命中或使用中性模板")
+                        
+                        local_response = _local_nlu.get_cached_response(intent, current_identity)
+                        if not local_response:
+                            local_response = "你好！很高兴见到你。"
+                        
+                        # 显示回复（带流式效果）
+                        self._show_nlu_response(message, intent, local_response)
+                        return
             
             # Token优化：检查并压缩历史对话
             if self.context_manager and hasattr(self.context_manager, 'memory'):

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional, Dict, List
 from datetime import datetime
 from .nlu_templates import NEUTRAL_TEMPLATES, TEMPLATE_GENERATION_PROMPT
+from PyQt6.QtCore import QThread, pyqtSignal
 
 
 class IntentClassifier:
@@ -284,6 +285,37 @@ class TemplateGenerator:
             return None
 
 
+class AsyncTemplateGeneratorThread(QThread):
+    """异步模板生成器（QThread）"""
+    
+    # 信号
+    generation_finished = pyqtSignal(dict)  # 生成成功：templates_dict
+    generation_failed = pyqtSignal(str)     # 生成失败：error_message
+    
+    def __init__(self, identity: str):
+        super().__init__()
+        self.identity = identity
+    
+    def run(self):
+        """在后台线程中生成模板"""
+        try:
+            print(f"[DEBUG] [7.0-P10] [异步] 开始生成模板...")
+            templates = TemplateGenerator.generate_templates_sync(self.identity)
+            
+            if templates:
+                print(f"[DEBUG] [7.0-P10] [异步] 模板生成成功")
+                self.generation_finished.emit(templates)
+            else:
+                print(f"[WARNING] [7.0-P10] [异步] 模板生成返回空")
+                self.generation_failed.emit("模板生成返回空结果")
+        except Exception as e:
+            error_msg = f"模板生成异常: {e}"
+            print(f"[ERROR] [7.0-P10] [异步] {error_msg}")
+            import traceback
+            traceback.print_exc()
+            self.generation_failed.emit(error_msg)
+
+
 class LocalNLU:
     """本地NLU主类"""
     
@@ -313,6 +345,67 @@ class LocalNLU:
         """
         return self.classifier.classify(message)
     
+    def needs_template_generation(self, identity: Optional[str] = None) -> bool:
+        """
+        检查是否需要生成模板（即缓存未命中）
+        
+        Args:
+            identity: 当前AI身份
+        
+        Returns:
+            是否需要生成模板
+        """
+        if not identity or len(identity) == 0:
+            return False  # 无身份，使用中性模板
+        
+        if len(identity) > 500:
+            return False  # 身份过于复杂，使用中性模板
+        
+        # 检查缓存
+        templates = self.template_cache.get(identity)
+        return templates is None  # 缓存未命中则需要生成
+    
+    def get_cached_response(self, intent: str, identity: Optional[str] = None) -> Optional[str]:
+        """
+        从缓存获取响应（不生成新模板）
+        
+        Args:
+            intent: 意图类型
+            identity: 当前AI身份
+        
+        Returns:
+            响应文本或None（如果缓存未命中）
+        """
+        if not identity or len(identity) == 0 or len(identity) > 500:
+            # 使用中性模板
+            if intent in NEUTRAL_TEMPLATES:
+                response = random.choice(NEUTRAL_TEMPLATES[intent])
+                self.stats['total_handled'] += 1
+                self.stats['by_intent'][intent] += 1
+                return response
+            return None
+        
+        # 从缓存获取
+        templates = self.template_cache.get(identity)
+        if templates and intent in templates:
+            response = random.choice(templates[intent])
+            self.stats['total_handled'] += 1
+            self.stats['by_intent'][intent] += 1
+            return response
+        
+        return None  # 缓存未命中
+    
+    def save_generated_templates(self, identity: str, templates: dict):
+        """
+        保存生成的模板到缓存
+        
+        Args:
+            identity: AI身份
+            templates: 生成的模板字典
+        """
+        self.template_cache.set(identity, templates)
+        print(f"[DEBUG] [7.0-P10] 模板已保存到缓存")
+    
     def get_local_response(
         self, 
         intent: str, 
@@ -338,8 +431,8 @@ class LocalNLU:
             print(f"[DEBUG] [7.0-P10] 身份内容: {identity[:100]}...")
         
         if identity and len(identity) > 0:
-            # 检查身份是否过于复杂（>200字）
-            if len(identity) > 200:
+            # 检查身份是否过于复杂（>500字）
+            if len(identity) > 500:
                 print(f"[DEBUG] [7.0-P10] 身份过于复杂({len(identity)}字)，降级到中性模板")
             else:
                 # 尝试从缓存获取
