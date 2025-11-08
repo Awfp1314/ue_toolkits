@@ -156,6 +156,18 @@ class ApiLLMClient(BaseLLMClient):
                             try:
                                 data = json.loads(data_str)
                                 
+                                # ⚡ 提取 token 使用量（在响应中可能出现）
+                                if 'usage' in data:
+                                    usage = data['usage']
+                                    yield {
+                                        'type': 'token_usage',
+                                        'usage': {
+                                            'prompt_tokens': usage.get('prompt_tokens', 0),
+                                            'completion_tokens': usage.get('completion_tokens', 0),
+                                            'total_tokens': usage.get('total_tokens', 0)
+                                        }
+                                    }
+                                
                                 if 'choices' in data and len(data['choices']) > 0:
                                     choice = data['choices'][0]
                                     delta = choice.get('delta', {})

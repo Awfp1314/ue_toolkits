@@ -49,6 +49,7 @@ class FunctionCallingCoordinator(QThread):
     tool_complete = pyqtSignal(str, dict)  # 工具完成：tool_name, result
     chunk_received = pyqtSignal(str)  # 文本块接收：chunk
     request_finished = pyqtSignal()  # 请求完成
+    token_usage = pyqtSignal(dict)  # Token 使用量统计
     error_occurred = pyqtSignal(str)  # 错误发生：error_message
     
     def __init__(
@@ -205,10 +206,15 @@ class FunctionCallingCoordinator(QThread):
             
             for chunk in self.llm_client.generate_response(messages, stream=True, tools=tools):
                 if isinstance(chunk, dict):
-                    if chunk.get('type') == 'tool_calls':
+                    chunk_type = chunk.get('type')
+                    
+                    if chunk_type == 'tool_calls':
                         accumulated_tool_calls = chunk.get('tool_calls')
-                    elif chunk.get('type') == 'content':
+                    elif chunk_type == 'content':
                         accumulated_content += chunk.get('text', '')
+                    elif chunk_type == 'token_usage':
+                        # ⚡ 转发 token 使用量
+                        self.token_usage.emit(chunk.get('usage', {}))
                 else:
                     accumulated_content += str(chunk)
             
@@ -230,7 +236,13 @@ class FunctionCallingCoordinator(QThread):
                     accumulated_content = ""
                     for chunk in self.llm_client.generate_response(messages, stream=True, tools=None):
                         if isinstance(chunk, dict):
-                            accumulated_content += chunk.get('text', '')
+                            chunk_type = chunk.get('type')
+                            
+                            if chunk_type == 'content':
+                                accumulated_content += chunk.get('text', '')
+                            elif chunk_type == 'token_usage':
+                                # ⚡ 转发 token 使用量
+                                self.token_usage.emit(chunk.get('usage', {}))
                         else:
                             accumulated_content += str(chunk)
                     return {'type': 'content', 'tool_calls': None, 'content': accumulated_content}
@@ -252,12 +264,17 @@ class FunctionCallingCoordinator(QThread):
                 if self._should_stop:
                     break
                 
-                # 只处理文本内容
+                # 只处理文本内容和token统计
                 if isinstance(chunk, dict):
-                    if chunk.get('type') == 'content':
+                    chunk_type = chunk.get('type')
+                    
+                    if chunk_type == 'content':
                         text = chunk.get('text', '')
                         if text:
                             self.chunk_received.emit(text)
+                    elif chunk_type == 'token_usage':
+                        # ⚡ 转发 token 使用量
+                        self.token_usage.emit(chunk.get('usage', {}))
                 else:
                     # 字符串类型（向后兼容）
                     self.chunk_received.emit(str(chunk))
@@ -270,12 +287,17 @@ class FunctionCallingCoordinator(QThread):
                     if self._should_stop:
                         break
                     
-                    # 只处理文本内容
+                    # 只处理文本内容和token统计
                     if isinstance(chunk, dict):
-                        if chunk.get('type') == 'content':
+                        chunk_type = chunk.get('type')
+                        
+                        if chunk_type == 'content':
                             text = chunk.get('text', '')
                             if text:
                                 self.chunk_received.emit(text)
+                        elif chunk_type == 'token_usage':
+                            # ⚡ 转发 token 使用量
+                            self.token_usage.emit(chunk.get('usage', {}))
                     else:
                         # 字符串类型（向后兼容）
                         self.chunk_received.emit(str(chunk))

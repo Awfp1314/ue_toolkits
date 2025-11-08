@@ -22,6 +22,7 @@ class APIClient(QThread):
     # 信号定义
     chunk_received = pyqtSignal(str)      # 接收到数据块
     request_finished = pyqtSignal()       # 请求完成
+    token_usage = pyqtSignal(dict)        # Token使用量统计
     error_occurred = pyqtSignal(str)      # 发生错误
     
     def __init__(self, messages, model=None, temperature=None, tools=None, config=None):
@@ -106,11 +107,19 @@ class APIClient(QThread):
                 if chunk:
                     # 支持新格式（dict）和旧格式（str）
                     if isinstance(chunk, dict):
-                        # 新格式：{'type': 'content', 'text': '...'}
-                        if chunk.get('type') == 'content':
+                        chunk_type = chunk.get('type')
+                        
+                        # 处理文本内容
+                        if chunk_type == 'content':
                             text = chunk.get('text', '')
                             if text:
                                 self.chunk_received.emit(text)
+                        
+                        # ⚡ 处理 token 使用量统计
+                        elif chunk_type == 'token_usage':
+                            usage = chunk.get('usage', {})
+                            self.token_usage.emit(usage)
+                        
                         # 忽略 tool_calls 类型（由协调器处理）
                     else:
                         # 旧格式：纯字符串
