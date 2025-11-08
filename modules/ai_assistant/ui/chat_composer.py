@@ -578,6 +578,15 @@ class ChatGPTComposer(QFrame):
     # ---- 对外 API ----
     def set_generating(self, generating: bool):
         safe_print(f"[DEBUG] set_generating 被调用: {generating}")
+        
+        # 添加调用栈追踪（只在设置为True时）
+        if generating:
+            import traceback
+            safe_print("[DEBUG] ===== 调用栈追踪 =====")
+            for line in traceback.format_stack()[:-1]:  # 排除当前行
+                safe_print(line.strip())
+            safe_print("[DEBUG] ========================")
+        
         self._is_generating = generating
         if generating:
             self.btn_send.setEnabled(True)

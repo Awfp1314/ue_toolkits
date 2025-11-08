@@ -952,13 +952,16 @@ class ChatWindow(QWidget):
             # 如果没有思考气泡，创建一个
             self.add_streaming_bubble()
         
-        # ⚡ 关键修复：在流式输出之前，先标记为非生成状态
-        # 这样在流式输出过程中，如果 textChanged 触发，按钮状态就不会被错误设置
-        self.input_area._is_generating = False
-        
         # 模拟流式输出效果（匹配真实AI的打字速度）
         import time
         from PyQt6.QtWidgets import QApplication
+        
+        # ⚡ 关键：不要在流式输出过程中调用 QApplication.processEvents()
+        # 因为它会处理待处理的UI事件，可能导致状态混乱
+        # 改为直接渲染完整文本，然后逐字符显示效果
+        
+        # 方案：使用QTimer来模拟流式效果，避免阻塞主线程
+        # 但为了简单起见，我们还是使用同步方式，但在最后统一处理UI状态
         
         for i, char in enumerate(response):
             self._text_buffer += char
@@ -988,10 +991,14 @@ class ChatWindow(QWidget):
         # 更新token显示为0
         self.update_token_count(0)
         
-        # 恢复UI状态（顺序很重要）
-        self.input_area.set_generating(False)  # 先恢复按钮状态
-        self.input_field.unlock()               # 然后解锁输入框
-        self.input_field.setFocus()             # 最后设置焦点
+        # ⚡⚡⚡ 关键修复：确保按钮状态正确恢复 ⚡⚡⚡
+        # 顺序很重要：先解锁，再设置状态，最后设置焦点
+        self.input_field.unlock()               # 1. 解锁输入框
+        self.input_area.set_generating(False)   # 2. 恢复按钮状态（发送）
+        
+        # 3. 延迟设置焦点，避免触发意外事件
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(50, lambda: self.input_field.setFocus())
         
         # 清空缓冲区
         self._text_buffer = ""
