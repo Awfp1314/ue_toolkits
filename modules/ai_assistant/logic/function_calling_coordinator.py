@@ -178,11 +178,10 @@ class FunctionCallingCoordinator(QThread):
                         buffer = ""
                         for i, char in enumerate(content):
                             buffer += char
-                            # 每2个字符发送一次，提供更细腻的流式效果
-                            if len(buffer) >= 2 or i == len(content) - 1:
-                                self.chunk_received.emit(buffer)
-                                buffer = ""
-                                time.sleep(0.05)  # 50毫秒延迟，模拟真实的打字速度
+                            # 每1个字符发送一次，打字机效果
+                            self.chunk_received.emit(buffer)
+                            buffer = ""
+                            time.sleep(0.02)  # 20毫秒延迟，快速但仍有打字机效果
                     
                     # ⚡ 发送token使用统计（如果有）
                     if usage:
