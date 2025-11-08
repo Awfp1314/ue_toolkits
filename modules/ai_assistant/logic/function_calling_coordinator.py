@@ -176,17 +176,13 @@ class FunctionCallingCoordinator(QThread):
                         # 模拟流式输出（逐字发送给UI，提供流畅体验）
                         import time
                         buffer = ""
-                        for char in content:
+                        for i, char in enumerate(content):
                             buffer += char
-                            # 每10个字符发送一次，模拟流式效果
-                            if len(buffer) >= 10:
+                            # 每3个字符发送一次，模拟真实的流式效果
+                            if len(buffer) >= 3 or i == len(content) - 1:
                                 self.chunk_received.emit(buffer)
                                 buffer = ""
-                                time.sleep(0.01)  # 短暂延迟，模拟网络传输
-                        
-                        # 发送剩余内容
-                        if buffer:
-                            self.chunk_received.emit(buffer)
+                                time.sleep(0.03)  # 30毫秒延迟，模拟自然的打字速度
                     
                     # ⚡ 发送token使用统计（如果有）
                     if usage:
