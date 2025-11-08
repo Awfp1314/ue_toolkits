@@ -54,6 +54,20 @@ class ApiLLMClient(BaseLLMClient):
             "Authorization": self.api_key
         }
         
+        # 创建持久化的Session对象（复用连接，避免每次都建立新连接）
+        self._session = requests.Session()
+        self._session.trust_env = False  # 禁用环境变量代理
+        self._session.proxies = {'http': None, 'https': None}  # 显式禁用代理
+        # 设置连接池参数
+        adapter = requests.adapters.HTTPAdapter(
+            pool_connections=10,  # 连接池大小
+            pool_maxsize=20,      # 最大连接数
+            max_retries=3,        # 自动重试3次
+            pool_block=False
+        )
+        self._session.mount('http://', adapter)
+        self._session.mount('https://', adapter)
+        
         # Tool calls 累积缓冲区
         self._tool_calls_buffer = []
     
@@ -108,18 +122,13 @@ class ApiLLMClient(BaseLLMClient):
                 if tools:
                     payload["tools"] = tools
                 
-                # 创建 Session 对象，完全禁用代理
-                session = requests.Session()
-                session.trust_env = False
-                
-                # 发送请求
-                response = session.post(
+                # 使用持久化Session发送请求（复用连接）
+                response = self._session.post(
                     self.api_url,
                     headers=self.headers,
                     json=payload,
                     stream=stream,
-                    timeout=self.timeout,
-                    proxies={'http': None, 'https': None}
+                    timeout=self.timeout
                 )
             finally:
                 # 恢复环境变量
@@ -323,17 +332,12 @@ class ApiLLMClient(BaseLLMClient):
                 if tools:
                     payload["tools"] = tools
                 
-                # 创建 Session 对象，完全禁用代理
-                session = requests.Session()
-                session.trust_env = False
-                
-                # 发送请求
-                response = session.post(
+                # 使用持久化Session发送请求（复用连接）
+                response = self._session.post(
                     self.api_url,
                     headers=self.headers,
                     json=payload,
-                    timeout=self.timeout,
-                    proxies={'http': None, 'https': None}
+                    timeout=self.timeout
                 )
             finally:
                 # 恢复环境变量
