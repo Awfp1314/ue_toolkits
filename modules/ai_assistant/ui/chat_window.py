@@ -806,7 +806,8 @@ class ChatWindow(QWidget):
     
     def on_message_sent(self, message):
         """处理发送的消息"""
-        self.send_message()
+        print(f"[DEBUG] on_message_sent 接收到消息: {message[:50] if len(message) > 50 else message}")
+        self.send_message(user_message=message)
     
     def on_message_with_images_sent(self, message, images):
         """处理带图片的消息"""
