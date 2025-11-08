@@ -814,16 +814,9 @@ class ChatWindow(QWidget):
         self.send_message_with_images(message, images)
     
     def eventFilter(self, obj, event):
-        """事件过滤器（处理 Enter 键和滚轮事件）"""
-        # 处理输入框的 Enter 键
-        if hasattr(self, 'input_field') and obj == self.input_field and event.type() == QEvent.Type.KeyPress:
-            if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
-                # Shift+Enter 换行，Enter 发送
-                if event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
-                    return False
-                else:
-                    self.send_message()
-                    return True
+        """事件过滤器（处理滚轮事件）"""
+        # ⚠️ 注意：Enter 键发送已由 ChatGPTComposer 处理，这里不再重复处理
+        # 避免按一次 Enter 触发两次 send_message()
         
         # 处理滚动区域的滚轮事件
         if hasattr(self, 'scroll_area') and obj == self.scroll_area.viewport() and event.type() == QEvent.Type.Wheel:
