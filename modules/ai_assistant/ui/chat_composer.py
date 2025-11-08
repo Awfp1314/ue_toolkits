@@ -606,7 +606,13 @@ class ChatGPTComposer(QFrame):
             self.btn_send.setText("↑")  # 恢复发送图标
             safe_print("[DEBUG] 按钮设置为 send 状态，文本: ↑")
             self.edit.unlock()
-            self._update_send_enabled()
+            # ⚡ 修复：生成完成后直接启用按钮，不检查内容
+            # 用户可能想立即输入新消息，不应该因为输入框是空的就禁用按钮
+            self.btn_send.setEnabled(True)
+            # 仍然更新shell的hasText属性（用于样式），但不影响按钮enabled状态
+            self.shell.setProperty("hasText", "true" if self.edit.toPlainText().strip() else "false")
+            self.shell.style().unpolish(self.shell)
+            self.shell.style().polish(self.shell)
         self.btn_send.style().unpolish(self.btn_send)
         self.btn_send.style().polish(self.btn_send)
         safe_print(f"[DEBUG] 按钮状态已更新，enabled: {self.btn_send.isEnabled()}")
