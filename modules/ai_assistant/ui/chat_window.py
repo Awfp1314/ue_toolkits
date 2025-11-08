@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QScrollArea, QTextEdit, QPushButton, QLabel,
     QFrame, QComboBox, QSizePolicy, QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QEvent, QTimer
+from PyQt6.QtCore import Qt, QEvent, QTimer, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QTextCursor
 
 from modules.ai_assistant.ui.markdown_message import MarkdownMessage, StreamingMarkdownMessage, ErrorMarkdownMessage
@@ -28,6 +28,33 @@ def safe_print(msg: str):
     except (OSError, UnicodeEncodeError):
         # 如果 print 失败，忽略（不要让调试输出导致程序崩溃）
         pass
+
+
+class ConnectionCheckThread(QThread):
+    """后台线程：检查 UE 连接状态（避免阻塞主线程）"""
+    result_ready = pyqtSignal(str, str)  # (status, status_text)
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.host = '127.0.0.1'
+        self.port = 9998
+        self.timeout = 0.5  # 降低超时时间，提高响应速度
+    
+    def run(self):
+        """在后台线程执行连接检查"""
+        try:
+            import socket
+            test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            test_socket.settimeout(self.timeout)
+            
+            try:
+                test_socket.connect((self.host, self.port))
+                test_socket.close()
+                self.result_ready.emit("connected", "已连接")
+            except (socket.timeout, ConnectionRefusedError, OSError):
+                self.result_ready.emit("disconnected", "未连接")
+        except Exception as e:
+            self.result_ready.emit("unknown", "未知")
 
 
 class ChatWindow(QWidget):
@@ -63,7 +90,8 @@ class ChatWindow(QWidget):
         self._text_buffer = ""  # 文本缓冲区
         self._update_timer = QTimer(self)
         self._update_timer.timeout.connect(self._flush_text_buffer)
-        self._update_timer.setInterval(50)  # 每50ms刷新一次UI
+        self._update_timer.setInterval(100)  # 每100ms刷新一次UI（从50ms增加，减少卡顿）
+        self._chunk_count = 0  # 用于控制日志输出频率
         
         # 从全局主题管理器获取当前主题
         try:
@@ -97,6 +125,13 @@ class ChatWindow(QWidget):
         # 智能滚动控制
         self._auto_scroll_enabled = True  # 是否启用自动滚动（用户在底部时跟随）
         self._user_is_scrolling = False  # 用户是否正在手动滚动
+        
+        # 状态指示器（新增）
+        self.ue_connection_status = "unknown"  # unknown, connected, disconnected
+        self.current_round_token_count = 0  # 本次问答的 token 消耗（不累加）
+        self.status_indicator = None  # 状态指示器组件
+        self._status_check_timer = None  # 状态检查定时器
+        self._connection_check_thread = None  # 后台连接检查线程（避免阻塞主线程）
         
         self.init_ui()
         self.load_theme(self.current_theme)
@@ -289,9 +324,14 @@ class ChatWindow(QWidget):
                 self._model_check_timer.stop()
                 self._model_check_timer = None
             logger.info(f"模型加载完成: {progress}")
-            # 立即发送AI欢迎消息
-            from PyQt6.QtCore import QTimer
-            QTimer.singleShot(100, self._send_intent_question)
+            # 禁用欢迎消息（直接解锁输入框）
+            if hasattr(self, 'input_area') and hasattr(self.input_area, 'edit'):
+                self.input_area.edit.setPlaceholderText("输入消息...")
+                self.input_area.edit.unlock()
+                self.input_area._update_send_enabled()
+                self.input_field.setFocus()
+                logger.info("输入框已启用，欢迎消息已禁用")
+            self._intent_question_sent = True  # 标记为已发送，避免再次触发
         
         elif is_loading:
             # 更新加载进度
@@ -371,6 +411,7 @@ class ChatWindow(QWidget):
         
         # 连接流式输出信号
         self.current_api_client.chunk_received.connect(self.on_chunk_received)
+        self.current_api_client.token_usage.connect(self.on_token_usage)  # ✅ 统计欢迎消息 token
         
         # 连接完成信号（欢迎消息完成后的处理）
         def on_welcome_finished():
@@ -500,6 +541,98 @@ class ChatWindow(QWidget):
         # from PyQt6.QtCore import QTimer
         # QTimer.singleShot(500, self.send_auto_greeting)
     
+    def create_status_indicator(self):
+        """创建状态指示器（右上角的圆点和token计数）"""
+        status_widget = QWidget()
+        status_widget.setObjectName("status_indicator")
+        status_widget.setFixedSize(120, 60)
+        
+        # 使用垂直布局
+        layout = QVBoxLayout(status_widget)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(5)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # 连接状态指示器（圆点）
+        status_row = QWidget()
+        status_row_layout = QHBoxLayout(status_row)
+        status_row_layout.setContentsMargins(0, 0, 0, 0)
+        status_row_layout.setSpacing(6)
+        status_row_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # 圆点
+        self.status_dot = QLabel("●")
+        self.status_dot.setObjectName("status_dot")
+        self.status_dot.setStyleSheet("font-size: 16px; color: #888;")  # 默认灰色
+        status_row_layout.addWidget(self.status_dot)
+        
+        # 状态文本
+        self.status_text = QLabel("检测中")
+        self.status_text.setObjectName("status_text")
+        self.status_text.setStyleSheet("font-size: 11px; color: #888;")
+        status_row_layout.addWidget(self.status_text)
+        
+        layout.addWidget(status_row)
+        
+        # Token计数显示（本次问答）
+        self.token_label = QLabel("Token: 0")
+        self.token_label.setObjectName("token_label")
+        self.token_label.setStyleSheet("font-size: 11px; color: #888;")
+        self.token_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.token_label)
+        
+        # 启动定时器检查UE连接状态（每5秒检查一次）
+        self._status_check_timer = QTimer(self)
+        self._status_check_timer.timeout.connect(self._check_ue_connection)
+        self._status_check_timer.start(5000)  # 5秒
+        
+        # 立即检查一次
+        QTimer.singleShot(1000, self._check_ue_connection)
+        
+        return status_widget
+    
+    def _check_ue_connection(self):
+        """检查 UE RPC 服务器连接状态（异步，不阻塞主线程）"""
+        if not self.tools_registry:
+            self._update_status_indicator("unknown", "未就绪")
+            return
+        
+        # 如果有线程正在运行，跳过本次检查
+        if self._connection_check_thread and self._connection_check_thread.isRunning():
+            return
+        
+        # 创建并启动后台检查线程
+        self._connection_check_thread = ConnectionCheckThread(self)
+        self._connection_check_thread.result_ready.connect(self._update_status_indicator)
+        self._connection_check_thread.start()
+    
+    def _update_status_indicator(self, status: str, status_text: str):
+        """更新状态指示器"""
+        self.ue_connection_status = status
+        
+        if not self.status_dot or not self.status_text:
+            return
+        
+        # 更新圆点颜色和状态文本
+        if status == "connected":
+            self.status_dot.setStyleSheet("font-size: 16px; color: #00ff00;")  # 绿色
+        elif status == "disconnected":
+            self.status_dot.setStyleSheet("font-size: 16px; color: #ff4444;")  # 红色
+        else:  # unknown
+            self.status_dot.setStyleSheet("font-size: 16px; color: #888;")  # 灰色
+        
+        self.status_text.setText(status_text)
+        self.status_text.setStyleSheet(f"font-size: 11px; color: {'#00ff00' if status == 'connected' else '#ff4444' if status == 'disconnected' else '#888'};")
+    
+    def update_token_count(self, token_count: int):
+        """更新 token 计数显示（本次问答）"""
+        if self.token_label:
+            # 显示格式：本次 Token 数
+            if token_count == 0:
+                self.token_label.setText("Token: 0")
+            else:
+                self.token_label.setText(f"Token: {token_count:,}")
+    
     def create_chat_area(self):
         """创建聊天区域"""
         chat_widget = QWidget()
@@ -509,6 +642,11 @@ class ChatWindow(QWidget):
         chat_layout = QVBoxLayout(chat_widget)
         chat_layout.setContentsMargins(0, 0, 0, 0)
         chat_layout.setSpacing(0)
+        
+        # 创建状态指示器并定位到右上角
+        self.status_indicator = self.create_status_indicator()
+        self.status_indicator.setParent(chat_widget)
+        self.status_indicator.raise_()  # 提升到最上层
         
         # 消息显示区域（滚动），占满整个空间
         self.scroll_area = QScrollArea()
@@ -551,16 +689,17 @@ class ChatWindow(QWidget):
         input_area = self.create_input_area()
         input_area.setParent(chat_widget)
         
-        # 监听窗口大小变化，调整输入框位置
+        # 监听窗口大小变化，调整输入框和状态指示器位置
         def on_resize(event):
             self.position_input_area(chat_widget)
+            self.position_status_indicator(chat_widget)
             QWidget.resizeEvent(chat_widget, event)
         
         chat_widget.resizeEvent = on_resize
         
         # 延迟初始化位置
         from PyQt6.QtCore import QTimer
-        QTimer.singleShot(0, lambda: self.position_input_area(chat_widget))
+        QTimer.singleShot(0, lambda: (self.position_input_area(chat_widget), self.position_status_indicator(chat_widget)))
         
         return chat_widget
     
@@ -579,6 +718,16 @@ class ChatWindow(QWidget):
             # 将输入框定位到底部居中（与内容列宽度一致）
             self.input_area.setGeometry(left_margin, height - input_height, content_width, input_height)
             self.input_area.raise_()  # 确保在最上层
+    
+    def position_status_indicator(self, chat_widget):
+        """定位状态指示器到右上角"""
+        if hasattr(self, 'status_indicator') and self.status_indicator:
+            width = chat_widget.width()
+            # 定位到右上角，留出一些边距
+            x = width - self.status_indicator.width() - 15
+            y = 10
+            self.status_indicator.setGeometry(x, y, self.status_indicator.width(), self.status_indicator.height())
+            self.status_indicator.raise_()  # 确保在最上层
     
     def create_input_area(self):
         """创建底部输入区域（ChatGPT 风格）"""
@@ -783,6 +932,7 @@ class ChatWindow(QWidget):
         except:
             pass
     
+    
     def send_message(self):
         """发送消息"""
         try:
@@ -797,29 +947,23 @@ class ChatWindow(QWidget):
             # 保存消息并清空输入框（切换为暂停按钮）
             self.input_area.save_and_clear_message()
             
+            # 清零 token 显示和计数器（开始新的问答）
+            self.current_round_token_count = 0
+            self.update_token_count(0)
+            self._chunk_count = 0  # 重置块计数器
+            
             # 锁定输入框（阻止用户编辑，但不影响按钮事件）
             self.input_field.lock()
             
             # 添加用户消息
             self.add_message(message, is_user=True)
             
-            # ⚡ 性能优化：立即添加思考动画，避免用户等待
-            # 在耗时的上下文构建之前就显示反馈
-            self.add_streaming_bubble()
-            
-            # 强制刷新 UI 事件循环，确保思考动画立即显示
-            from PyQt6.QtWidgets import QApplication
-            QApplication.processEvents()
-            
             # Token优化：检查并压缩历史对话
-            import time
-            t_start = time.time()
             if self.context_manager and hasattr(self.context_manager, 'memory'):
                 try:
                     compressed = self.context_manager.memory.compress_old_context(self.conversation_history)
                     if compressed:
-                        t_compress = time.time() - t_start
-                        print(f"[DEBUG] [Token优化] 对话历史已压缩，当前历史长度: {len(self.conversation_history)}，耗时: {t_compress:.2f}s")
+                        print(f"[DEBUG] [Token优化] 对话历史已压缩，当前历史长度: {len(self.conversation_history)}")
                 except Exception as e:
                     print(f"[WARNING] 压缩历史失败: {e}")
             
@@ -833,32 +977,33 @@ class ChatWindow(QWidget):
             context_message = None
             if self.context_manager:
                 try:
-                    t_context_start = time.time()
-                    safe_print("[DEBUG] 正在构建上下文...")
+                    print("[DEBUG] 正在构建上下文...")
                     # 只构建领域上下文，不包含系统提示词（系统提示词只在第一次发送）
                     context = self.context_manager.build_context(message, include_system_prompt=False)
-                    t_context = time.time() - t_context_start
-                    safe_print(f"[DEBUG] [PERF] 上下文构建耗时: {t_context:.2f}s")
                     if context:
                         # 将上下文作为单独的system消息发送（不累积到历史）
                         context_message = {
                             "role": "system",
                             "content": f"[当前查询的上下文信息]\n{context}"
                         }
-                        safe_print(f"[DEBUG] [OK] 已构建上下文信息，上下文长度: {len(context)} 字符")
+                        print(f"[DEBUG] [OK] 已构建上下文信息，上下文长度: {len(context)} 字符")
                         try:
-                            safe_print(f"[DEBUG] 上下文预览:\n{context[:500]}...")
-                        except Exception:
-                            # Windows终端编码问题，忽略打印错误
-                            pass
+                            print(f"[DEBUG] 上下文预览:\n{context[:500]}...")
+                        except UnicodeEncodeError:
+                            # Windows终端编码问题
+                            safe_preview = context[:500].encode('gbk', errors='ignore').decode('gbk')
+                            print(f"[DEBUG] 上下文预览:\n{safe_preview}...")
                     else:
-                        safe_print("[DEBUG] [WARN] 上下文管理器返回空内容（可能是简单问候）")
+                        print("[DEBUG] [WARN] 上下文管理器返回空内容（可能是简单问候）")
                 except Exception as e:
-                    safe_print(f"[WARNING] [ERROR] 构建上下文失败: {e}")
+                    print(f"[WARNING] [ERROR] 构建上下文失败: {e}")
                     import traceback
                     safe_print(traceback.format_exc())
             else:
-                print("[DEBUG] [WARN] 上下文管理器未初始化！AI 无法访问资产/文档/日志数据")
+                print("[DEBUG] [WARN] 上下文管理器未初始化，AI 无法访问资产/文档/日志数据")
+            
+            # 添加流式输出气泡
+            self.add_streaming_bubble()
             
             # 构建本次请求的消息列表（不影响历史记录）
             request_messages = []
@@ -869,7 +1014,7 @@ class ChatWindow(QWidget):
             system_prompt = self._get_system_prompt()
             if self.context_manager and hasattr(self.context_manager, 'memory'):
                 user_identity = self.context_manager.memory.get_user_identity()
-                print(f"[DEBUG] [身份检查] get_user_identity() 返回: '{user_identity}'")
+                print(f"[DEBUG] [身份检测] get_user_identity() 返回: '{user_identity}'")
                 if user_identity:
                     # 将身份融入系统提示词
                     system_prompt = f"""{SYSTEM_PROMPT}
@@ -967,6 +1112,7 @@ class ChatWindow(QWidget):
                 )
                 self.current_api_client.chunk_received.connect(self.on_chunk_received)
                 self.current_api_client.request_finished.connect(self.on_request_finished)
+                self.current_api_client.token_usage.connect(self.on_token_usage)
                 self.current_api_client.error_occurred.connect(self.on_error_occurred)
                 self.current_api_client.start()
         except Exception as e:
@@ -984,6 +1130,11 @@ class ChatWindow(QWidget):
             
             # 保存消息并清空输入框（切换为暂停按钮）
             self.input_area.save_and_clear_message()
+            
+            # 清零 token 显示和计数器（开始新的问答）
+            self.current_round_token_count = 0
+            self.update_token_count(0)
+            self._chunk_count = 0  # 重置块计数器
             
             # 锁定输入框（阻止用户编辑，但不影响按钮事件）
             self.input_field.lock()
@@ -1041,6 +1192,7 @@ class ChatWindow(QWidget):
                 )
                 self.current_api_client.chunk_received.connect(self.on_chunk_received)
                 self.current_api_client.request_finished.connect(self.on_request_finished)
+                self.current_api_client.token_usage.connect(self.on_token_usage)
                 self.current_api_client.error_occurred.connect(self.on_error_occurred)
                 print(f"[DEBUG] 启动 API 请求...")
                 self.current_api_client.start()
@@ -1103,6 +1255,7 @@ class ChatWindow(QWidget):
             self.current_coordinator.tool_complete.connect(self.on_tool_complete)
             self.current_coordinator.chunk_received.connect(self.on_chunk_received_text)
             self.current_coordinator.request_finished.connect(self.on_request_finished)
+            self.current_coordinator.token_usage.connect(self.on_token_usage)
             self.current_coordinator.error_occurred.connect(self.on_error_occurred)
             
             # 启动协调器
@@ -1166,7 +1319,11 @@ class ChatWindow(QWidget):
     def on_chunk_received_text(self, text):
         """接收文本块（从协调器，文本已经提取）"""
         try:
-            safe_print(f"[STREAM] 收到文本块: {text[:20]}... (长度: {len(text)})")
+            # 减少日志输出频率（每 10 个字符打印一次）
+            self._chunk_count += 1
+            if self._chunk_count % 10 == 0:
+                safe_print(f"[STREAM] 收到文本块 #{self._chunk_count}: {text[:20]}...")
+            
             if self.current_streaming_bubble:
                 # 将文本放入缓冲区，而不是立即渲染（防止频繁渲染导致卡顿）
                 self._text_buffer += text
@@ -1175,7 +1332,8 @@ class ChatWindow(QWidget):
                 if not self._update_timer.isActive():
                     self._update_timer.start()
             else:
-                safe_print(f"[WARNING] 流式气泡为空，无法追加文本！")
+                if self._chunk_count % 10 == 0:
+                    safe_print(f"[WARNING] 流式气泡为空，无法追加文本！")
         except Exception as e:
             safe_print(f"[ERROR] 处理文本块时出错: {e}")
     
@@ -1188,9 +1346,13 @@ class ChatWindow(QWidget):
                 if chunk.get('type') == 'content':
                     text = chunk.get('text', '')
                     if text:
-                        print(f"[STREAM] 收到内容块: {text[:20]}... (长度: {len(text)})")
+                        # 减少日志频率
+                        self._chunk_count += 1
+                        if self._chunk_count % 10 == 0:
+                            print(f"[STREAM] 已收到 {self._chunk_count} 个块...")
+                        
                         if self.current_streaming_bubble:
-                            # 将文本放入缓冲区，而不是立即渲染（防止频繁渲染导致卡顿）
+                            # 将文本放入缓冲区，而不是立即渲染
                             self._text_buffer += text
                             
                             # 如果定时器未启动，启动它
@@ -1201,29 +1363,17 @@ class ChatWindow(QWidget):
                     print(f"[DEBUG] 收到 tool_calls，由协调器处理")
             else:
                 # 旧格式：纯字符串
-                try:
-                    print(f"[STREAM] 收到数据块: {chunk[:20]}... (长度: {len(chunk)})")
-                except UnicodeEncodeError:
-                    pass  # 忽略 print 的编码错误
+                self._chunk_count += 1
                 
                 if self.current_streaming_bubble:
-                    print(f"[STREAM] 正在追加到流式气泡...")
-                    
-                    # 将文本放入缓冲区，而不是立即渲染（防止频繁渲染导致卡顿）
+                    # 将文本放入缓冲区
                     self._text_buffer += chunk
                     
                     # 如果定时器未启动，启动它
                     if not self._update_timer.isActive():
                         self._update_timer.start()
-                else:
-                    print(f"[WARNING] 流式气泡为空，无法追加文本！")
         except Exception as e:
-            try:
-                safe_print(f"[ERROR] 处理数据块时出错: {e}")
-            except UnicodeEncodeError:
-                pass
-            import traceback
-            safe_print(traceback.format_exc())
+            safe_print(f"[ERROR] 处理数据块时出错: {e}")
     
     def on_request_finished(self):
         """请求完成"""
@@ -1328,6 +1478,23 @@ class ChatWindow(QWidget):
                 self.input_area.set_generating(False)
             except:
                 pass
+    
+    def on_token_usage(self, usage: dict):
+        """处理 token 使用量统计（本次问答，不累加）"""
+        try:
+            total_tokens = usage.get("total_tokens", 0)
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            
+            # 只显示本次对话的 token（不累加）
+            self.current_round_token_count = total_tokens
+            
+            print(f"[DEBUG] Token 使用量 - 本次对话: {total_tokens} (输入: {prompt_tokens}, 输出: {completion_tokens})")
+            
+            # 更新显示（只显示本次对话）
+            self.update_token_count(total_tokens)
+        except Exception as e:
+            safe_print(f"[ERROR] 处理 token 使用量时出错: {e}")
     
     def on_error_occurred(self, error_message):
         """处理错误（显示思考动画，然后显示错误消息）"""
