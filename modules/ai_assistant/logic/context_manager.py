@@ -312,6 +312,12 @@ class ContextManager:
         # ===== 上下文优化和去重 =====
         optimized_context = self._optimize_context(context_sections, query)
         
+        # ⚡ 额外的总体长度限制（防止上下文过长导致 API 超时）
+        MAX_CONTEXT_LENGTH = 2000  # 限制为 2000 字符
+        if len(optimized_context) > MAX_CONTEXT_LENGTH:
+            self.logger.warning(f"上下文过长 ({len(optimized_context)} 字符)，截断到 {MAX_CONTEXT_LENGTH} 字符")
+            optimized_context = optimized_context[:MAX_CONTEXT_LENGTH] + "\n...(上下文已截断)"
+        
         # v0.1 新增：Debug 模式输出
         if self.debug:
             self.logger.info("="*60)

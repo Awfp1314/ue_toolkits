@@ -192,8 +192,17 @@ class ChatGPTComposer(QFrame):
         self._update_send_enabled()
 
         # focus-within 属性模拟
-        self.edit.focusInEvent = self._wrap_focus(self.edit.focusInEvent, True)
-        self.edit.focusOutEvent = self._wrap_focus(self.edit.focusOutEvent, False)
+        original_focus_in = self.edit.focusInEvent
+        original_focus_out = self.edit.focusOutEvent
+        
+        def custom_focus_in(event):
+            # 清除所有选中状态
+            if hasattr(self.parent(), 'selection_manager'):
+                self.parent().selection_manager.clear_all_selections()
+            return self._wrap_focus(original_focus_in, True)(event)
+        
+        self.edit.focusInEvent = custom_focus_in
+        self.edit.focusOutEvent = self._wrap_focus(original_focus_out, False)
 
         # 拖拽
         self.setAcceptDrops(self._attachments_enabled)

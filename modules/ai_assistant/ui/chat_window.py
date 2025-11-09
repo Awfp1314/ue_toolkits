@@ -142,6 +142,14 @@ class ChatWindow(QWidget):
         # 7.0组件（延迟初始化，避免启动卡顿）
         self._7_0_initialized = False
         
+        # 选中状态管理器
+        from modules.ai_assistant.ui.selection_manager import SelectionManager
+        self.selection_manager = SelectionManager(self)
+        print("[DEBUG] SelectionManager 已初始化")
+        
+        # 滚动控制器（延迟初始化，在 create_chat_area 中）
+        self.scroll_controller = None
+        
         self.init_ui()
         self.load_theme(self.current_theme)
     
@@ -585,6 +593,10 @@ class ChatWindow(QWidget):
         # 添加到主布局
         main_layout.addWidget(self.chat_widget, 1)
         
+        # 应用光标样式
+        from modules.ai_assistant.ui.cursor_style_manager import CursorStyleManager
+        QTimer.singleShot(100, lambda: CursorStyleManager.apply_styles(self))
+        
         # 移除自动发送欢迎消息（用户反馈不需要）
         # from PyQt6.QtCore import QTimer
         # QTimer.singleShot(500, self.send_auto_greeting)
@@ -703,11 +715,17 @@ class ChatWindow(QWidget):
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         
+        # 初始化滚动控制器
+        from modules.ai_assistant.ui.scroll_controller import ScrollController
+        self.scroll_controller = ScrollController(self.scroll_area, debounce_ms=100)
+        print("[DEBUG] ScrollController 已初始化")
+        
         # 安装事件过滤器，监听滚轮事件和滚动条拖动
         self.scroll_area.viewport().installEventFilter(self)
         scrollbar = self.scroll_area.verticalScrollBar()
-        scrollbar.sliderPressed.connect(self._on_slider_pressed)
-        scrollbar.sliderReleased.connect(self._on_slider_released)
+        scrollbar.valueChanged.connect(self.scroll_controller.on_user_scroll)
+        scrollbar.sliderPressed.connect(self.scroll_controller.on_slider_pressed)
+        scrollbar.sliderReleased.connect(self.scroll_controller.on_slider_released)
         
         # 外层容器（用于居中内容列）
         viewport_widget = QWidget()
@@ -863,6 +881,16 @@ class ChatWindow(QWidget):
             self.messages_layout.count() - 1,
             markdown_msg
         )
+        
+        # 注册到 SelectionManager
+        if hasattr(self, 'selection_manager') and hasattr(markdown_msg, 'content_label'):
+            self.selection_manager.register_bubble(markdown_msg.content_label)
+        
+        # 设置光标样式
+        from modules.ai_assistant.ui.cursor_style_manager import CursorStyleManager
+        if hasattr(markdown_msg, 'content_label'):
+            CursorStyleManager.set_bubble_cursor(markdown_msg.content_label)
+        
         # 新消息添加时，重新启用自动滚动
         self._auto_scroll_enabled = True
         self.scroll_to_bottom()
@@ -1032,15 +1060,16 @@ class ChatWindow(QWidget):
             self._auto_scroll_enabled = False
     
     def scroll_to_bottom(self):
-        """智能滚动到底部（只有当用户在底部时才自动滚动）"""
-        # 只有在启用自动滚动且用户没有在拖动滚动条时才执行
-        if not self._auto_scroll_enabled or self._user_is_scrolling:
-            return
-        
-        # 使用 QTimer 确保在控件渲染完成后滚动
-        QTimer.singleShot(0, self._do_scroll)
-        QTimer.singleShot(50, self._do_scroll)
-        QTimer.singleShot(100, self._do_scroll)
+        """智能滚动到底部（使用 ScrollController）"""
+        if self.scroll_controller:
+            self.scroll_controller.request_scroll_to_bottom()
+        else:
+            # 回退到原有逻辑
+            if not self._auto_scroll_enabled or self._user_is_scrolling:
+                return
+            QTimer.singleShot(0, self._do_scroll)
+            QTimer.singleShot(50, self._do_scroll)
+            QTimer.singleShot(100, self._do_scroll)
     
     def _do_scroll(self):
         """执行滚动（只有在启用自动滚动且用户未手动滚动时才执行）"""
@@ -1110,27 +1139,39 @@ class ChatWindow(QWidget):
             # 延迟初始化7.0组件
             self._init_7_0_components()
             
-            # ⚡ 关键修复：禁用记忆压缩，避免阻塞 UI
-            # 原因：compress_old_context() 使用同步 API 调用，会阻塞主线程 4-15 秒
-            # 解决方案：暂时禁用，或者将来改为异步压缩
-            # Token优化：检查并压缩历史对话（已禁用）
-            # if self.context_manager and hasattr(self.context_manager, 'memory'):
-            #     try:
-            #         compressed = self.context_manager.memory.compress_old_context(self.conversation_history)
-            #         if compressed:
-            #             print(f"[DEBUG] [Token优化] 对话历史已压缩，当前历史长度: {len(self.conversation_history)}")
-            #     except Exception as e:
-            #         print(f"[WARNING] 压缩历史失败: {e}")
+            # ⚡ Token 优化：异步记忆压缩（不阻塞 UI）
+            if self.context_manager and hasattr(self.context_manager, 'memory'):
+                try:
+                    # 使用异步压缩器
+                    from modules.ai_assistant.logic.async_memory_compressor import AsyncMemoryCompressor
+                    
+                    # 创建异步压缩器
+                    compressor = AsyncMemoryCompressor(
+                        self.context_manager.memory,
+                        self.conversation_history
+                    )
+                    
+                    # 连接完成信号
+                    def on_compression_complete(success):
+                        if success:
+                            print(f"[DEBUG] [Token优化] 对话历史已异步压缩，当前历史长度: {len(self.conversation_history)}")
+                    
+                    compressor.compression_complete.connect(on_compression_complete)
+                    
+                    # 启动异步压缩（不阻塞主线程）
+                    compressor.start()
+                    print(f"[DEBUG] [Token优化] 已启动异步压缩，当前历史长度: {len(self.conversation_history)}")
+                    
+                except Exception as e:
+                    print(f"[WARNING] 启动异步压缩失败: {e}")
             
-            # ⚡ Token 优化：手动限制历史长度（临时方案）
-            # 只保留系统提示词 + 最近 10 轮对话（20 条消息）
-            if len(self.conversation_history) > 21:  # 1 system + 20 messages
+            # ⚡ Token 优化：手动限制历史长度（作为备用方案）
+            # 只保留系统提示词 + 最近 15 轮对话（30 条消息）
+            if len(self.conversation_history) > 31:  # 1 system + 30 messages
                 system_msg = self.conversation_history[0]
-                recent_messages = self.conversation_history[-20:]
+                recent_messages = self.conversation_history[-30:]
                 self.conversation_history = [system_msg] + recent_messages
-                print(f"[DEBUG] [Token优化] 历史已截断，保留最近 10 轮，当前长度: {len(self.conversation_history)}")
-            else:
-                print(f"[DEBUG] [Token优化] 记忆压缩已禁用（避免 UI 阻塞），当前历史长度: {len(self.conversation_history)}")
+                print(f"[DEBUG] [Token优化] 历史已截断，保留最近 15 轮，当前长度: {len(self.conversation_history)}")
             
             # 添加用户消息到历史（不拼接上下文）
             self.conversation_history.append({
