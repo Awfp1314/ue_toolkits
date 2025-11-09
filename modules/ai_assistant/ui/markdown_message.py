@@ -994,6 +994,10 @@ class MarkdownMessage(QFrame):
             }}
         """)
         
+        # 强制设置 viewport 属性，确保光标样式持久化
+        self.markdown_browser.viewport().setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.markdown_browser.viewport().setMouseTracking(True)
+        
         # 连接链接点击信号，手动处理链接打开
         self.markdown_browser.anchorClicked.connect(lambda url: QDesktopServices.openUrl(url))
         
@@ -1003,6 +1007,9 @@ class MarkdownMessage(QFrame):
         # 渲染 Markdown 为 HTML
         html_content = markdown_to_html(self.message, self.theme)
         self.markdown_browser.setHtml(html_content)
+        
+        # 确保渲染后光标样式仍然正确
+        self.markdown_browser.viewport().setCursor(Qt.CursorShape.IBeamCursor)
         
         # 不使用 setStyleSheet，而是在 HTML CSS 中设置样式
         self.markdown_browser.document().setDocumentMargin(0)
@@ -1082,6 +1089,10 @@ class MarkdownMessage(QFrame):
         self.message += text
         html_content = markdown_to_html(self.message, self.theme)
         self.markdown_browser.setHtml(html_content)
+        
+        # 重新设置光标样式（setHtml 可能会重置）
+        if hasattr(self, 'markdown_browser'):
+            self.markdown_browser.viewport().setCursor(Qt.CursorShape.IBeamCursor)
     
     def get_text(self):
         """获取当前文本"""
@@ -1160,6 +1171,9 @@ class MarkdownMessage(QFrame):
         if self.role == "assistant" and hasattr(self, 'markdown_browser'):
             html_content = markdown_to_html(self.message, self.theme)
             self.markdown_browser.setHtml(html_content)
+            
+            # 重新设置光标样式（setHtml 可能会重置）
+            self.markdown_browser.viewport().setCursor(Qt.CursorShape.IBeamCursor)
         
         # 如果是系统消息，更新容器和标签的主题属性
         if self.role == "system":
@@ -1254,6 +1268,7 @@ class StreamingMarkdownMessage(QFrame):
         self.markdown_browser.viewport().setCursor(Qt.CursorShape.IBeamCursor)
         
         # 设置选中文本的样式（深色主题/浅色主题都保持高对比度）
+        # 同时在 CSS 中设置光标样式，确保不会被覆盖
         selection_bg = "#3390FF" if self.theme == "dark" else "#0078D7"
         selection_fg = "#FFFFFF"
         self.markdown_browser.setStyleSheet(f"""
@@ -1262,6 +1277,10 @@ class StreamingMarkdownMessage(QFrame):
                 selection-color: {selection_fg};
             }}
         """)
+        
+        # 强制设置 viewport 属性，确保光标样式持久化
+        self.markdown_browser.viewport().setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.markdown_browser.viewport().setMouseTracking(True)
         
         # 连接链接点击信号，手动处理链接打开
         self.markdown_browser.anchorClicked.connect(lambda url: QDesktopServices.openUrl(url))
@@ -1515,6 +1534,9 @@ class StreamingMarkdownMessage(QFrame):
         if hasattr(self, 'markdown_browser') and self.current_text:
             html_content = markdown_to_html(self.current_text, self.theme)
             self.markdown_browser.setHtml(html_content)
+            
+            # 重新设置光标样式（setHtml 可能会重置）
+            self.markdown_browser.viewport().setCursor(Qt.CursorShape.IBeamCursor)
     
     def showEvent(self, event):
         """组件显示事件 - 切换回来时重新调整高度"""
@@ -1546,6 +1568,9 @@ class StreamingMarkdownMessage(QFrame):
             self.current_text += text
             html_content = markdown_to_html(self.current_text, self.theme)
             self.markdown_browser.setHtml(html_content)
+            
+            # 重新设置光标样式（setHtml 可能会重置）
+            self.markdown_browser.viewport().setCursor(Qt.CursorShape.IBeamCursor)
         except Exception as e:
             print(f"[ERROR] append_text 出错: {e}")
     
@@ -1567,6 +1592,9 @@ class StreamingMarkdownMessage(QFrame):
             # 最后一次渲染
             final_html = markdown_to_html(self.current_text, self.theme)
             self.markdown_browser.setHtml(final_html)
+            
+            # 重新设置光标样式（setHtml 可能会重置）
+            self.markdown_browser.viewport().setCursor(Qt.CursorShape.IBeamCursor)
             
             # 重新连接信号
             self.markdown_browser.document().contentsChanged.connect(self.adjust_height)

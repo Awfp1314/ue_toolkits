@@ -61,9 +61,22 @@ class CursorStyleManager:
         为聊天气泡设置光标样式
         
         Args:
-            bubble: 聊天气泡组件
+            bubble: 聊天气泡组件（QTextBrowser 或 QLabel）
         """
         try:
-            bubble.setCursor(Qt.CursorShape.IBeamCursor)
+            from PyQt6.QtWidgets import QTextBrowser, QLabel
+            
+            if isinstance(bubble, QTextBrowser):
+                # QTextBrowser 需要设置 viewport 的光标
+                bubble.viewport().setCursor(Qt.CursorShape.IBeamCursor)
+                print(f"[CursorStyleManager] 已设置 QTextBrowser viewport 光标为 IBeam")
+            elif isinstance(bubble, QLabel):
+                # QLabel 直接设置光标
+                bubble.setCursor(Qt.CursorShape.IBeamCursor)
+                print(f"[CursorStyleManager] 已设置 QLabel 光标为 IBeam")
+            else:
+                # 其他类型，尝试直接设置
+                bubble.setCursor(Qt.CursorShape.IBeamCursor)
+                print(f"[CursorStyleManager] 已设置 {type(bubble).__name__} 光标为 IBeam")
         except Exception as e:
             print(f"[CursorStyleManager] 设置气泡光标失败: {e}")

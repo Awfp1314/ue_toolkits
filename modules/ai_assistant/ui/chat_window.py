@@ -841,6 +841,10 @@ class ChatWindow(QWidget):
             # 清除所有选中状态
             if hasattr(self, 'selection_manager') and self.selection_manager:
                 self.selection_manager.clear_all_selections()
+                
+                # 重新应用所有气泡的光标样式（清除选中可能会重置光标）
+                self._reapply_all_bubble_cursors()
+                
         except Exception as e:
             print(f"[ERROR] [ChatWindow] 处理鼠标点击事件失败: {e}")
         
@@ -2072,6 +2076,53 @@ class ChatWindow(QWidget):
         # 合并主题样式 + 所有组件样式
         full_stylesheet = main_stylesheet + "\n" + "\n".join(component_stylesheets)
         self.setStyleSheet(full_stylesheet)
+        
+        # 重新应用光标样式（主题切换后可能被重置）
+        self._reapply_cursor_styles()
+    
+    def _reapply_cursor_styles(self):
+        """
+        重新应用所有气泡的光标样式
+        
+        在主题切换或样式表更新后调用，确保光标样式不被覆盖
+        """
+        try:
+            from modules.ai_assistant.ui.cursor_style_manager import CursorStyleManager
+            
+            # 重新应用全局光标样式
+            CursorStyleManager.apply_styles(self)
+            
+            # 重新应用所有消息气泡的光标样式
+            self._reapply_all_bubble_cursors()
+                
+        except Exception as e:
+            print(f"[ERROR] [UI管理器] 重新应用光标样式失败: {e}")
+    
+    def _reapply_all_bubble_cursors(self):
+        """
+        重新应用所有消息气泡的光标样式
+        
+        在清除选中状态后调用，确保光标样式不被重置
+        """
+        try:
+            from modules.ai_assistant.ui.cursor_style_manager import CursorStyleManager
+            from modules.ai_assistant.ui.markdown_message import MarkdownMessage, StreamingMarkdownMessage
+            
+            if hasattr(self, 'messages_layout') and self.messages_layout:
+                for i in range(self.messages_layout.count()):
+                    widget = self.messages_layout.itemAt(i).widget()
+                    if widget and isinstance(widget, (MarkdownMessage, StreamingMarkdownMessage)):
+                        # 助手消息使用 markdown_browser
+                        if hasattr(widget, 'markdown_browser'):
+                            CursorStyleManager.set_bubble_cursor(widget.markdown_browser)
+                        # 用户消息使用 text_label
+                        elif hasattr(widget, 'text_label'):
+                            CursorStyleManager.set_bubble_cursor(widget.text_label)
+                
+                print(f"[DEBUG] [UI管理器] 已重新应用所有气泡的光标样式")
+                
+        except Exception as e:
+            print(f"[ERROR] [UI管理器] 重新应用气泡光标样式失败: {e}")
     
     def get_dark_theme(self):
         """获取深色主题（已迁移到 resources/themes/dark.qss）"""

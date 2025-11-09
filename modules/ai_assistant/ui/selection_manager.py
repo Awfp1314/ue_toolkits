@@ -46,6 +46,8 @@ class SelectionManager:
     
     def clear_all_selections(self):
         """清除所有气泡的选中状态"""
+        from PyQt6.QtCore import Qt
+        
         for bubble in self.selected_bubbles[:]:  # 使用副本遍历
             try:
                 if isinstance(bubble, QTextBrowser):
@@ -53,15 +55,23 @@ class SelectionManager:
                     cursor = bubble.textCursor()
                     cursor.clearSelection()
                     bubble.setTextCursor(cursor)
+                    
+                    # 重新设置光标样式（clearSelection 可能会重置）
+                    bubble.viewport().setCursor(Qt.CursorShape.IBeamCursor)
+                    
                 elif isinstance(bubble, QLabel):
                     # QLabel：清除选中文本（如果有）
                     if bubble.hasSelectedText():
                         bubble.setSelection(0, 0)
+                    
+                    # 重新设置光标样式
+                    bubble.setCursor(Qt.CursorShape.IBeamCursor)
+                    
             except Exception as e:
                 print(f"[SelectionManager] 清除选中状态失败: {e}")
         
         self.selected_bubbles.clear()
-        print(f"[SelectionManager] 已清除所有选中状态")
+        print(f"[SelectionManager] 已清除所有选中状态并重新设置光标样式")
     
     def _on_selection_changed(self, bubble: QTextBrowser):
         """
