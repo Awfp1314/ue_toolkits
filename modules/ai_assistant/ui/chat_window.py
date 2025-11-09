@@ -1063,6 +1063,13 @@ class ChatWindow(QWidget):
             message: 可选的消息内容。如果未提供，则从输入框读取
         """
         try:
+            # ⚡ 关键修复：添加重入保护，防止重复调用
+            if hasattr(self, '_is_sending_message') and self._is_sending_message:
+                safe_print("[DEBUG] [BLOCKED] send_message 重入保护触发，拒绝重复调用")
+                return
+            
+            self._is_sending_message = True
+            
             # ⚠️ 调试：追踪调用堆栈
             import traceback
             call_stack = ''.join(traceback.format_stack()[-4:-1])  # 显示最近3层调用
@@ -1103,14 +1110,18 @@ class ChatWindow(QWidget):
             # 延迟初始化7.0组件
             self._init_7_0_components()
             
-            # Token优化：检查并压缩历史对话
-            if self.context_manager and hasattr(self.context_manager, 'memory'):
-                try:
-                    compressed = self.context_manager.memory.compress_old_context(self.conversation_history)
-                    if compressed:
-                        print(f"[DEBUG] [Token优化] 对话历史已压缩，当前历史长度: {len(self.conversation_history)}")
-                except Exception as e:
-                    print(f"[WARNING] 压缩历史失败: {e}")
+            # ⚡ 关键修复：禁用记忆压缩，避免阻塞 UI
+            # 原因：compress_old_context() 使用同步 API 调用，会阻塞主线程 4-15 秒
+            # 解决方案：暂时禁用，或者将来改为异步压缩
+            # Token优化：检查并压缩历史对话（已禁用）
+            # if self.context_manager and hasattr(self.context_manager, 'memory'):
+            #     try:
+            #         compressed = self.context_manager.memory.compress_old_context(self.conversation_history)
+            #         if compressed:
+            #             print(f"[DEBUG] [Token优化] 对话历史已压缩，当前历史长度: {len(self.conversation_history)}")
+            #     except Exception as e:
+            #         print(f"[WARNING] 压缩历史失败: {e}")
+            print(f"[DEBUG] [Token优化] 记忆压缩已禁用（避免 UI 阻塞），当前历史长度: {len(self.conversation_history)}")
             
             # 添加用户消息到历史（不拼接上下文）
             self.conversation_history.append({
@@ -1271,6 +1282,9 @@ class ChatWindow(QWidget):
             # 恢复输入框状态
             self.input_field.unlock()
             self.input_area.set_generating(False)
+        finally:
+            # ⚡ 关键修复：重置重入保护标志
+            self._is_sending_message = False
     
     def send_message_with_images(self, message, images):
         """发送带图片的消息"""

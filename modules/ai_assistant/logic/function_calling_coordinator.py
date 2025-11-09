@@ -262,32 +262,14 @@ class FunctionCallingCoordinator(QThread):
             else:
                 return {'type': 'content', 'tool_calls': None, 'content': accumulated_content}
         except Exception as e:
-            # 捕获模型不支持工具的错误
+            # ⚡ 关键修复：移除重试逻辑，直接抛出异常
+            # 原因：重试逻辑会导致重复 API 调用
             error_msg = str(e)
             if 'does not support tools' in error_msg or 'tools' in error_msg.lower():
-                print(f"[WARNING] [FunctionCalling] 当前模型不支持 Function Calling，降级为普通模式")
-                # 返回空的 tool_calls，让协调器直接生成普通回复
-                try:
-                    # 不带 tools 参数重新调用
-                    return self.llm_client.generate_response_non_streaming(messages, tools=None)
-                except:
-                    # 回退到流式
-                    accumulated_content = ""
-                    for chunk in self.llm_client.generate_response(messages, stream=True, tools=None):
-                        if isinstance(chunk, dict):
-                            chunk_type = chunk.get('type')
-                            
-                            if chunk_type == 'content':
-                                accumulated_content += chunk.get('text', '')
-                            elif chunk_type == 'token_usage':
-                                # ⚡ 转发 token 使用量
-                                self.token_usage.emit(chunk.get('usage', {}))
-                        else:
-                            accumulated_content += str(chunk)
-                    return {'type': 'content', 'tool_calls': None, 'content': accumulated_content}
-            else:
-                # 其他错误，继续抛出
-                raise
+                print(f"[WARNING] [FunctionCalling] 当前模型不支持 Function Calling")
+                print(f"[WARNING] [FunctionCalling] 建议：在配置中禁用工具调用或更换支持的模型")
+            # 直接抛出异常，不进行重试
+            raise
     
     def _stream_final_response(self, messages: List[Dict], tools: List[Dict]):
         """
@@ -296,59 +278,30 @@ class FunctionCallingCoordinator(QThread):
         Args:
             messages: 消息列表
             tools: 工具定义列表
+        
+        ⚠️ 修复说明：移除了重试逻辑，避免重复 API 调用
+        如果模型不支持工具，应该在初始化时检测，而不是在运行时重试
         """
-        # 尝试传递 tools，如果失败则降级为无工具模式
-        try:
-            for chunk in self.llm_client.generate_response(messages, stream=True, tools=tools):
-                if self._should_stop:
-                    break
+        # ⚡ 关键修复：移除重试逻辑，直接抛出异常
+        # 原因：重试逻辑会导致重复 API 调用，浪费 Token
+        for chunk in self.llm_client.generate_response(messages, stream=True, tools=tools):
+            if self._should_stop:
+                break
+            
+            # 只处理文本内容和token统计
+            if isinstance(chunk, dict):
+                chunk_type = chunk.get('type')
                 
-                # 只处理文本内容和token统计
-                if isinstance(chunk, dict):
-                    chunk_type = chunk.get('type')
-                    
-                    if chunk_type == 'content':
-                        text = chunk.get('text', '')
-                        if text:
-                            self.chunk_received.emit(text)
-                    elif chunk_type == 'token_usage':
-                        # ⚡ 转发 token 使用量
-                        self.token_usage.emit(chunk.get('usage', {}))
-                else:
-                    # 字符串类型（向后兼容）
-                    self.chunk_received.emit(str(chunk))
-        except Exception as e:
-            error_msg = str(e)
-            print(f"[DEBUG] [FunctionCalling] 捕获到异常: {error_msg}")
-            # 如果是模型不支持工具的错误，尝试不带 tools 参数重新调用
-            if 'does not support tools' in error_msg or 'tools' in error_msg.lower():
-                print(f"\n{'='*80}")
-                print(f"[RETRY_DETECTED] !!! 检测到重试逻辑被触发！")
-                print(f"[RETRY_DETECTED] 原始错误: {error_msg}")
-                print(f"[RETRY_DETECTED] 即将进行第二次API调用（无tools参数）")
-                print(f"[RETRY_DETECTED] 消息数量: {len(messages)}")
-                print(f"{'='*80}\n")
-                for chunk in self.llm_client.generate_response(messages, stream=True, tools=None):
-                    if self._should_stop:
-                        break
-                    
-                    # 只处理文本内容和token统计
-                    if isinstance(chunk, dict):
-                        chunk_type = chunk.get('type')
-                        
-                        if chunk_type == 'content':
-                            text = chunk.get('text', '')
-                            if text:
-                                self.chunk_received.emit(text)
-                        elif chunk_type == 'token_usage':
-                            # ⚡ 转发 token 使用量
-                            self.token_usage.emit(chunk.get('usage', {}))
-                    else:
-                        # 字符串类型（向后兼容）
-                        self.chunk_received.emit(str(chunk))
+                if chunk_type == 'content':
+                    text = chunk.get('text', '')
+                    if text:
+                        self.chunk_received.emit(text)
+                elif chunk_type == 'token_usage':
+                    # ⚡ 转发 token 使用量
+                    self.token_usage.emit(chunk.get('usage', {}))
             else:
-                # 其他错误，继续抛出
-                raise
+                # 字符串类型（向后兼容）
+                self.chunk_received.emit(str(chunk))
     
     def _execute_tool(self, tool_name: str, tool_args_str: str) -> Dict:
         """
