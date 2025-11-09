@@ -1,0 +1,13 @@
+This file is created to force save all modifications.
+如果你看到这个文件，说明之前的保存操作失败了。
+
+请手动执行：
+1. 在IDE中按 Ctrl+K, S (保存所有文件)
+2. 或者逐个打开每个修改过的文件按 Ctrl+S
+3. 确认文件标签页上的 ● 标记消失
+
+修改过的文件：
+- modules/ai_assistant/ui/chat_window.py
+- modules/ai_assistant/logic/function_calling_coordinator.py
+- modules/ai_assistant/logic/local_nlu.py
+
