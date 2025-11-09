@@ -1121,7 +1121,16 @@ class ChatWindow(QWidget):
             #             print(f"[DEBUG] [Token优化] 对话历史已压缩，当前历史长度: {len(self.conversation_history)}")
             #     except Exception as e:
             #         print(f"[WARNING] 压缩历史失败: {e}")
-            print(f"[DEBUG] [Token优化] 记忆压缩已禁用（避免 UI 阻塞），当前历史长度: {len(self.conversation_history)}")
+            
+            # ⚡ Token 优化：手动限制历史长度（临时方案）
+            # 只保留系统提示词 + 最近 10 轮对话（20 条消息）
+            if len(self.conversation_history) > 21:  # 1 system + 20 messages
+                system_msg = self.conversation_history[0]
+                recent_messages = self.conversation_history[-20:]
+                self.conversation_history = [system_msg] + recent_messages
+                print(f"[DEBUG] [Token优化] 历史已截断，保留最近 10 轮，当前长度: {len(self.conversation_history)}")
+            else:
+                print(f"[DEBUG] [Token优化] 记忆压缩已禁用（避免 UI 阻塞），当前历史长度: {len(self.conversation_history)}")
             
             # 添加用户消息到历史（不拼接上下文）
             self.conversation_history.append({
