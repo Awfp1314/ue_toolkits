@@ -1,0 +1,4936 @@
+{
+  "metadata": {
+    "generated_at": "2025-11-09T23:43:19.511035",
+    "analysis_duration": 5.49859356880188,
+    "tool_version": "1.0.0"
+  },
+  "statistics": {
+    "total_files_scanned": 150,
+    "total_issues_found": 609,
+    "estimated_lines_to_remove": 1705,
+    "by_category": {
+      "dead_code": {
+        "count": 97,
+        "percentage": 15.93
+      },
+      "deprecated": {
+        "count": 7,
+        "percentage": 1.15
+      },
+      "unused_import": {
+        "count": 130,
+        "percentage": 21.35
+      },
+      "unused_variable": {
+        "count": 126,
+        "percentage": 20.69
+      },
+      "unused_file": {
+        "count": 135,
+        "percentage": 22.17
+      },
+      "duplicate_code": {
+        "count": 2,
+        "percentage": 0.33
+      },
+      "config": {
+        "count": 5,
+        "percentage": 0.82
+      },
+      "safety": {
+        "count": 107,
+        "percentage": 17.57
+      }
+    },
+    "by_severity": {
+      "medium": {
+        "count": 206,
+        "percentage": 33.83
+      },
+      "low": {
+        "count": 268,
+        "percentage": 44.01
+      },
+      "high": {
+        "count": 135,
+        "percentage": 22.17
+      }
+    }
+  },
+  "issues": [
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\ai_services\\embedding_service.py",
+      "line_number": 1,
+      "description": "未使用的文件: embedding_service.py",
+      "suggestion": "考虑删除文件 core\\ai_services\\embedding_service.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\base_logic.py",
+      "line_number": 1,
+      "description": "未使用的文件: base_logic.py",
+      "suggestion": "考虑删除文件 core\\base_logic.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\config\\config_backup.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_backup.py",
+      "suggestion": "考虑删除文件 core\\config\\config_backup.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\config\\config_validator.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_validator.py",
+      "suggestion": "考虑删除文件 core\\config\\config_validator.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\utils\\custom_widgets.py",
+      "line_number": 1,
+      "description": "未使用的文件: custom_widgets.py",
+      "suggestion": "考虑删除文件 core\\utils\\custom_widgets.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\utils\\error_handler.py",
+      "line_number": 1,
+      "description": "未使用的文件: error_handler.py",
+      "suggestion": "考虑删除文件 core\\utils\\error_handler.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\utils\\file_utils.py",
+      "line_number": 1,
+      "description": "未使用的文件: file_utils.py",
+      "suggestion": "考虑删除文件 core\\utils\\file_utils.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\utils\\lru_cache.py",
+      "line_number": 1,
+      "description": "未使用的文件: lru_cache.py",
+      "suggestion": "考虑删除文件 core\\utils\\lru_cache.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\utils\\performance_monitor.py",
+      "line_number": 1,
+      "description": "未使用的文件: performance_monitor.py",
+      "suggestion": "考虑删除文件 core\\utils\\performance_monitor.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\utils\\thread_cleanup.py",
+      "line_number": 1,
+      "description": "未使用的文件: thread_cleanup.py",
+      "suggestion": "考虑删除文件 core\\utils\\thread_cleanup.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\utils\\ue_process_utils.py",
+      "line_number": 1,
+      "description": "未使用的文件: ue_process_utils.py",
+      "suggestion": "考虑删除文件 core\\utils\\ue_process_utils.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "core\\utils\\validators.py",
+      "line_number": 1,
+      "description": "未使用的文件: validators.py",
+      "suggestion": "考虑删除文件 core\\utils\\validators.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\_template\\logic\\module_logic.py",
+      "line_number": 1,
+      "description": "未使用的文件: module_logic.py",
+      "suggestion": "考虑删除文件 modules\\_template\\logic\\module_logic.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\__main__.py",
+      "line_number": 1,
+      "description": "未使用的文件: __main__.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\__main__.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ai_assistant.py",
+      "line_number": 1,
+      "description": "未使用的文件: ai_assistant.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ai_assistant.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\clients\\api_llm_client.py",
+      "line_number": 1,
+      "description": "未使用的文件: api_llm_client.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\clients\\api_llm_client.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\clients\\base_llm_client.py",
+      "line_number": 1,
+      "description": "未使用的文件: base_llm_client.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\clients\\base_llm_client.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\clients\\llm_client_factory.py",
+      "line_number": 1,
+      "description": "未使用的文件: llm_client_factory.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\clients\\llm_client_factory.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\clients\\ollama_llm_client.py",
+      "line_number": 1,
+      "description": "未使用的文件: ollama_llm_client.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\clients\\ollama_llm_client.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\clients\\ue_tool_client.py",
+      "line_number": 1,
+      "description": "未使用的文件: ue_tool_client.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\clients\\ue_tool_client.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\config_schema.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_schema.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\config_schema.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\api_call_tracker.py",
+      "line_number": 1,
+      "description": "未使用的文件: api_call_tracker.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\api_call_tracker.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\api_client.py",
+      "line_number": 1,
+      "description": "未使用的文件: api_client.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\api_client.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\api_client_streaming.py",
+      "line_number": 1,
+      "description": "未使用的文件: api_client_streaming.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\api_client_streaming.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\asset_importer.py",
+      "line_number": 1,
+      "description": "未使用的文件: asset_importer.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\asset_importer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\asset_reader.py",
+      "line_number": 1,
+      "description": "未使用的文件: asset_reader.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\asset_reader.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\async_memory_compressor.py",
+      "line_number": 1,
+      "description": "未使用的文件: async_memory_compressor.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\async_memory_compressor.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\config.py",
+      "line_number": 1,
+      "description": "未使用的文件: config.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\config.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\config_reader.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_reader.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\config_reader.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\context_manager.py",
+      "line_number": 1,
+      "description": "未使用的文件: context_manager.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\context_manager.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\document_reader.py",
+      "line_number": 1,
+      "description": "未使用的文件: document_reader.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\document_reader.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\enhanced_memory_manager.py",
+      "line_number": 1,
+      "description": "未使用的文件: enhanced_memory_manager.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\enhanced_memory_manager.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\faiss_memory_store.py",
+      "line_number": 1,
+      "description": "未使用的文件: faiss_memory_store.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\faiss_memory_store.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 1,
+      "description": "未使用的文件: function_calling_coordinator.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\function_calling_coordinator.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 1,
+      "description": "未使用的文件: intent_parser.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\intent_parser.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\local_retriever.py",
+      "line_number": 1,
+      "description": "未使用的文件: local_retriever.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\local_retriever.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\log_analyzer.py",
+      "line_number": 1,
+      "description": "未使用的文件: log_analyzer.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\log_analyzer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\memory_compressor.py",
+      "line_number": 1,
+      "description": "未使用的文件: memory_compressor.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\memory_compressor.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\nlu_templates.py",
+      "line_number": 1,
+      "description": "未使用的文件: nlu_templates.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\nlu_templates.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\non_streaming_worker.py",
+      "line_number": 1,
+      "description": "未使用的文件: non_streaming_worker.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\non_streaming_worker.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\prompt_cache\\backends.py",
+      "line_number": 1,
+      "description": "未使用的文件: backends.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\prompt_cache\\backends.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\prompt_cache\\manager.py",
+      "line_number": 1,
+      "description": "未使用的文件: manager.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\prompt_cache\\manager.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\prompt_cache\\normalizer.py",
+      "line_number": 1,
+      "description": "未使用的文件: normalizer.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\prompt_cache\\normalizer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\query_rewriter.py",
+      "line_number": 1,
+      "description": "未使用的文件: query_rewriter.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\query_rewriter.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\remote_retriever.py",
+      "line_number": 1,
+      "description": "未使用的文件: remote_retriever.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\remote_retriever.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\runtime_context.py",
+      "line_number": 1,
+      "description": "未使用的文件: runtime_context.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\runtime_context.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\site_reader.py",
+      "line_number": 1,
+      "description": "未使用的文件: site_reader.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\site_reader.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\streaming_buffer_manager.py",
+      "line_number": 1,
+      "description": "未使用的文件: streaming_buffer_manager.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\streaming_buffer_manager.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\theme_generator.py",
+      "line_number": 1,
+      "description": "未使用的文件: theme_generator.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\theme_generator.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 1,
+      "description": "未使用的文件: tools_registry.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\logic\\tools_registry.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 1,
+      "description": "未使用的文件: chat_composer.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\chat_composer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 1,
+      "description": "未使用的文件: chat_input.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\chat_input.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input_bar.py",
+      "line_number": 1,
+      "description": "未使用的文件: chat_input_bar.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\chat_input_bar.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\chat_window.py",
+      "line_number": 1,
+      "description": "未使用的文件: chat_window.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\chat_window.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\confirmation_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: confirmation_dialog.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\confirmation_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\cursor_style_manager.py",
+      "line_number": 1,
+      "description": "未使用的文件: cursor_style_manager.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\cursor_style_manager.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 1,
+      "description": "未使用的文件: markdown_message.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\markdown_message.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\scroll_controller.py",
+      "line_number": 1,
+      "description": "未使用的文件: scroll_controller.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\scroll_controller.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\selection_manager.py",
+      "line_number": 1,
+      "description": "未使用的文件: selection_manager.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\selection_manager.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\ui\\tool_status_display.py",
+      "line_number": 1,
+      "description": "未使用的文件: tool_status_display.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\ui\\tool_status_display.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\ai_assistant\\utils\\module_theme.py",
+      "line_number": 1,
+      "description": "未使用的文件: module_theme.py",
+      "suggestion": "考虑删除文件 modules\\ai_assistant\\utils\\module_theme.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\asset_manager.py",
+      "line_number": 1,
+      "description": "未使用的文件: asset_manager.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\asset_manager.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 1,
+      "description": "未使用的文件: asset_manager_logic.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\logic\\asset_manager_logic.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\logic\\asset_model.py",
+      "line_number": 1,
+      "description": "未使用的文件: asset_model.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\logic\\asset_model.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\logic\\lazy_asset_loader.py",
+      "line_number": 1,
+      "description": "未使用的文件: lazy_asset_loader.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\logic\\lazy_asset_loader.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\logic\\thumbnail_generator.py",
+      "line_number": 1,
+      "description": "未使用的文件: thumbnail_generator.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\logic\\thumbnail_generator.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\add_asset_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: add_asset_dialog.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\add_asset_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 1,
+      "description": "未使用的文件: asset_card.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\asset_card.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1,
+      "description": "未使用的文件: asset_manager_ui.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\asset_manager_ui.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\category_management_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: category_management_dialog.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\category_management_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\confirm_delete_category_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: confirm_delete_category_dialog.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\confirm_delete_category_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\custom_checkbox.py",
+      "line_number": 1,
+      "description": "未使用的文件: custom_checkbox.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\custom_checkbox.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\dialogs.py",
+      "line_number": 1,
+      "description": "未使用的文件: dialogs.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\dialogs.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\edit_asset_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: edit_asset_dialog.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\edit_asset_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\first_launch_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: first_launch_dialog.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\first_launch_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\progress_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: progress_dialog.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\progress_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\asset_manager\\ui\\set_paths_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: set_paths_dialog.py",
+      "suggestion": "考虑删除文件 modules\\asset_manager\\ui\\set_paths_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\__main__.py",
+      "line_number": 1,
+      "description": "未使用的文件: __main__.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\__main__.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\logic\\config_tool_logic.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_tool_logic.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\logic\\config_tool_logic.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\components\\config_template.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_template.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\components\\config_template.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\components\\config_template_button.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_template_button.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\components\\config_template_button.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\components\\ue_project_card.py",
+      "line_number": 1,
+      "description": "未使用的文件: ue_project_card.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\components\\ue_project_card.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\config_tool_ui.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_tool_ui.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\config_tool_ui.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\config_tool_ui_core.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_tool_ui_core.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\config_tool_ui_core.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\dialogs\\config_apply_confirm_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_apply_confirm_dialog.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\dialogs\\config_apply_confirm_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\dialogs\\name_input_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: name_input_dialog.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\dialogs\\name_input_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\dialogs\\project_running_warning_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: project_running_warning_dialog.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\dialogs\\project_running_warning_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\dialogs\\ue_project_selector_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: ue_project_selector_dialog.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\dialogs\\ue_project_selector_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\handlers\\config_handler.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_handler.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\handlers\\config_handler.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\config_tool\\ui\\layouts\\layout_builder.py",
+      "line_number": 1,
+      "description": "未使用的文件: layout_builder.py",
+      "suggestion": "考虑删除文件 modules\\config_tool\\ui\\layouts\\layout_builder.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\site_recommendations\\__main__.py",
+      "line_number": 1,
+      "description": "未使用的文件: __main__.py",
+      "suggestion": "考虑删除文件 modules\\site_recommendations\\__main__.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\site_recommendations\\logic\\site_recommendations_logic.py",
+      "line_number": 1,
+      "description": "未使用的文件: site_recommendations_logic.py",
+      "suggestion": "考虑删除文件 modules\\site_recommendations\\logic\\site_recommendations_logic.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "modules\\site_recommendations\\ui\\site_recommendations_ui.py",
+      "line_number": 1,
+      "description": "未使用的文件: site_recommendations_ui.py",
+      "suggestion": "考虑删除文件 modules\\site_recommendations\\ui\\site_recommendations_ui.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "scripts\\build.py",
+      "line_number": 1,
+      "description": "未使用的文件: build.py",
+      "suggestion": "考虑删除文件 scripts\\build.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "scripts\\build_release.py",
+      "line_number": 1,
+      "description": "未使用的文件: build_release.py",
+      "suggestion": "考虑删除文件 scripts\\build_release.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_asset_manager_lazy_loading.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_asset_manager_lazy_loading.py",
+      "suggestion": "考虑删除文件 tests\\test_asset_manager_lazy_loading.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_error_handler.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_error_handler.py",
+      "suggestion": "考虑删除文件 tests\\test_error_handler.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_function_calling_coordinator.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_function_calling_coordinator.py",
+      "suggestion": "考虑删除文件 tests\\test_function_calling_coordinator.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_lazy_asset_loader.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_lazy_asset_loader.py",
+      "suggestion": "考虑删除文件 tests\\test_lazy_asset_loader.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_log_analyzer.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_log_analyzer.py",
+      "suggestion": "考虑删除文件 tests\\test_log_analyzer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_lru_cache.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_lru_cache.py",
+      "suggestion": "考虑删除文件 tests\\test_lru_cache.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_memory_retrieval_accuracy.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_memory_retrieval_accuracy.py",
+      "suggestion": "考虑删除文件 tests\\test_memory_retrieval_accuracy.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_safe_print.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_safe_print.py",
+      "suggestion": "考虑删除文件 tests\\test_safe_print.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_streaming_buffer_manager.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_streaming_buffer_manager.py",
+      "suggestion": "考虑删除文件 tests\\test_streaming_buffer_manager.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_thread_cleanup.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_thread_cleanup.py",
+      "suggestion": "考虑删除文件 tests\\test_thread_cleanup.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tests\\test_tool_status_display.py",
+      "line_number": 1,
+      "description": "未使用的文件: test_tool_status_display.py",
+      "suggestion": "考虑删除文件 tests\\test_tool_status_display.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\clean_faiss_memory.py",
+      "line_number": 1,
+      "description": "未使用的文件: clean_faiss_memory.py",
+      "suggestion": "考虑删除文件 tools\\clean_faiss_memory.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\clean_memory_now.py",
+      "line_number": 1,
+      "description": "未使用的文件: clean_memory_now.py",
+      "suggestion": "考虑删除文件 tools\\clean_memory_now.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\analyzers\\base.py",
+      "line_number": 1,
+      "description": "未使用的文件: base.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\analyzers\\base.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\analyzers\\config_analyzer.py",
+      "line_number": 1,
+      "description": "未使用的文件: config_analyzer.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\analyzers\\config_analyzer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\analyzers\\dead_code_analyzer.py",
+      "line_number": 1,
+      "description": "未使用的文件: dead_code_analyzer.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\analyzers\\dead_code_analyzer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\analyzers\\deprecated_analyzer.py",
+      "line_number": 1,
+      "description": "未使用的文件: deprecated_analyzer.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\analyzers\\deprecated_analyzer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\analyzers\\duplicate_analyzer.py",
+      "line_number": 1,
+      "description": "未使用的文件: duplicate_analyzer.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\analyzers\\duplicate_analyzer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\analyzers\\safety_validator.py",
+      "line_number": 1,
+      "description": "未使用的文件: safety_validator.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\analyzers\\safety_validator.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\analyzers\\unused_analyzer.py",
+      "line_number": 1,
+      "description": "未使用的文件: unused_analyzer.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\analyzers\\unused_analyzer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\ast_parser.py",
+      "line_number": 1,
+      "description": "未使用的文件: ast_parser.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\ast_parser.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\auto_fixer.py",
+      "line_number": 1,
+      "description": "未使用的文件: auto_fixer.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\auto_fixer.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\cli.py",
+      "line_number": 1,
+      "description": "未使用的文件: cli.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\cli.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\dependency_graph.py",
+      "line_number": 1,
+      "description": "未使用的文件: dependency_graph.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\dependency_graph.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\models.py",
+      "line_number": 1,
+      "description": "未使用的文件: models.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\models.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\orchestrator.py",
+      "line_number": 1,
+      "description": "未使用的文件: orchestrator.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\orchestrator.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\reporters\\base.py",
+      "line_number": 1,
+      "description": "未使用的文件: base.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\reporters\\base.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\reporters\\json_reporter.py",
+      "line_number": 1,
+      "description": "未使用的文件: json_reporter.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\reporters\\json_reporter.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\reporters\\markdown_reporter.py",
+      "line_number": 1,
+      "description": "未使用的文件: markdown_reporter.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\reporters\\markdown_reporter.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\code_cleanup\\scanner.py",
+      "line_number": 1,
+      "description": "未使用的文件: scanner.py",
+      "suggestion": "考虑删除文件 tools\\code_cleanup\\scanner.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\fix_ai_config.py",
+      "line_number": 1,
+      "description": "未使用的文件: fix_ai_config.py",
+      "suggestion": "考虑删除文件 tools\\fix_ai_config.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\show_faiss_location.py",
+      "line_number": 1,
+      "description": "未使用的文件: show_faiss_location.py",
+      "suggestion": "考虑删除文件 tools\\show_faiss_location.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "tools\\verify_faiss.py",
+      "line_number": 1,
+      "description": "未使用的文件: verify_faiss.py",
+      "suggestion": "考虑删除文件 tools\\verify_faiss.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "ui\\dialogs\\close_confirmation_dialog.py",
+      "line_number": 1,
+      "description": "未使用的文件: close_confirmation_dialog.py",
+      "suggestion": "考虑删除文件 ui\\dialogs\\close_confirmation_dialog.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "ui\\main_window_components\\title_bar.py",
+      "line_number": 1,
+      "description": "未使用的文件: title_bar.py",
+      "suggestion": "考虑删除文件 ui\\main_window_components\\title_bar.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "ui\\main_window_handlers\\module_loader.py",
+      "line_number": 1,
+      "description": "未使用的文件: module_loader.py",
+      "suggestion": "考虑删除文件 ui\\main_window_handlers\\module_loader.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "ui\\main_window_handlers\\navigation_handler.py",
+      "line_number": 1,
+      "description": "未使用的文件: navigation_handler.py",
+      "suggestion": "考虑删除文件 ui\\main_window_handlers\\navigation_handler.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 1,
+      "description": "未使用的文件: settings_widget.py",
+      "suggestion": "考虑删除文件 ui\\settings_widget.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "ui\\system_tray_manager.py",
+      "line_number": 1,
+      "description": "未使用的文件: system_tray_manager.py",
+      "suggestion": "考虑删除文件 ui\\system_tray_manager.py"
+    },
+    {
+      "category": "unused_file",
+      "severity": "high",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 1,
+      "description": "未使用的文件: ue_main_window_core.py",
+      "suggestion": "考虑删除文件 ui\\ue_main_window_core.py"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "core\\app_manager.py",
+      "line_number": 110,
+      "description": "未调用的私有函数: _signal_handler",
+      "suggestion": "删除第 110 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "core\\single_instance.py",
+      "line_number": 86,
+      "description": "未调用的私有函数: _on_new_connection",
+      "suggestion": "删除第 86 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "core\\utils\\style_loader.py",
+      "line_number": 489,
+      "description": "未调用的私有函数: _on_directory_changed",
+      "suggestion": "删除第 489 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "core\\utils\\style_loader.py",
+      "line_number": 494,
+      "description": "未调用的私有函数: _on_file_changed",
+      "suggestion": "删除第 494 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "core\\utils\\ue_process_utils.py",
+      "line_number": 211,
+      "description": "未调用的私有函数: _search_location",
+      "suggestion": "删除第 211 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: CustomDialog",
+      "suggestion": "更新文档或实现符号 'CustomDialog'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: load_module",
+      "suggestion": "更新文档或实现符号 'load_module'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: break",
+      "suggestion": "更新文档或实现符号 'break'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: get_current_module",
+      "suggestion": "更新文档或实现符号 'get_current_module'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: activate",
+      "suggestion": "更新文档或实现符号 'activate'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: datas",
+      "suggestion": "更新文档或实现符号 'datas'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: _init_context_manager",
+      "suggestion": "更新文档或实现符号 '_init_context_manager'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: success",
+      "suggestion": "更新文档或实现符号 'success'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: border",
+      "suggestion": "更新文档或实现符号 'border'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: process_file",
+      "suggestion": "更新文档或实现符号 'process_file'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: build",
+      "suggestion": "更新文档或实现符号 'build'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: continue",
+      "suggestion": "更新文档或实现符号 'continue'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: accent_alpha",
+      "suggestion": "更新文档或实现符号 'accent_alpha'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: CustomAnalyzer",
+      "suggestion": "更新文档或实现符号 'CustomAnalyzer'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: go_back",
+      "suggestion": "更新文档或实现符号 'go_back'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: border_hover",
+      "suggestion": "更新文档或实现符号 'border_hover'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: __all__",
+      "suggestion": "更新文档或实现符号 '__all__'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: navigate_to",
+      "suggestion": "更新文档或实现符号 'navigate_to'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: accent_hover",
+      "suggestion": "更新文档或实现符号 'accent_hover'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: bg_pressed",
+      "suggestion": "更新文档或实现符号 'bg_pressed'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: get_cached_ui",
+      "suggestion": "更新文档或实现符号 'get_cached_ui'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: icon",
+      "suggestion": "更新文档或实现符号 'icon'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: binaries",
+      "suggestion": "更新文档或实现符号 'binaries'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: ModuleInterface",
+      "suggestion": "更新文档或实现符号 'ModuleInterface'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: test_",
+      "suggestion": "更新文档或实现符号 'test_'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: bg_primary_alpha",
+      "suggestion": "更新文档或实现符号 'bg_primary_alpha'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: bg_secondary_alpha",
+      "suggestion": "更新文档或实现符号 'bg_secondary_alpha'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: token_usage",
+      "suggestion": "更新文档或实现符号 'token_usage'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: info",
+      "suggestion": "更新文档或实现符号 'info'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: test_long_running",
+      "suggestion": "更新文档或实现符号 'test_long_running'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: text_disabled",
+      "suggestion": "更新文档或实现符号 'text_disabled'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: text_primary",
+      "suggestion": "更新文档或实现符号 'text_primary'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: _",
+      "suggestion": "更新文档或实现符号 '_'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: on_",
+      "suggestion": "更新文档或实现符号 'on_'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: __pycache__",
+      "suggestion": "更新文档或实现符号 '__pycache__'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: QThread",
+      "suggestion": "更新文档或实现符号 'QThread'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: button_hover",
+      "suggestion": "更新文档或实现符号 'button_hover'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: on_request_finished",
+      "suggestion": "更新文档或实现符号 'on_request_finished'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: raise",
+      "suggestion": "更新文档或实现符号 'raise'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: text_tertiary",
+      "suggestion": "更新文档或实现符号 'text_tertiary'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: detect_duplicate_code",
+      "suggestion": "更新文档或实现符号 'detect_duplicate_code'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: button_pressed",
+      "suggestion": "更新文档或实现符号 'button_pressed'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: bg_hover",
+      "suggestion": "更新文档或实现符号 'bg_hover'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: _version",
+      "suggestion": "更新文档或实现符号 '_version'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: QPropertyAnimation",
+      "suggestion": "更新文档或实现符号 'QPropertyAnimation'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: _cleanup_streaming_state",
+      "suggestion": "更新文档或实现符号 '_cleanup_streaming_state'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: danger_hover",
+      "suggestion": "更新文档或实现符号 'danger_hover'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: detect_unreachable_code",
+      "suggestion": "更新文档或实现符号 'detect_unreachable_code'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: release",
+      "suggestion": "更新文档或实现符号 'release'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: switch_module",
+      "suggestion": "更新文档或实现符号 'switch_module'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: bg_tertiary",
+      "suggestion": "更新文档或实现符号 'bg_tertiary'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: QGraphicsDropShadowEffect",
+      "suggestion": "更新文档或实现符号 'QGraphicsDropShadowEffect'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: deactivate",
+      "suggestion": "更新文档或实现符号 'deactivate'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: pickle",
+      "suggestion": "更新文档或实现符号 'pickle'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: button_hover_scale",
+      "suggestion": "更新文档或实现符号 'button_hover_scale'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: delete_memory",
+      "suggestion": "更新文档或实现符号 'delete_memory'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: on_button_clicked",
+      "suggestion": "更新文档或实现符号 'on_button_clicked'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: class",
+      "suggestion": "更新文档或实现符号 'class'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: _text_buffer",
+      "suggestion": "更新文档或实现符号 '_text_buffer'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: clean_",
+      "suggestion": "更新文档或实现符号 'clean_'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: WorkerThread",
+      "suggestion": "更新文档或实现符号 'WorkerThread'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: button_bg",
+      "suggestion": "更新文档或实现符号 'button_bg'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: update_status",
+      "suggestion": "更新文档或实现符号 'update_status'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: calibrate_from_api",
+      "suggestion": "更新文档或实现符号 'calibrate_from_api'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: detect_unused_imports",
+      "suggestion": "更新文档或实现符号 'detect_unused_imports'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: timeout_handler",
+      "suggestion": "更新文档或实现符号 'timeout_handler'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: mock_api_call",
+      "suggestion": "更新文档或实现符号 'mock_api_call'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: content",
+      "suggestion": "更新文档或实现符号 'content'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: fix_",
+      "suggestion": "更新文档或实现符号 'fix_'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: ChatWindow",
+      "suggestion": "更新文档或实现符号 'ChatWindow'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: cache",
+      "suggestion": "更新文档或实现符号 'cache'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: verify_",
+      "suggestion": "更新文档或实现符号 'verify_'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: danger",
+      "suggestion": "更新文档或实现符号 'danger'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: border_focus",
+      "suggestion": "更新文档或实现符号 'border_focus'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: slide_in_from_left",
+      "suggestion": "更新文档或实现符号 'slide_in_from_left'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: ast",
+      "suggestion": "更新文档或实现符号 'ast'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: bg_primary",
+      "suggestion": "更新文档或实现符号 'bg_primary'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: clicked",
+      "suggestion": "更新文档或实现符号 'clicked'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: load_module_ui",
+      "suggestion": "更新文档或实现符号 'load_module_ui'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: fade_in",
+      "suggestion": "更新文档或实现符号 'fade_in'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: return",
+      "suggestion": "更新文档或实现符号 'return'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: package",
+      "suggestion": "更新文档或实现符号 'package'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: excludes",
+      "suggestion": "更新文档或实现符号 'excludes'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: unload_module_ui",
+      "suggestion": "更新文档或实现符号 'unload_module_ui'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: MainWindow",
+      "suggestion": "更新文档或实现符号 'MainWindow'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: usage",
+      "suggestion": "更新文档或实现符号 'usage'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: setup_modules",
+      "suggestion": "更新文档或实现符号 'setup_modules'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: QEasingCurve",
+      "suggestion": "更新文档或实现符号 'QEasingCurve'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: UIAnimations",
+      "suggestion": "更新文档或实现符号 'UIAnimations'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: bg_secondary",
+      "suggestion": "更新文档或实现符号 'bg_secondary'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: test_api_call_count",
+      "suggestion": "更新文档或实现符号 'test_api_call_count'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: text_secondary",
+      "suggestion": "更新文档或实现符号 'text_secondary'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: hiddenimports",
+      "suggestion": "更新文档或实现符号 'hiddenimports'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: _update_timer",
+      "suggestion": "更新文档或实现符号 '_update_timer'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: clean",
+      "suggestion": "更新文档或实现符号 'clean'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: test_thread_leak",
+      "suggestion": "更新文档或实现符号 'test_thread_leak'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: accent",
+      "suggestion": "更新文档或实现符号 'accent'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: is_read",
+      "suggestion": "更新文档或实现符号 'is_read'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: argparse",
+      "suggestion": "更新文档或实现符号 'argparse'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: accent_pressed",
+      "suggestion": "更新文档或实现符号 'accent_pressed'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: UEMainWindowCore",
+      "suggestion": "更新文档或实现符号 'UEMainWindowCore'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: button_text",
+      "suggestion": "更新文档或实现符号 'button_text'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: CustomReporter",
+      "suggestion": "更新文档或实现符号 'CustomReporter'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: smooth_scroll",
+      "suggestion": "更新文档或实现符号 'smooth_scroll'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: tqdm",
+      "suggestion": "更新文档或实现符号 'tqdm'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: QWidgetName",
+      "suggestion": "更新文档或实现符号 'QWidgetName'"
+    },
+    {
+      "category": "safety",
+      "severity": "medium",
+      "file_path": "docs",
+      "line_number": 1,
+      "description": "文档引用了不存在的符号: json",
+      "suggestion": "更新文档或实现符号 'json'"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\async_memory_compressor.py",
+      "line_number": 102,
+      "description": "未调用的私有函数: _start_timeout_timer",
+      "suggestion": "删除第 102 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\async_memory_compressor.py",
+      "line_number": 113,
+      "description": "未调用的私有函数: _on_timeout",
+      "suggestion": "删除第 113 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\context_manager.py",
+      "line_number": 645,
+      "description": "未调用的私有函数: _build_fallback_context",
+      "suggestion": "删除第 645 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\context_manager.py",
+      "line_number": 800,
+      "description": "未调用的私有函数: _build_runtime_status",
+      "suggestion": "删除第 800 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\enhanced_memory_manager.py",
+      "line_number": 597,
+      "description": "未调用的私有函数: _is_important_query",
+      "suggestion": "删除第 597 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 355,
+      "description": "未调用的私有函数: _stream_final_response",
+      "suggestion": "删除第 355 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\streaming_buffer_manager.py",
+      "line_number": 94,
+      "description": "未调用的私有函数: _flush",
+      "suggestion": "删除第 94 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 279,
+      "description": "未调用的私有函数: _tool_search_assets",
+      "suggestion": "删除第 279 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 285,
+      "description": "未调用的私有函数: _tool_query_asset_detail",
+      "suggestion": "删除第 285 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 291,
+      "description": "未调用的私有函数: _tool_search_configs",
+      "suggestion": "删除第 291 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 297,
+      "description": "未调用的私有函数: _tool_diff_config",
+      "suggestion": "删除第 297 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 302,
+      "description": "未调用的私有函数: _tool_search_logs",
+      "suggestion": "删除第 302 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 308,
+      "description": "未调用的私有函数: _tool_search_docs",
+      "suggestion": "删除第 308 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 434,
+      "description": "未调用的私有函数: _tool_import_asset",
+      "suggestion": "删除第 434 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 441,
+      "description": "未调用的私有函数: _tool_list_importable_assets",
+      "suggestion": "删除第 441 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 447,
+      "description": "未调用的私有函数: _tool_generate_theme",
+      "suggestion": "删除第 447 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 456,
+      "description": "未调用的私有函数: _tool_confirm_theme",
+      "suggestion": "删除第 456 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 463,
+      "description": "未调用的私有函数: _tool_reject_theme",
+      "suggestion": "删除第 463 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 470,
+      "description": "未调用的私有函数: _tool_list_themes",
+      "suggestion": "删除第 470 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 476,
+      "description": "未调用的私有函数: _register_controlled_tools",
+      "suggestion": "删除第 476 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 531,
+      "description": "未调用的私有函数: _tool_export_config_template",
+      "suggestion": "删除第 531 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 538,
+      "description": "未调用的私有函数: _tool_batch_rename_preview",
+      "suggestion": "删除第 538 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 449,
+      "description": "未调用的私有函数: _handler",
+      "suggestion": "删除第 449 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 468,
+      "description": "未调用的私有函数: _on_edit_height_changed",
+      "suggestion": "删除第 468 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 491,
+      "description": "未调用的私有函数: _remove",
+      "suggestion": "删除第 491 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 204,
+      "description": "未调用的私有函数: _show_thinking_text",
+      "suggestion": "删除第 204 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "duplicate_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 1155,
+      "description": "发现重复代码 (36 行)，在 2 个位置重复",
+      "suggestion": "考虑将重复代码提取为公共函数。重复位置: modules\\ai_assistant\\ui\\markdown_message.py:1155, modules\\ai_assistant\\ui\\markdown_message.py:1424",
+      "code_snippet": "        \"\"\"创建复制图标（两个重叠的圆角正方形）\"\"\"\n        from PyQt6.QtCore import QPointF\n        from PyQt6.QtGui import QPainterPath\n        \n        # 使用更大的画布以获得更清晰的渲染\n        size = 48\n        pixmap = QPixmap(si"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 1410,
+      "description": "未调用的私有函数: _start_thinking_animation",
+      "suggestion": "删除第 1410 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "duplicate_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 1424,
+      "description": "发现重复代码 (36 行)，在 2 个位置重复",
+      "suggestion": "考虑将重复代码提取为公共函数。重复位置: modules\\ai_assistant\\ui\\markdown_message.py:1155, modules\\ai_assistant\\ui\\markdown_message.py:1424",
+      "code_snippet": "        \"\"\"创建复制图标（两个重叠的圆角正方形）\"\"\"\n        from PyQt6.QtCore import QPointF\n        from PyQt6.QtGui import QPainterPath\n        \n        # 使用更大的画布以获得更清晰的渲染\n        size = 48\n        pixmap = QPixmap(si"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\ui\\scroll_controller.py",
+      "line_number": 97,
+      "description": "未调用的私有函数: _resume_auto_scroll",
+      "suggestion": "删除第 97 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\ai_assistant\\ui\\scroll_controller.py",
+      "line_number": 108,
+      "description": "未调用的私有函数: _do_scroll",
+      "suggestion": "删除第 108 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 370,
+      "description": "未调用的私有函数: _load_assets_from_config",
+      "suggestion": "删除第 370 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 1358,
+      "description": "未调用的私有函数: _sync_category_folders",
+      "suggestion": "删除第 1358 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 1749,
+      "description": "未调用的私有函数: _do_preview_asset",
+      "suggestion": "删除第 1749 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\logic\\lazy_asset_loader.py",
+      "line_number": 116,
+      "description": "未调用的私有函数: _on_load_complete",
+      "suggestion": "删除第 116 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 65,
+      "description": "未调用的私有函数: _check_mouse_position",
+      "suggestion": "删除第 65 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 521,
+      "description": "未调用的私有函数: _load_thumbnail_with_cache",
+      "suggestion": "删除第 521 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 630,
+      "description": "未调用的私有函数: _open_asset_location",
+      "suggestion": "删除第 630 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 672,
+      "description": "未调用的私有函数: _show_context_menu",
+      "suggestion": "删除第 672 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 593,
+      "description": "未调用的私有函数: _on_category_changed",
+      "suggestion": "删除第 593 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 602,
+      "description": "未调用的私有函数: _on_search_changed",
+      "suggestion": "删除第 602 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 614,
+      "description": "未调用的私有函数: _show_category_management",
+      "suggestion": "删除第 614 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 623,
+      "description": "未调用的私有函数: _on_categories_updated",
+      "suggestion": "删除第 623 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 632,
+      "description": "未调用的私有函数: _show_add_asset_dialog",
+      "suggestion": "删除第 632 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 763,
+      "description": "未调用的私有函数: _set_paths",
+      "suggestion": "删除第 763 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1080,
+      "description": "未调用的私有函数: _load_thumbnail_sync",
+      "suggestion": "删除第 1080 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1172,
+      "description": "未调用的私有函数: _preview_asset",
+      "suggestion": "删除第 1172 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1451,
+      "description": "未调用的私有函数: _delete_asset",
+      "suggestion": "删除第 1451 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1468,
+      "description": "未调用的私有函数: _migrate_asset",
+      "suggestion": "删除第 1468 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1636,
+      "description": "未调用的私有函数: _edit_asset_info",
+      "suggestion": "删除第 1636 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1692,
+      "description": "未调用的私有函数: _on_asset_added",
+      "suggestion": "删除第 1692 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1698,
+      "description": "未调用的私有函数: _on_asset_removed",
+      "suggestion": "删除第 1698 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1704,
+      "description": "未调用的私有函数: _on_assets_loaded",
+      "suggestion": "删除第 1704 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1710,
+      "description": "未调用的私有函数: _on_preview_started",
+      "suggestion": "删除第 1710 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1721,
+      "description": "未调用的私有函数: _on_thumbnail_updated",
+      "suggestion": "删除第 1721 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1739,
+      "description": "未调用的私有函数: _on_error",
+      "suggestion": "删除第 1739 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1764,
+      "description": "未调用的私有函数: _update_asset_description",
+      "suggestion": "删除第 1764 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\dialogs.py",
+      "line_number": 257,
+      "description": "未调用的私有函数: _on_ok_clicked",
+      "suggestion": "删除第 257 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\edit_asset_dialog.py",
+      "line_number": 244,
+      "description": "未调用的私有函数: _on_name_changed",
+      "suggestion": "删除第 244 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\edit_asset_dialog.py",
+      "line_number": 249,
+      "description": "未调用的私有函数: _on_ok_clicked",
+      "suggestion": "删除第 249 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\first_launch_dialog.py",
+      "line_number": 223,
+      "description": "未调用的私有函数: _browse_asset_library",
+      "suggestion": "删除第 223 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\first_launch_dialog.py",
+      "line_number": 239,
+      "description": "未调用的私有函数: _on_confirm",
+      "suggestion": "删除第 239 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\progress_dialog.py",
+      "line_number": 206,
+      "description": "未调用的私有函数: _do_close",
+      "suggestion": "删除第 206 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\progress_dialog.py",
+      "line_number": 242,
+      "description": "未调用的私有函数: _on_progress_update",
+      "suggestion": "删除第 242 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\set_paths_dialog.py",
+      "line_number": 201,
+      "description": "未调用的私有函数: _browse_asset_library",
+      "suggestion": "删除第 201 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\asset_manager\\ui\\set_paths_dialog.py",
+      "line_number": 215,
+      "description": "未调用的私有函数: _browse_preview_project",
+      "suggestion": "删除第 215 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\config_tool\\ui\\dialogs\\ue_project_selector_dialog.py",
+      "line_number": 251,
+      "description": "未调用的私有函数: _on_card_clicked",
+      "suggestion": "删除第 251 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\config_tool\\ui\\handlers\\config_handler.py",
+      "line_number": 24,
+      "description": "未调用的私有函数: _open_folder_async",
+      "suggestion": "删除第 24 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "modules\\config_tool\\ui\\handlers\\config_handler.py",
+      "line_number": 92,
+      "description": "未调用的私有函数: _check_mouse_position",
+      "suggestion": "删除第 92 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\dialogs\\close_confirmation_dialog.py",
+      "line_number": 182,
+      "description": "未调用的私有函数: _on_close_clicked",
+      "suggestion": "删除第 182 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\dialogs\\close_confirmation_dialog.py",
+      "line_number": 188,
+      "description": "未调用的私有函数: _on_minimize_clicked",
+      "suggestion": "删除第 188 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\dialogs\\close_confirmation_dialog.py",
+      "line_number": 194,
+      "description": "未调用的私有函数: _on_cancel_clicked",
+      "suggestion": "删除第 194 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 457,
+      "description": "未调用的私有函数: _add_additional_preview_project",
+      "suggestion": "删除第 457 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 487,
+      "description": "未调用的私有函数: _add_additional_preview_project_with_path",
+      "suggestion": "删除第 487 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 686,
+      "description": "未调用的私有函数: _browse_asset_library",
+      "suggestion": "删除第 686 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 826,
+      "description": "未调用的私有函数: _on_theme_changed",
+      "suggestion": "删除第 826 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 862,
+      "description": "未调用的私有函数: _import_custom_theme",
+      "suggestion": "删除第 862 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 920,
+      "description": "未调用的私有函数: _export_current_theme",
+      "suggestion": "删除第 920 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 1108,
+      "description": "未调用的私有函数: _on_close_behavior_changed",
+      "suggestion": "删除第 1108 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 1390,
+      "description": "未调用的私有函数: _auto_save_ai_settings",
+      "suggestion": "删除第 1390 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 1410,
+      "description": "未调用的私有函数: _load_ai_assistant_settings",
+      "suggestion": "删除第 1410 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 1470,
+      "description": "未调用的私有函数: _save_ai_assistant_settings",
+      "suggestion": "删除第 1470 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 1548,
+      "description": "未调用的私有函数: _save_ai_assistant_settings_silent",
+      "suggestion": "删除第 1548 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 1612,
+      "description": "未调用的私有函数: _test_ollama_connection",
+      "suggestion": "删除第 1612 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 1649,
+      "description": "未调用的私有函数: _refresh_ollama_models",
+      "suggestion": "删除第 1649 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 1706,
+      "description": "未调用的私有函数: _auto_refresh_ollama_models",
+      "suggestion": "删除第 1706 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\splash_screen.py",
+      "line_number": 160,
+      "description": "未调用的私有函数: _process_progress_queue",
+      "suggestion": "删除第 160 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\splash_screen.py",
+      "line_number": 180,
+      "description": "未调用的私有函数: _smooth_progress_update",
+      "suggestion": "删除第 180 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\system_tray_manager.py",
+      "line_number": 96,
+      "description": "未调用的私有函数: _on_tray_activated",
+      "suggestion": "删除第 96 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\system_tray_manager.py",
+      "line_number": 108,
+      "description": "未调用的私有函数: _on_show_window",
+      "suggestion": "删除第 108 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\system_tray_manager.py",
+      "line_number": 113,
+      "description": "未调用的私有函数: _on_quit",
+      "suggestion": "删除第 113 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 76,
+      "description": "未调用的私有函数: _on_tray_show_window",
+      "suggestion": "删除第 76 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 83,
+      "description": "未调用的私有函数: _on_tray_quit",
+      "suggestion": "删除第 83 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "dead_code",
+      "severity": "medium",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 161,
+      "description": "未调用的私有函数: _async_load_widget",
+      "suggestion": "删除第 161 行的函数定义，或将其改为公共函数"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "core\\base_logic.py",
+      "line_number": 15,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 15 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\base_logic.py",
+      "line_number": 21,
+      "description": "未使用的变量: logger",
+      "suggestion": "删除第 21 行的变量定义，或重命名为 _logger"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\base_logic.py",
+      "line_number": 65,
+      "description": "未使用的变量: CURRENT_CONFIG_VERSION",
+      "suggestion": "删除第 65 行的变量定义，或重命名为 _CURRENT_CONFIG_VERSION"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "core\\config\\config_backup.py",
+      "line_number": 9,
+      "description": "未使用的导入: shutil",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "core\\logger.py",
+      "line_number": 6,
+      "description": "未使用的导入: Path",
+      "suggestion": "删除第 6 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "core\\module_manager.py",
+      "line_number": 5,
+      "description": "未使用的导入: logging",
+      "suggestion": "删除第 5 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\module_manager.py",
+      "line_number": 19,
+      "description": "未使用的变量: DISCOVERED",
+      "suggestion": "删除第 19 行的变量定义，或重命名为 _DISCOVERED"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\module_manager.py",
+      "line_number": 20,
+      "description": "未使用的变量: LOADED",
+      "suggestion": "删除第 20 行的变量定义，或重命名为 _LOADED"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\module_manager.py",
+      "line_number": 21,
+      "description": "未使用的变量: INITIALIZED",
+      "suggestion": "删除第 21 行的变量定义，或重命名为 _INITIALIZED"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\module_manager.py",
+      "line_number": 22,
+      "description": "未使用的变量: UNLOADED",
+      "suggestion": "删除第 22 行的变量定义，或重命名为 _UNLOADED"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\module_manager.py",
+      "line_number": 23,
+      "description": "未使用的变量: ERROR",
+      "suggestion": "删除第 23 行的变量定义，或重命名为 _ERROR"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "core\\single_instance.py",
+      "line_number": 8,
+      "description": "未使用的导入: sys",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "core\\single_instance.py",
+      "line_number": 11,
+      "description": "未使用的导入: QMessageBox",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\utils\\file_utils.py",
+      "line_number": 33,
+      "description": "未使用的变量: DANGEROUS_PATTERNS",
+      "suggestion": "删除第 33 行的变量定义，或重命名为 _DANGEROUS_PATTERNS"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\utils\\file_utils.py",
+      "line_number": 39,
+      "description": "未使用的变量: DANGEROUS_NAMES",
+      "suggestion": "删除第 39 行的变量定义，或重命名为 _DANGEROUS_NAMES"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "core\\utils\\theme_manager.py",
+      "line_number": 18,
+      "description": "未使用的导入: StyleLoader",
+      "suggestion": "删除第 18 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\utils\\theme_manager.py",
+      "line_number": 26,
+      "description": "未使用的变量: DARK",
+      "suggestion": "删除第 26 行的变量定义，或重命名为 _DARK"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\utils\\theme_manager.py",
+      "line_number": 27,
+      "description": "未使用的变量: LIGHT",
+      "suggestion": "删除第 27 行的变量定义，或重命名为 _LIGHT"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\utils\\theme_manager.py",
+      "line_number": 28,
+      "description": "未使用的变量: CUSTOM",
+      "suggestion": "删除第 28 行的变量定义，或重命名为 _CUSTOM"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\utils\\thread_utils.py",
+      "line_number": 34,
+      "description": "未使用的变量: finished",
+      "suggestion": "删除第 34 行的变量定义，或重命名为 _finished"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\utils\\thread_utils.py",
+      "line_number": 35,
+      "description": "未使用的变量: error",
+      "suggestion": "删除第 35 行的变量定义，或重命名为 _error"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "core\\utils\\thread_utils.py",
+      "line_number": 37,
+      "description": "未使用的变量: progress",
+      "suggestion": "删除第 37 行的变量定义，或重命名为 _progress"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "core\\utils\\ue_process_utils.py",
+      "line_number": 5,
+      "description": "未使用的导入: logging",
+      "suggestion": "删除第 5 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "core\\utils\\ue_process_utils.py",
+      "line_number": 8,
+      "description": "未使用的导入: Dict",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "main.py",
+      "line_number": 8,
+      "description": "未使用的导入: os",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "main.py",
+      "line_number": 17,
+      "description": "未使用的导入: Qt",
+      "suggestion": "删除第 17 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\_template\\logic\\module_logic.py",
+      "line_number": 10,
+      "description": "未使用的导入: Path",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\_template\\logic\\module_logic.py",
+      "line_number": 11,
+      "description": "未使用的导入: List",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\_template\\logic\\module_logic.py",
+      "line_number": 11,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\clients\\api_llm_client.py",
+      "line_number": 12,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\clients\\ollama_llm_client.py",
+      "line_number": 10,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\clients\\ue_tool_client.py",
+      "line_number": 12,
+      "description": "未使用的导入: Dict",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\clients\\ue_tool_client.py",
+      "line_number": 12,
+      "description": "未使用的导入: Any",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_call_tracker.py",
+      "line_number": 13,
+      "description": "未使用的导入: field",
+      "suggestion": "删除第 13 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client.py",
+      "line_number": 7,
+      "description": "未使用的导入: os",
+      "suggestion": "删除第 7 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client.py",
+      "line_number": 8,
+      "description": "未使用的导入: time",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client.py",
+      "line_number": 9,
+      "description": "未使用的导入: requests",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client.py",
+      "line_number": 11,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client.py",
+      "line_number": 23,
+      "description": "未使用的变量: chunk_received",
+      "suggestion": "删除第 23 行的变量定义，或重命名为 _chunk_received"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client.py",
+      "line_number": 24,
+      "description": "未使用的变量: request_finished",
+      "suggestion": "删除第 24 行的变量定义，或重命名为 _request_finished"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client.py",
+      "line_number": 25,
+      "description": "未使用的变量: token_usage",
+      "suggestion": "删除第 25 行的变量定义，或重命名为 _token_usage"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client.py",
+      "line_number": 26,
+      "description": "未使用的变量: error_occurred",
+      "suggestion": "删除第 26 行的变量定义，或重命名为 _error_occurred"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client_streaming.py",
+      "line_number": 7,
+      "description": "未使用的导入: Generator",
+      "suggestion": "删除第 7 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client_streaming.py",
+      "line_number": 101,
+      "description": "未使用的变量: chunk_received",
+      "suggestion": "删除第 101 行的变量定义，或重命名为 _chunk_received"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client_streaming.py",
+      "line_number": 102,
+      "description": "未使用的变量: tool_call_detected",
+      "suggestion": "删除第 102 行的变量定义，或重命名为 _tool_call_detected"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client_streaming.py",
+      "line_number": 103,
+      "description": "未使用的变量: request_finished",
+      "suggestion": "删除第 103 行的变量定义，或重命名为 _request_finished"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client_streaming.py",
+      "line_number": 104,
+      "description": "未使用的变量: token_usage",
+      "suggestion": "删除第 104 行的变量定义，或重命名为 _token_usage"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\api_client_streaming.py",
+      "line_number": 105,
+      "description": "未使用的变量: error_occurred",
+      "suggestion": "删除第 105 行的变量定义，或重命名为 _error_occurred"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\asset_importer.py",
+      "line_number": 11,
+      "description": "未使用的导入: List",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\asset_reader.py",
+      "line_number": 8,
+      "description": "未使用的导入: json",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\asset_reader.py",
+      "line_number": 10,
+      "description": "未使用的导入: List",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\asset_reader.py",
+      "line_number": 10,
+      "description": "未使用的导入: Dict",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\asset_reader.py",
+      "line_number": 10,
+      "description": "未使用的导入: Any",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\asset_reader.py",
+      "line_number": 10,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\async_memory_compressor.py",
+      "line_number": 11,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\async_memory_compressor.py",
+      "line_number": 33,
+      "description": "未使用的变量: compression_complete",
+      "suggestion": "删除第 33 行的变量定义，或重命名为 _compression_complete"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\async_memory_compressor.py",
+      "line_number": 34,
+      "description": "未使用的变量: compression_timeout",
+      "suggestion": "删除第 34 行的变量定义，或重命名为 _compression_timeout"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\config.py",
+      "line_number": 7,
+      "description": "未使用的变量: SYSTEM_PROMPT",
+      "suggestion": "删除第 7 行的变量定义，或重命名为 _SYSTEM_PROMPT"
+    },
+    {
+      "category": "deprecated",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\config.py",
+      "line_number": 75,
+      "description": "包含废弃标记的代码",
+      "suggestion": "检查第 75 行附近的代码是否可以删除"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\config_reader.py",
+      "line_number": 8,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\config_reader.py",
+      "line_number": 8,
+      "description": "未使用的导入: List",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\context_manager.py",
+      "line_number": 10,
+      "description": "未使用的导入: Path",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\context_manager.py",
+      "line_number": 25,
+      "description": "未使用的变量: logger",
+      "suggestion": "删除第 25 行的变量定义，或重命名为 _logger"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\context_manager.py",
+      "line_number": 41,
+      "description": "未使用的变量: LocalDocIndex",
+      "suggestion": "删除第 41 行的变量定义，或重命名为 _LocalDocIndex"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\document_reader.py",
+      "line_number": 8,
+      "description": "未使用的导入: os",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\document_reader.py",
+      "line_number": 10,
+      "description": "未使用的导入: List",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\document_reader.py",
+      "line_number": 10,
+      "description": "未使用的导入: Dict",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\enhanced_memory_manager.py",
+      "line_number": 14,
+      "description": "未使用的导入: numpy",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\enhanced_memory_manager.py",
+      "line_number": 27,
+      "description": "未使用的变量: logger",
+      "suggestion": "删除第 27 行的变量定义，或重命名为 _logger"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\enhanced_memory_manager.py",
+      "line_number": 35,
+      "description": "未使用的变量: USER",
+      "suggestion": "删除第 35 行的变量定义，或重命名为 _USER"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\enhanced_memory_manager.py",
+      "line_number": 36,
+      "description": "未使用的变量: SESSION",
+      "suggestion": "删除第 36 行的变量定义，或重命名为 _SESSION"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\enhanced_memory_manager.py",
+      "line_number": 37,
+      "description": "未使用的变量: CONTEXT",
+      "suggestion": "删除第 37 行的变量定义，或重命名为 _CONTEXT"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\faiss_memory_store.py",
+      "line_number": 17,
+      "description": "未使用的导入: numpy",
+      "suggestion": "删除第 17 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 12,
+      "description": "未使用的导入: Callable",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 12,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 51,
+      "description": "未使用的变量: tool_start",
+      "suggestion": "删除第 51 行的变量定义，或重命名为 _tool_start"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 52,
+      "description": "未使用的变量: tool_complete",
+      "suggestion": "删除第 52 行的变量定义，或重命名为 _tool_complete"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 53,
+      "description": "未使用的变量: chunk_received",
+      "suggestion": "删除第 53 行的变量定义，或重命名为 _chunk_received"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 54,
+      "description": "未使用的变量: request_finished",
+      "suggestion": "删除第 54 行的变量定义，或重命名为 _request_finished"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 55,
+      "description": "未使用的变量: token_usage",
+      "suggestion": "删除第 55 行的变量定义，或重命名为 _token_usage"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\function_calling_coordinator.py",
+      "line_number": 56,
+      "description": "未使用的变量: error_occurred",
+      "suggestion": "删除第 56 行的变量定义，或重命名为 _error_occurred"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 18,
+      "description": "未使用的变量: logger",
+      "suggestion": "删除第 18 行的变量定义，或重命名为 _logger"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 23,
+      "description": "未使用的变量: ASSET_QUERY",
+      "suggestion": "删除第 23 行的变量定义，或重命名为 _ASSET_QUERY"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 24,
+      "description": "未使用的变量: ASSET_DETAIL",
+      "suggestion": "删除第 24 行的变量定义，或重命名为 _ASSET_DETAIL"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 25,
+      "description": "未使用的变量: CONFIG_QUERY",
+      "suggestion": "删除第 25 行的变量定义，或重命名为 _CONFIG_QUERY"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 26,
+      "description": "未使用的变量: CONFIG_COMPARE",
+      "suggestion": "删除第 26 行的变量定义，或重命名为 _CONFIG_COMPARE"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 27,
+      "description": "未使用的变量: LOG_ANALYZE",
+      "suggestion": "删除第 27 行的变量定义，或重命名为 _LOG_ANALYZE"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 28,
+      "description": "未使用的变量: LOG_SEARCH",
+      "suggestion": "删除第 28 行的变量定义，或重命名为 _LOG_SEARCH"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 29,
+      "description": "未使用的变量: DOC_SEARCH",
+      "suggestion": "删除第 29 行的变量定义，或重命名为 _DOC_SEARCH"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 30,
+      "description": "未使用的变量: SITE_RECOMMENDATION",
+      "suggestion": "删除第 30 行的变量定义，或重命名为 _SITE_RECOMMENDATION"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 31,
+      "description": "未使用的变量: CHITCHAT",
+      "suggestion": "删除第 31 行的变量定义，或重命名为 _CHITCHAT"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 36,
+      "description": "未使用的变量: BGE_SMALL",
+      "suggestion": "删除第 36 行的变量定义，或重命名为 _BGE_SMALL"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 37,
+      "description": "未使用的变量: RULE_BASED",
+      "suggestion": "删除第 37 行的变量定义，或重命名为 _RULE_BASED"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\intent_parser.py",
+      "line_number": 161,
+      "description": "未使用的导入: numpy",
+      "suggestion": "删除第 161 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\log_analyzer.py",
+      "line_number": 8,
+      "description": "未使用的导入: re",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\log_analyzer.py",
+      "line_number": 10,
+      "description": "未使用的导入: Dict",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\log_analyzer.py",
+      "line_number": 10,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\memory_compressor.py",
+      "line_number": 8,
+      "description": "未使用的导入: Any",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\nlu_templates.py",
+      "line_number": 7,
+      "description": "未使用的变量: NEUTRAL_TEMPLATES",
+      "suggestion": "删除第 7 行的变量定义，或重命名为 _NEUTRAL_TEMPLATES"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\nlu_templates.py",
+      "line_number": 43,
+      "description": "未使用的变量: TEMPLATE_GENERATION_PROMPT",
+      "suggestion": "删除第 43 行的变量定义，或重命名为 _TEMPLATE_GENERATION_PROMPT"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\non_streaming_worker.py",
+      "line_number": 26,
+      "description": "未使用的变量: result_ready",
+      "suggestion": "删除第 26 行的变量定义，或重命名为 _result_ready"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\non_streaming_worker.py",
+      "line_number": 27,
+      "description": "未使用的变量: error_occurred",
+      "suggestion": "删除第 27 行的变量定义，或重命名为 _error_occurred"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\prompt_cache\\manager.py",
+      "line_number": 15,
+      "description": "未使用的变量: CACHE_TYPE_SYSTEM",
+      "suggestion": "删除第 15 行的变量定义，或重命名为 _CACHE_TYPE_SYSTEM"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\prompt_cache\\manager.py",
+      "line_number": 16,
+      "description": "未使用的变量: CACHE_TYPE_TOOLS",
+      "suggestion": "删除第 16 行的变量定义，或重命名为 _CACHE_TYPE_TOOLS"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\prompt_cache\\manager.py",
+      "line_number": 17,
+      "description": "未使用的变量: CACHE_TYPE_IDENTITY",
+      "suggestion": "删除第 17 行的变量定义，或重命名为 _CACHE_TYPE_IDENTITY"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\query_rewriter.py",
+      "line_number": 7,
+      "description": "未使用的导入: Tuple",
+      "suggestion": "删除第 7 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\query_rewriter.py",
+      "line_number": 28,
+      "description": "未使用的变量: DEICTIC_WORDS",
+      "suggestion": "删除第 28 行的变量定义，或重命名为 _DEICTIC_WORDS"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\query_rewriter.py",
+      "line_number": 35,
+      "description": "未使用的变量: VERB_STARTERS",
+      "suggestion": "删除第 35 行的变量定义，或重命名为 _VERB_STARTERS"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\query_rewriter.py",
+      "line_number": 38,
+      "description": "未使用的变量: CONTEXT_DEPENDENT",
+      "suggestion": "删除第 38 行的变量定义，或重命名为 _CONTEXT_DEPENDENT"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\query_rewriter.py",
+      "line_number": 142,
+      "description": "未使用的变量: THRESHOLD_HIGH",
+      "suggestion": "删除第 142 行的变量定义，或重命名为 _THRESHOLD_HIGH"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\query_rewriter.py",
+      "line_number": 143,
+      "description": "未使用的变量: THRESHOLD_MID",
+      "suggestion": "删除第 143 行的变量定义，或重命名为 _THRESHOLD_MID"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\runtime_context.py",
+      "line_number": 29,
+      "description": "未使用的变量: MODULE_NAME_MAP",
+      "suggestion": "删除第 29 行的变量定义，或重命名为 _MODULE_NAME_MAP"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\site_reader.py",
+      "line_number": 8,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\theme_generator.py",
+      "line_number": 213,
+      "description": "未使用的变量: border",
+      "suggestion": "删除第 213 行的变量定义，或重命名为 _border"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\theme_generator.py",
+      "line_number": 408,
+      "description": "未使用的导入: Theme",
+      "suggestion": "删除第 408 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 9,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "deprecated",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\logic\\tools_registry.py",
+      "line_number": 596,
+      "description": "包含废弃标记的代码",
+      "suggestion": "检查第 596 行附近的代码是否可以删除"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 22,
+      "description": "未使用的变量: heightChanged",
+      "suggestion": "删除第 22 行的变量定义，或重命名为 _heightChanged"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 94,
+      "description": "未使用的变量: submitted",
+      "suggestion": "删除第 94 行的变量定义，或重命名为 _submitted"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 95,
+      "description": "未使用的变量: submitted_detail",
+      "suggestion": "删除第 95 行的变量定义，或重命名为 _submitted_detail"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 96,
+      "description": "未使用的变量: stop_requested",
+      "suggestion": "删除第 96 行的变量定义，或重命名为 _stop_requested"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 97,
+      "description": "未使用的变量: height_changed",
+      "suggestion": "删除第 97 行的变量定义，或重命名为 _height_changed"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_composer.py",
+      "line_number": 757,
+      "description": "未使用的变量: original_text",
+      "suggestion": "删除第 757 行的变量定义，或重命名为 _original_text"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 6,
+      "description": "未使用的导入: QGraphicsBlurEffect",
+      "suggestion": "删除第 6 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 11,
+      "description": "未使用的导入: QSize",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 12,
+      "description": "未使用的导入: QFont",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 12,
+      "description": "未使用的导入: QIcon",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 12,
+      "description": "未使用的导入: QTextCursor",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 12,
+      "description": "未使用的导入: QPalette",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 22,
+      "description": "未使用的变量: image_pasted",
+      "suggestion": "删除第 22 行的变量定义，或重命名为 _image_pasted"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 23,
+      "description": "未使用的变量: height_changing",
+      "suggestion": "删除第 23 行的变量定义，或重命名为 _height_changing"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 198,
+      "description": "未使用的变量: message_sent",
+      "suggestion": "删除第 198 行的变量定义，或重命名为 _message_sent"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 199,
+      "description": "未使用的变量: message_with_images_sent",
+      "suggestion": "删除第 199 行的变量定义，或重命名为 _message_with_images_sent"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 200,
+      "description": "未使用的变量: height_changed",
+      "suggestion": "删除第 200 行的变量定义，或重命名为 _height_changed"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 201,
+      "description": "未使用的变量: stop_generation",
+      "suggestion": "删除第 201 行的变量定义，或重命名为 _stop_generation"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input.py",
+      "line_number": 230,
+      "description": "未使用的导入: QSizePolicy",
+      "suggestion": "删除第 230 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input_bar.py",
+      "line_number": 10,
+      "description": "未使用的导入: QSize",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input_bar.py",
+      "line_number": 11,
+      "description": "未使用的导入: QTextCursor",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input_bar.py",
+      "line_number": 11,
+      "description": "未使用的导入: QKeyEvent",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\chat_input_bar.py",
+      "line_number": 22,
+      "description": "未使用的变量: message_sent",
+      "suggestion": "删除第 22 行的变量定义，或重命名为 _message_sent"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\confirmation_dialog.py",
+      "line_number": 12,
+      "description": "未使用的导入: Qt",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 7,
+      "description": "未使用的导入: QUrl",
+      "suggestion": "删除第 7 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 17,
+      "description": "未使用的导入: FencedCodeExtension",
+      "suggestion": "删除第 17 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 18,
+      "description": "未使用的导入: TableExtension",
+      "suggestion": "删除第 18 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 28,
+      "description": "未使用的导入: get_lexer_by_name",
+      "suggestion": "删除第 28 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 28,
+      "description": "未使用的导入: guess_lexer",
+      "suggestion": "删除第 28 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 29,
+      "description": "未使用的导入: HtmlFormatter",
+      "suggestion": "删除第 29 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 30,
+      "description": "未使用的导入: ClassNotFound",
+      "suggestion": "删除第 30 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 38,
+      "description": "未使用的导入: TOOL_NAME_MAP",
+      "suggestion": "删除第 38 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 1265,
+      "description": "未使用的变量: copy_clicked",
+      "suggestion": "删除第 1265 行的变量定义，或重命名为 _copy_clicked"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\markdown_message.py",
+      "line_number": 1266,
+      "description": "未使用的变量: regenerate_clicked",
+      "suggestion": "删除第 1266 行的变量定义，或重命名为 _regenerate_clicked"
+    },
+    {
+      "category": "deprecated",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\tool_status_display.py",
+      "line_number": 47,
+      "description": "包含废弃标记的代码",
+      "suggestion": "检查第 47 行附近的代码是否可以删除"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\ai_assistant\\ui\\tool_status_display.py",
+      "line_number": 86,
+      "description": "未使用的变量: TOOL_NAME_MAP",
+      "suggestion": "删除第 86 行的变量定义，或重命名为 _TOOL_NAME_MAP"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\asset_manager.py",
+      "line_number": 9,
+      "description": "未使用的导入: pyqtSignal",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 45,
+      "description": "未使用的变量: asset_added",
+      "suggestion": "删除第 45 行的变量定义，或重命名为 _asset_added"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 46,
+      "description": "未使用的变量: asset_removed",
+      "suggestion": "删除第 46 行的变量定义，或重命名为 _asset_removed"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 47,
+      "description": "未使用的变量: assets_loaded",
+      "suggestion": "删除第 47 行的变量定义，或重命名为 _assets_loaded"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 48,
+      "description": "未使用的变量: preview_started",
+      "suggestion": "删除第 48 行的变量定义，或重命名为 _preview_started"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 49,
+      "description": "未使用的变量: preview_finished",
+      "suggestion": "删除第 49 行的变量定义，或重命名为 _preview_finished"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 50,
+      "description": "未使用的变量: thumbnail_updated",
+      "suggestion": "删除第 50 行的变量定义，或重命名为 _thumbnail_updated"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 51,
+      "description": "未使用的变量: error_occurred",
+      "suggestion": "删除第 51 行的变量定义，或重命名为 _error_occurred"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 52,
+      "description": "未使用的变量: progress_updated",
+      "suggestion": "删除第 52 行的变量定义，或重命名为 _progress_updated"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 53,
+      "description": "未使用的变量: asset_selected",
+      "suggestion": "删除第 53 行的变量定义，或重命名为 _asset_selected"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 1393,
+      "description": "未使用的变量: old_category_folder",
+      "suggestion": "删除第 1393 行的变量定义，或重命名为 _old_category_folder"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 1604,
+      "description": "未使用的变量: progress",
+      "suggestion": "删除第 1604 行的变量定义，或重命名为 _progress"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 1688,
+      "description": "未使用的变量: progress",
+      "suggestion": "删除第 1688 行的变量定义，或重命名为 _progress"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_manager_logic.py",
+      "line_number": 1732,
+      "description": "未使用的变量: file_size",
+      "suggestion": "删除第 1732 行的变量定义，或重命名为 _file_size"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_model.py",
+      "line_number": 16,
+      "description": "未使用的变量: PACKAGE",
+      "suggestion": "删除第 16 行的变量定义，或重命名为 _PACKAGE"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\asset_model.py",
+      "line_number": 17,
+      "description": "未使用的变量: FILE",
+      "suggestion": "删除第 17 行的变量定义，或重命名为 _FILE"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\lazy_asset_loader.py",
+      "line_number": 20,
+      "description": "未使用的变量: load_complete",
+      "suggestion": "删除第 20 行的变量定义，或重命名为 _load_complete"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\thumbnail_generator.py",
+      "line_number": 10,
+      "description": "未使用的导入: io",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\thumbnail_generator.py",
+      "line_number": 22,
+      "description": "未使用的变量: IMAGE_EXTENSIONS",
+      "suggestion": "删除第 22 行的变量定义，或重命名为 _IMAGE_EXTENSIONS"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\logic\\thumbnail_generator.py",
+      "line_number": 25,
+      "description": "未使用的变量: THUMBNAIL_SIZE",
+      "suggestion": "删除第 25 行的变量定义，或重命名为 _THUMBNAIL_SIZE"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\add_asset_dialog.py",
+      "line_number": 7,
+      "description": "未使用的导入: QWidget",
+      "suggestion": "删除第 7 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\add_asset_dialog.py",
+      "line_number": 13,
+      "description": "未使用的导入: QFont",
+      "suggestion": "删除第 13 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 10,
+      "description": "未使用的导入: QBrush",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 10,
+      "description": "未使用的导入: QPen",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 237,
+      "description": "未使用的变量: preview_clicked",
+      "suggestion": "删除第 237 行的变量定义，或重命名为 _preview_clicked"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 238,
+      "description": "未使用的变量: delete_clicked",
+      "suggestion": "删除第 238 行的变量定义，或重命名为 _delete_clicked"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 239,
+      "description": "未使用的变量: migrate_clicked",
+      "suggestion": "删除第 239 行的变量定义，或重命名为 _migrate_clicked"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 240,
+      "description": "未使用的变量: edit_info_clicked",
+      "suggestion": "删除第 240 行的变量定义，或重命名为 _edit_info_clicked"
+    },
+    {
+      "category": "deprecated",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 241,
+      "description": "包含废弃标记的代码",
+      "suggestion": "检查第 241 行附近的代码是否可以删除"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 241,
+      "description": "未使用的变量: description_updated",
+      "suggestion": "删除第 241 行的变量定义，或重命名为 _description_updated"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_card.py",
+      "line_number": 242,
+      "description": "未使用的变量: open_markdown_editor",
+      "suggestion": "删除第 242 行的变量定义，或重命名为 _open_markdown_editor"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 7,
+      "description": "未使用的导入: QFileDialog",
+      "suggestion": "删除第 7 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 12,
+      "description": "未使用的导入: QFont",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 26,
+      "description": "未使用的导入: DescriptionDialog",
+      "suggestion": "删除第 26 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 36,
+      "description": "未使用的变量: thumbnail_loaded",
+      "suggestion": "删除第 36 行的变量定义，或重命名为 _thumbnail_loaded"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1204,
+      "description": "未使用的变量: mousePressEvent_orig",
+      "suggestion": "删除第 1204 行的变量定义，或重命名为 _mousePressEvent_orig"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1205,
+      "description": "未使用的变量: mouseMoveEvent_orig",
+      "suggestion": "删除第 1205 行的变量定义，或重命名为 _mouseMoveEvent_orig"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1484,
+      "description": "未使用的变量: search_completed",
+      "suggestion": "删除第 1484 行的变量定义，或重命名为 _search_completed"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1485,
+      "description": "未使用的变量: search_error",
+      "suggestion": "删除第 1485 行的变量定义，或重命名为 _search_error"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\asset_manager_ui.py",
+      "line_number": 1486,
+      "description": "未使用的变量: progress_updated",
+      "suggestion": "删除第 1486 行的变量定义，或重命名为 _progress_updated"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\category_management_dialog.py",
+      "line_number": 13,
+      "description": "未使用的导入: QFont",
+      "suggestion": "删除第 13 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\category_management_dialog.py",
+      "line_number": 26,
+      "description": "未使用的变量: categories_updated",
+      "suggestion": "删除第 26 行的变量定义，或重命名为 _categories_updated"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\confirm_delete_category_dialog.py",
+      "line_number": 11,
+      "description": "未使用的导入: QFont",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\custom_checkbox.py",
+      "line_number": 6,
+      "description": "未使用的导入: QRect",
+      "suggestion": "删除第 6 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\dialogs.py",
+      "line_number": 8,
+      "description": "未使用的导入: QWidget",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\dialogs.py",
+      "line_number": 11,
+      "description": "未使用的导入: QIcon",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\dialogs.py",
+      "line_number": 12,
+      "description": "未使用的导入: Path",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\progress_dialog.py",
+      "line_number": 12,
+      "description": "未使用的导入: QFont",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\progress_dialog.py",
+      "line_number": 24,
+      "description": "未使用的变量: cancelled",
+      "suggestion": "删除第 24 行的变量定义，或重命名为 _cancelled"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\asset_manager\\ui\\set_paths_dialog.py",
+      "line_number": 14,
+      "description": "未使用的导入: Path",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\__main__.py",
+      "line_number": 6,
+      "description": "未使用的导入: cast",
+      "suggestion": "删除第 6 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\components\\config_template_button.py",
+      "line_number": 19,
+      "description": "未使用的变量: search_completed",
+      "suggestion": "删除第 19 行的变量定义，或重命名为 _search_completed"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\components\\config_template_button.py",
+      "line_number": 20,
+      "description": "未使用的变量: search_error",
+      "suggestion": "删除第 20 行的变量定义，或重命名为 _search_error"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\components\\config_template_button.py",
+      "line_number": 21,
+      "description": "未使用的变量: progress_updated",
+      "suggestion": "删除第 21 行的变量定义，或重命名为 _progress_updated"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\components\\ue_project_card.py",
+      "line_number": 8,
+      "description": "未使用的导入: QRect",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\components\\ue_project_card.py",
+      "line_number": 9,
+      "description": "未使用的导入: QPen",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\components\\ue_project_card.py",
+      "line_number": 9,
+      "description": "未使用的导入: QBrush",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\components\\ue_project_card.py",
+      "line_number": 10,
+      "description": "未使用的导入: Path",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\components\\ue_project_card.py",
+      "line_number": 105,
+      "description": "未使用的变量: clicked",
+      "suggestion": "删除第 105 行的变量定义，或重命名为 _clicked"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\config_tool_ui_core.py",
+      "line_number": 9,
+      "description": "未使用的导入: get_style_loader",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\dialogs\\ue_project_selector_dialog.py",
+      "line_number": 10,
+      "description": "未使用的导入: QMouseEvent",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\dialogs\\ue_project_selector_dialog.py",
+      "line_number": 208,
+      "description": "未使用的导入: QScreen",
+      "suggestion": "删除第 208 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\handlers\\config_handler.py",
+      "line_number": 14,
+      "description": "未使用的导入: QProcess",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\handlers\\config_handler.py",
+      "line_number": 14,
+      "description": "未使用的导入: QRunnable",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\handlers\\config_handler.py",
+      "line_number": 14,
+      "description": "未使用的导入: QThreadPool",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\config_tool\\ui\\layouts\\layout_builder.py",
+      "line_number": 14,
+      "description": "未使用的导入: get_style_loader",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\site_recommendations\\ui\\site_recommendations_ui.py",
+      "line_number": 7,
+      "description": "未使用的导入: QGridLayout",
+      "suggestion": "删除第 7 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\site_recommendations\\ui\\site_recommendations_ui.py",
+      "line_number": 11,
+      "description": "未使用的导入: Qt",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "modules\\site_recommendations\\ui\\site_recommendations_ui.py",
+      "line_number": 14,
+      "description": "未使用的导入: Optional",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "config",
+      "severity": "low",
+      "file_path": "resources\\templates\\global_settings.json",
+      "line_number": 1,
+      "description": "未被引用的配置文件: global_settings.json",
+      "suggestion": "检查是否可以删除此配置文件"
+    },
+    {
+      "category": "config",
+      "severity": "low",
+      "file_path": "resources\\themes\\example_custom_theme.json",
+      "line_number": 1,
+      "description": "未被引用的配置文件: example_custom_theme.json",
+      "suggestion": "检查是否可以删除此配置文件"
+    },
+    {
+      "category": "config",
+      "severity": "low",
+      "file_path": "resources\\themes\\forest_green.json",
+      "line_number": 1,
+      "description": "未被引用的配置文件: forest_green.json",
+      "suggestion": "检查是否可以删除此配置文件"
+    },
+    {
+      "category": "config",
+      "severity": "low",
+      "file_path": "resources\\themes\\sunset_orange.json",
+      "line_number": 1,
+      "description": "未被引用的配置文件: sunset_orange.json",
+      "suggestion": "检查是否可以删除此配置文件"
+    },
+    {
+      "category": "config",
+      "severity": "low",
+      "file_path": "resources\\themes\\violet.json",
+      "line_number": 1,
+      "description": "未被引用的配置文件: violet.json",
+      "suggestion": "检查是否可以删除此配置文件"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tests\\test_asset_manager_lazy_loading.py",
+      "line_number": 8,
+      "description": "未使用的导入: Path",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tests\\test_lazy_asset_loader.py",
+      "line_number": 8,
+      "description": "未使用的导入: time",
+      "suggestion": "删除第 8 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tests\\test_lazy_asset_loader.py",
+      "line_number": 9,
+      "description": "未使用的导入: MagicMock",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tests\\test_lazy_asset_loader.py",
+      "line_number": 9,
+      "description": "未使用的导入: patch",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "tests\\test_thread_cleanup.py",
+      "line_number": 59,
+      "description": "未使用的变量: start_time",
+      "suggestion": "删除第 59 行的变量定义，或重命名为 _start_time"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "tests\\test_thread_cleanup.py",
+      "line_number": 245,
+      "description": "未使用的变量: worker_id",
+      "suggestion": "删除第 245 行的变量定义，或重命名为 _worker_id"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\analyzers\\deprecated_analyzer.py",
+      "line_number": 10,
+      "description": "未使用的导入: re",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "deprecated",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\analyzers\\deprecated_analyzer.py",
+      "line_number": 81,
+      "description": "包含废弃标记的代码",
+      "suggestion": "检查第 81 行附近的代码是否可以删除"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\analyzers\\duplicate_analyzer.py",
+      "line_number": 10,
+      "description": "未使用的导入: Set",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\auto_fixer.py",
+      "line_number": 10,
+      "description": "未使用的导入: re",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\auto_fixer.py",
+      "line_number": 11,
+      "description": "未使用的导入: Set",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "deprecated",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\models.py",
+      "line_number": 70,
+      "description": "包含废弃标记的代码",
+      "suggestion": "检查第 70 行附近的代码是否可以删除"
+    },
+    {
+      "category": "deprecated",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\orchestrator.py",
+      "line_number": 58,
+      "description": "包含废弃标记的代码",
+      "suggestion": "检查第 58 行附近的代码是否可以删除"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\reporters\\json_reporter.py",
+      "line_number": 13,
+      "description": "未使用的导入: Issue",
+      "suggestion": "删除第 13 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\reporters\\markdown_reporter.py",
+      "line_number": 10,
+      "description": "未使用的导入: Issue",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tools\\code_cleanup\\scanner.py",
+      "line_number": 11,
+      "description": "未使用的导入: Set",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tools\\verify_faiss.py",
+      "line_number": 5,
+      "description": "未使用的导入: os",
+      "suggestion": "删除第 5 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "tools\\verify_faiss.py",
+      "line_number": 29,
+      "description": "未使用的导入: numpy",
+      "suggestion": "删除第 29 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\dialogs\\close_confirmation_dialog.py",
+      "line_number": 9,
+      "description": "未使用的导入: QFont",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "ui\\dialogs\\close_confirmation_dialog.py",
+      "line_number": 20,
+      "description": "未使用的变量: RESULT_CLOSE",
+      "suggestion": "删除第 20 行的变量定义，或重命名为 _RESULT_CLOSE"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "ui\\dialogs\\close_confirmation_dialog.py",
+      "line_number": 21,
+      "description": "未使用的变量: RESULT_MINIMIZE",
+      "suggestion": "删除第 21 行的变量定义，或重命名为 _RESULT_MINIMIZE"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "ui\\dialogs\\close_confirmation_dialog.py",
+      "line_number": 22,
+      "description": "未使用的变量: RESULT_CANCEL",
+      "suggestion": "删除第 22 行的变量定义，或重命名为 _RESULT_CANCEL"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\main_window_components\\title_bar.py",
+      "line_number": 9,
+      "description": "未使用的导入: QSize",
+      "suggestion": "删除第 9 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\main_window_components\\title_bar.py",
+      "line_number": 10,
+      "description": "未使用的导入: QIcon",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\main_window_handlers\\module_loader.py",
+      "line_number": 7,
+      "description": "未使用的导入: Dict",
+      "suggestion": "删除第 7 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "ui\\main_window_handlers\\navigation_handler.py",
+      "line_number": 10,
+      "description": "未使用的变量: logger",
+      "suggestion": "删除第 10 行的变量定义，或重命名为 _logger"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\settings_widget.py",
+      "line_number": 12,
+      "description": "未使用的导入: QFont",
+      "suggestion": "删除第 12 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\splash_screen.py",
+      "line_number": 10,
+      "description": "未使用的导入: pyqtSignal",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\splash_screen.py",
+      "line_number": 10,
+      "description": "未使用的导入: QObject",
+      "suggestion": "删除第 10 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\splash_screen.py",
+      "line_number": 11,
+      "description": "未使用的导入: QFont",
+      "suggestion": "删除第 11 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\splash_screen.py",
+      "line_number": 13,
+      "description": "未使用的导入: Tuple",
+      "suggestion": "删除第 13 行的导入语句"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "ui\\system_tray_manager.py",
+      "line_number": 20,
+      "description": "未使用的变量: tray_activated",
+      "suggestion": "删除第 20 行的变量定义，或重命名为 _tray_activated"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "ui\\system_tray_manager.py",
+      "line_number": 21,
+      "description": "未使用的变量: show_window_requested",
+      "suggestion": "删除第 21 行的变量定义，或重命名为 _show_window_requested"
+    },
+    {
+      "category": "unused_variable",
+      "severity": "low",
+      "file_path": "ui\\system_tray_manager.py",
+      "line_number": 22,
+      "description": "未使用的变量: quit_requested",
+      "suggestion": "删除第 22 行的变量定义，或重命名为 _quit_requested"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 14,
+      "description": "未使用的导入: QRegion",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 14,
+      "description": "未使用的导入: QPainterPath",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 14,
+      "description": "未使用的导入: QPainter",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 14,
+      "description": "未使用的导入: QColor",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 14,
+      "description": "未使用的导入: QBrush",
+      "suggestion": "删除第 14 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 15,
+      "description": "未使用的导入: QMouseEvent",
+      "suggestion": "删除第 15 行的导入语句"
+    },
+    {
+      "category": "unused_import",
+      "severity": "low",
+      "file_path": "ui\\ue_main_window_core.py",
+      "line_number": 23,
+      "description": "未使用的导入: ModuleLoader",
+      "suggestion": "删除第 23 行的导入语句"
+    }
+  ]
+}

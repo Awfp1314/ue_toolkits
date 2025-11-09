@@ -190,7 +190,6 @@ class SmartPrefetcher:
         if not pattern:
             return
         
-        print(f"[DEBUG] [7.0-P9] 检测到模式: {pattern.name} ({pattern.description})")
         
         self.stats['total_prefetch_attempts'] += 1
         self.stats['by_pattern'][pattern.name] += 1
@@ -201,7 +200,6 @@ class SmartPrefetcher:
             if prefetched_data:
                 self.cache.set(pattern.name, prefetched_data)
                 self.stats['successful_prefetches'] += 1
-                print(f"[DEBUG] [7.0-P9] 预取成功: {pattern.name}")
         except Exception as e:
             print(f"[WARNING] [7.0-P9] 预取失败: {e}")
     
@@ -221,7 +219,6 @@ class SmartPrefetcher:
         
         cached = self.cache.get(pattern.name)
         if cached:
-            print(f"[DEBUG] [7.0-P9] 预取命中: {pattern.name}")
         
         return cached
     

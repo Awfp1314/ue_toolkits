@@ -51,7 +51,6 @@ class BGEEmbeddingFunction:
         import numpy as np
         
         try:
-            print(f"[DEBUG] 文档嵌入函数被调用，input: {input}")
             
             # 🔧 展平嵌套列表（ChromaDB 有时会传递 [['text']] 而不是 ['text']）
             if input and isinstance(input[0], list):
@@ -60,11 +59,10 @@ class BGEEmbeddingFunction:
             
             # 使用 EmbeddingService 编码（不强制转换为 NumPy，保持原始格式）
             embeddings = self.embedding_service.encode_text(input, convert_to_numpy=False)
-            
-            print(f"[DEBUG] encode_text 返回类型: {type(embeddings)}")
+
             if hasattr(embeddings, 'shape'):
-                print(f"[DEBUG] embeddings.shape: {embeddings.shape}")
-            
+                pass  # embeddings 已经是数组格式
+
             if embeddings is None:
                 print(f"[WARN] embeddings 为 None，返回零向量")
                 dimension = self.embedding_service.get_embedding_dimension() or 384
@@ -72,25 +70,21 @@ class BGEEmbeddingFunction:
             
             # 转换为 NumPy 数组（无论原始格式是什么）
             embeddings = np.array(embeddings, dtype=np.float32)
-            print(f"[DEBUG] 转换为 NumPy 后: type={type(embeddings)}, shape={embeddings.shape}, ndim={embeddings.ndim}")
             
             # 确保是二维数组
             if embeddings.ndim == 1:
-                print(f"[DEBUG] 检测到一维数组，reshape 为 (1, -1)")
                 embeddings = embeddings.reshape(1, -1)
             elif embeddings.ndim == 0:
                 print(f"[ERROR] 检测到标量（0维），返回零向量")
                 dimension = self.embedding_service.get_embedding_dimension() or 384
                 return [[0.0] * dimension for _ in input]
             
-            print(f"[DEBUG] reshape 后: shape={embeddings.shape}")
             
             # 转换为纯 Python 列表
             result = embeddings.tolist()
-            print(f"[DEBUG] tolist() 后: type={type(result)}, len={len(result)}")
             if len(result) > 0:
-                print(f"[DEBUG] result[0] type={type(result[0])}, len={len(result[0]) if isinstance(result[0], list) else 'N/A'}")
-            
+                pass  # 结果非空
+
             # 验证格式
             if not isinstance(result, list) or not all(isinstance(r, list) for r in result):
                 raise ValueError(f"嵌入函数返回格式错误: {type(result)}")
@@ -100,10 +94,8 @@ class BGEEmbeddingFunction:
             
         except Exception as e:
             print(f"[ERROR] 文档嵌入函数调用失败: {e}")
-            print(f"[DEBUG] input: {input}")
-            print(f"[DEBUG] embeddings type: {type(embeddings) if 'embeddings' in locals() else 'N/A'}")
             if 'embeddings' in locals():
-                print(f"[DEBUG] embeddings value: {embeddings if not hasattr(embeddings, 'shape') else f'array with shape {embeddings.shape}'}")
+                pass  # embeddings 变量存在
             import traceback
             print(traceback.format_exc())
             dimension = self.embedding_service.get_embedding_dimension() or 384
