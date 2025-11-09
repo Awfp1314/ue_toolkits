@@ -6,8 +6,8 @@
 统一管理所有聊天气泡的文本选中状态
 """
 
-from typing import List
-from PyQt6.QtWidgets import QTextBrowser
+from typing import List, Union
+from PyQt6.QtWidgets import QTextBrowser, QLabel
 
 
 class SelectionManager:
@@ -28,28 +28,35 @@ class SelectionManager:
             chat_window: ChatWindow 实例
         """
         self.chat_window = chat_window
-        self.selected_bubbles: List[QTextBrowser] = []
+        self.selected_bubbles: List[Union[QTextBrowser, QLabel]] = []
     
-    def register_bubble(self, bubble: QTextBrowser):
+    def register_bubble(self, bubble: Union[QTextBrowser, QLabel]):
         """
         注册一个聊天气泡
         
         Args:
-            bubble: 聊天气泡组件
+            bubble: 聊天气泡组件（QTextBrowser 或 QLabel）
         """
-        # 连接选中状态变化信号
-        if hasattr(bubble, 'selectionChanged'):
+        # 只有 QTextBrowser 有 selectionChanged 信号
+        if isinstance(bubble, QTextBrowser) and hasattr(bubble, 'selectionChanged'):
             bubble.selectionChanged.connect(
                 lambda: self._on_selection_changed(bubble)
             )
+        # QLabel 不需要连接信号，因为它的选中状态由系统管理
     
     def clear_all_selections(self):
         """清除所有气泡的选中状态"""
         for bubble in self.selected_bubbles[:]:  # 使用副本遍历
             try:
-                cursor = bubble.textCursor()
-                cursor.clearSelection()
-                bubble.setTextCursor(cursor)
+                if isinstance(bubble, QTextBrowser):
+                    # QTextBrowser：使用 textCursor 清除选中
+                    cursor = bubble.textCursor()
+                    cursor.clearSelection()
+                    bubble.setTextCursor(cursor)
+                elif isinstance(bubble, QLabel):
+                    # QLabel：清除选中文本（如果有）
+                    if bubble.hasSelectedText():
+                        bubble.setSelection(0, 0)
             except Exception as e:
                 print(f"[SelectionManager] 清除选中状态失败: {e}")
         
@@ -58,7 +65,7 @@ class SelectionManager:
     
     def _on_selection_changed(self, bubble: QTextBrowser):
         """
-        选中状态变化回调
+        选中状态变化回调（仅用于 QTextBrowser）
         
         Args:
             bubble: 发生变化的气泡

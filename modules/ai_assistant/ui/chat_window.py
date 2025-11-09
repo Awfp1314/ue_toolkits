@@ -831,6 +831,22 @@ class ChatWindow(QWidget):
         """处理带图片的消息"""
         self.send_message_with_images(message, images)
     
+    def mousePressEvent(self, event):
+        """
+        鼠标点击事件处理
+        
+        用于清除所有聊天气泡的选中状态
+        """
+        try:
+            # 清除所有选中状态
+            if hasattr(self, 'selection_manager') and self.selection_manager:
+                self.selection_manager.clear_all_selections()
+        except Exception as e:
+            print(f"[ERROR] [ChatWindow] 处理鼠标点击事件失败: {e}")
+        
+        # 调用父类方法
+        super().mousePressEvent(event)
+    
     def eventFilter(self, obj, event):
         """事件过滤器（处理滚轮事件）"""
         # ⚠️ 注意：Enter 键发送已由 ChatGPTComposer 处理，这里不再重复处理
@@ -882,14 +898,26 @@ class ChatWindow(QWidget):
             markdown_msg
         )
         
-        # 注册到 SelectionManager
-        if hasattr(self, 'selection_manager') and hasattr(markdown_msg, 'content_label'):
-            self.selection_manager.register_bubble(markdown_msg.content_label)
-        
-        # 设置光标样式
-        from modules.ai_assistant.ui.cursor_style_manager import CursorStyleManager
-        if hasattr(markdown_msg, 'content_label'):
-            CursorStyleManager.set_bubble_cursor(markdown_msg.content_label)
+        # 注册到 SelectionManager 和设置光标样式
+        try:
+            if hasattr(self, 'selection_manager') and self.selection_manager:
+                # 助手消息使用 markdown_browser，用户消息使用 text_label
+                text_widget = None
+                if hasattr(markdown_msg, 'markdown_browser'):
+                    text_widget = markdown_msg.markdown_browser
+                elif hasattr(markdown_msg, 'text_label'):
+                    text_widget = markdown_msg.text_label
+                
+                if text_widget:
+                    self.selection_manager.register_bubble(text_widget)
+                    
+                    # 设置光标样式
+                    from modules.ai_assistant.ui.cursor_style_manager import CursorStyleManager
+                    CursorStyleManager.set_bubble_cursor(text_widget)
+                    
+                    print(f"[DEBUG] [UI管理器] 已注册消息气泡到 SelectionManager")
+        except Exception as e:
+            print(f"[ERROR] [UI管理器] 注册消息气泡失败: {e}")
         
         # 新消息添加时，重新启用自动滚动
         self._auto_scroll_enabled = True
@@ -942,6 +970,21 @@ class ChatWindow(QWidget):
             self.messages_layout.count() - 1,
             self.current_streaming_bubble
         )
+        
+        # 注册到 SelectionManager 和设置光标样式
+        try:
+            if hasattr(self, 'selection_manager') and self.selection_manager:
+                if hasattr(self.current_streaming_bubble, 'markdown_browser'):
+                    self.selection_manager.register_bubble(self.current_streaming_bubble.markdown_browser)
+                    
+                    # 设置光标样式
+                    from modules.ai_assistant.ui.cursor_style_manager import CursorStyleManager
+                    CursorStyleManager.set_bubble_cursor(self.current_streaming_bubble.markdown_browser)
+                    
+                    print(f"[DEBUG] [UI管理器] 已注册流式气泡到 SelectionManager")
+        except Exception as e:
+            print(f"[ERROR] [UI管理器] 注册流式气泡失败: {e}")
+        
         # AI开始回答时，重新启用自动滚动
         self._auto_scroll_enabled = True
         self.scroll_to_bottom()
