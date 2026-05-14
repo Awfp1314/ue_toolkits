@@ -2,7 +2,7 @@
 
 > ⚠️ **重要提示**: 本项目为旧版本，已停止维护。
 >
-> 🚀 **新版本已发布**: [UE_ToolkitAI](https://github.com/Awfp1314/UE_ToolkitAI) - 全新架构，集成 AI 助手，功能更强大！
+> 🚀 **新版本已发布**: [UE Toolkit AI](https://unrealenginetookit.top/) - 全新架构，集成 AI 助手，功能更强大！
 >
 > 新版本特性：
 >
@@ -12,7 +12,7 @@
 > - 🌐 Web 服务 - 在线更新、授权管理
 > - 📱 更现代的 UI - 全新设计的用户界面
 >
-> **建议所有用户迁移到新版本**: [https://github.com/Awfp1314/UE_ToolkitAI](https://github.com/Awfp1314/UE_ToolkitAI)
+> **新版本已闭源，请通过官网获取**: [https://unrealenginetookit.top/](https://unrealenginetookit.top/)
 
 ---
 
@@ -30,7 +30,7 @@
 - 配置工具
 - 站点推荐
 
-如需使用最新功能（AI 助手、蓝图分析等），请访问新版本：[UE_ToolkitAI](https://github.com/Awfp1314/UE_ToolkitAI)
+如需使用最新功能（AI 助手、蓝图分析等），请访问官网下载新版本：[UE Toolkit AI](https://unrealenginetookit.top/)
 
 ---
 
@@ -331,23 +331,6 @@ ue_toolkit/
 - **Pillow**: 图像处理
 - **psutil**: 系统监控
 - **pypinyin**: 拼音转换
-
-## 贡献指南
-
-欢迎提交 Issue 和 Pull Request 来帮助改进项目。
-
-### 开发环境设置
-
-```bash
-# 安装开发依赖
-pip install -r requirements.txt
-
-# 运行测试
-pytest
-
-# 运行测试并生成覆盖率报告
-pytest --cov=core --cov=modules --cov-report=html
-```
 
 ## 许可证
 
