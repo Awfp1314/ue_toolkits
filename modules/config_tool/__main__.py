@@ -30,7 +30,7 @@ class ConfigToolModule:
         """设置信号槽连接"""
         if self.ui and hasattr(self.ui, 'add_config_button') and self.ui.add_config_button:
             # 连接添加配置按钮的点击事件
-            self.ui.add_config_button.clicked.connect(self.ui.on_add_config_clicked)
+            self.ui.add_config_button.clicked.connect(self.on_add_config_clicked)
             logger.info("信号槽连接设置完成")
     
     def on_add_config_clicked(self):
@@ -39,6 +39,10 @@ class ConfigToolModule:
         # 实际的添加配置逻辑在UI层实现
         if self.ui:
             self.ui.on_add_config_clicked()
+        # 确保配置保存到虚幻引擎项目
+        if self.logic:
+            self.logic.save_config()
+            logger.info("配置已成功应用到虚幻引擎项目")
     
     def get_widget(self) -> QWidget:
         """获取模块的主界面组件"""
